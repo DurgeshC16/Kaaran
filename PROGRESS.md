@@ -10,7 +10,7 @@ Phase 3 stages:
 - [x] Stage 0: LLM foundation (anthropic 2.1.0, wrapper with cache/replay, usage log, spend cap; auth + model ids verified live)
 - [x] Stage 1: mapping proposer (Messy-File Reader) + variant_b hold-out layout
 - [x] Stage 2: intent parser
-- [ ] Stage 3: Brief Writer (Marathi + English, placeholders)
+- [x] Stage 3: Brief Writer (Marathi + English, placeholders)
 - [ ] Stage 4: verifier
 - [ ] Stage 5: guardrail tests + brief eval + sample briefs
 

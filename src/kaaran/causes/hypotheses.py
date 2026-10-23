@@ -13,6 +13,11 @@ from .trend import change_number
 ASSOCIATED = [{"template_key": "caveat.associated_not_caused", "params": {}}]
 
 
+def association_caveat(label: str) -> list[dict]:
+    """'An association, not a proven cause' fits WEAK findings only (STRONG meets the criteria; RULED_OUT found no link)."""
+    return list(ASSOCIATED) if label == "WEAK" else []
+
+
 def _inconclusive(b: Builder, fid: str, hypothesis: str, focus: str, criteria: list, sample: dict) -> dict:
     return b.finding(id=fid, type="CAUSE", label="INSUFFICIENT", rule_id="CAUSE-INSUFFICIENT", hypothesis=hypothesis, origin="default",
                      template_key="cause.inconclusive",
@@ -62,7 +67,7 @@ def election(b: Builder, tables: dict, sc: pd.DataFrame, focus: str, insufficien
         params |= {"similar": {"set": sid}, "n_similar_no_drop": {"number": nd}}
     rule = "CAUSE-ELECTION" if label == "WEAK" else "CAUSE-RULED-OUT"
     return b.finding(id="F.cause.election", type="CAUSE", label=label, rule_id=rule, hypothesis="election", origin="default",
-                     template_key=key, params=params, criteria=criteria, sample=sample, caveats=list(ASSOCIATED))
+                     template_key=key, params=params, criteria=criteria, sample=sample, caveats=association_caveat(label))
 
 
 # ---------- teacher vacancy (school-level exposure) ----------
@@ -124,7 +129,7 @@ def vacancy(b: Builder, tables: dict, sc: pd.DataFrame, focus: str, insufficient
     if key == "cause.vacancy.concentrated":
         params |= {"since": {"period": b.period("academic_year", since, since)}, "share_of_decline": {"number": sh}}
     rule = {"STRONG": "CAUSE-SCHOOL-EXPOSURE", "WEAK": "CAUSE-SCHOOL-EXPOSURE", "RULED_OUT": "CAUSE-RULED-OUT"}[label]
-    caveats = [] if label == "STRONG" else list(ASSOCIATED)
+    caveats = association_caveat(label)
     return b.finding(id="F.cause.vacancy", type="CAUSE", label=label, rule_id=rule, hypothesis="vacancy", origin="default",
                      template_key=key, params=params, criteria=criteria, sample=sample, caveats=caveats), info
 
@@ -169,7 +174,7 @@ def infrastructure(b: Builder, tables: dict, sc: pd.DataFrame, focus: str, insuf
     rule = "CAUSE-RULED-OUT" if label == "RULED_OUT" else "CAUSE-CORRELATION"
     return b.finding(id="F.cause.infrastructure", type="CAUSE", label=label, rule_id=rule, hypothesis="infrastructure", origin="default",
                      template_key=key, params=params, criteria=criteria, sample={"n_schools": n},
-                     caveats=[{"template_key": "caveat.static_infra_snapshot", "params": {}}] + list(ASSOCIATED))
+                     caveats=[{"template_key": "caveat.static_infra_snapshot", "params": {}}] + association_caveat(label))
 
 
 # ---------- attendance (correlation, after trust exclusions) ----------
@@ -204,4 +209,4 @@ def attendance(b: Builder, tables: dict, sc: pd.DataFrame, att: pd.DataFrame, fo
     rule = "CAUSE-RULED-OUT" if label == "RULED_OUT" else "CAUSE-CORRELATION"
     return b.finding(id="F.cause.attendance", type="CAUSE", label=label, rule_id=rule, hypothesis="attendance", origin="default",
                      template_key=key, params={"taluka": {"entity": focus}, "r": {"number": nr}}, criteria=criteria, sample=sample,
-                     caveats=list(ASSOCIATED))
+                     caveats=association_caveat(label))

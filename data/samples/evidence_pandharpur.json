@@ -2933,10 +2933,6 @@
     {
      "template_key": "caveat.static_infra_snapshot",
      "params": {}
-    },
-    {
-     "template_key": "caveat.associated_not_caused",
-     "params": {}
     }
    ],
    "related": []
