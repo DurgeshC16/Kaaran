@@ -12,10 +12,16 @@ Phase 2 stages:
 - [x] Stage 0: housekeeping (schedule, slow marker, CLAUDE.md commands and git rule)
 - [x] Stage 1: evidence contract (docs/EVIDENCE_SCHEMA.md, sample evidence pack)
 - [x] Stage 2: ingest (raw files -> DuckDB with provenance, mapping JSON, ingest report, round trip)
-- [ ] Stage 3: trust checks (flat runs, jumps, missing data, duplicates; docs/CONFIDENCE_RULES.md)
+- [x] Stage 3: trust checks (flat runs, jumps, missing data, duplicates; docs/CONFIDENCE_RULES.md)
 - [ ] Phase 2B: causes, twins, confidence rules, eval harness (Oct 24-25)
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
+
+## Phase 2 result so far (Stages 0-3, 2026-10-23)
+- Contract: docs/EVIDENCE_SCHEMA.md v1.0, src/kaaran/evidence.py (validate / finalize / llm_view), sample data/samples/evidence_pandharpur.json (illustrative until 2B regenerates it).
+- Ingest: `python -m kaaran.ingest <raw> --db <db>`, about 2.5 s. Rule-based mapping JSON (committed as data/samples/mapping_baseline.json), validated against a closed vocabulary; 6 canonical tables + links/fixes/unresolved/sources in DuckDB, every row with src_* provenance. Round trip vs clean tables 100% on seeds 42, 7 (fictional names), 2026.
+- Trust: `python -m kaaran.trust --db <db>`, about 1 s. From the RAW files: all 53 T5 schools flagged, Pandharpur the only RED_FLAG taluka, Mangalvedha the only INSUFFICIENT taluka (set = T6 exactly), no T8 school flagged and all 15 CLEARED. Same result on 20 more seeds (table in docs/CONFIDENCE_RULES.md).
+- Tests: 86 passing (full, about 66 s); fast suite (`-m "not slow"`) about 35 s.
 
 ## Phase 1 result
 - Generator: `python -m kaaran.synth --seed 42 --out data/synthetic/demo [--names fictional] [--clean-only]`, about 5 s.
@@ -24,7 +30,7 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - Code: src/kaaran/synth/{config,rng,entities,plant,tables,ground_truth,messy,writers,generate,__main__}.py; tests/{conftest,test_smoke,test_truths_clean,test_raw_files,test_cli,test_determinism}.py.
 
 ## Next task
-Re-plan phase 2 dates (phase 1 finished 4 days late), then phase 2: DuckDB store + messy-file ingest of the raw files, trust checks, cause tester, twin finder. Score them against ground_truth.json.
+Phase 2B (Oct 24-25): causes/ (vacancy, election, infrastructure), twins/ (size, enrolment, election duty; poverty caveat), confidence.py with TREND/CAUSE/TWIN/ACTION thresholds in docs/CONFIDENCE_RULES.md, pipeline.py building the full evidence pack (replace the illustrative sample), eval/ scorecard vs ground_truth.json on 3 seeds.
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
@@ -55,6 +61,12 @@ Re-plan phase 2 dates (phase 1 finished 4 days late), then phase 2: DuckDB store
   - Bare-year convention auto-detected (end-year gives 0 duplicate school-years, start-year 821).
   - 2B stats: numpy only (t-statistics, effect sizes); constants get their own rationale, never copied from ground_truth.json.
   - Tests: fast = `-m "not slow"`, full suite before every commit; no default addopts change.
+
+- 2026-10-23 Stage 1 schema shaped by a read-only contract review: top-level registries (numbers, entities, sets, periods), provenance = cells | query | constant, outline decided by rule, llm_view for rule 5, {{n:<id>}} placeholders recommended for the Phase 3 Brief Writer.
+- 2026-10-23 Attendance jumps are judged against the school's own history (deseasonalised); a district-wide z flagged honest T8 schools.
+- 2026-10-23 Persisting score jumps are trust annotations for the cause tester, not flags; only reverting spikes are flagged.
+- 2026-10-23 Name matching for crosswalk gaps is a one-to-one assignment within the taluka (a unique-best rule left two near-identical names unresolved on seeds 1-2).
+- 2026-10-23 Trust inputs are ingested raw data; "expected months" = months present in the file for the taluka.
 
 ## Spend ledger
 | Date | What | Spend ($) | Cumulative ($) |

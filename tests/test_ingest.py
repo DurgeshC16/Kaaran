@@ -276,3 +276,20 @@ def test_ingest_cli(demo_dir, tmp_path, capsys):
     assert ingest_cli([str(demo_dir / "raw"), "--db", str(db)]) == 0
     out = capsys.readouterr().out
     assert "SYNTHETIC" in out and db.exists() and (tmp_path / "ingest_report.json").exists()
+
+
+def test_name_matching_is_one_to_one_for_near_identical_names():
+    """Regression (seeds 1 and 2): two crosswalk gaps in one taluka with near-identical names must both link."""
+    from kaaran.ingest.pipeline import FixLog, _link_attendance
+
+    schools = pd.DataFrame({"udise_code": ["00990514801", "00990518601", "00990510101"],
+                            "school_name": ["ZP Primary School Palewadi", "ZP Primary School Palwad", "ZP Primary School Khandwadi"],
+                            "taluka_id": ["T05", "T05", "T05"], "enrol_total": [108, 109, 60]})
+    att = pd.DataFrame({"short_code": ["SC74534", "SC15731", "SC00001"],
+                        "school_name": ["ZP Primary School Palewadi", "ZPPS Palwad", "ZP Primary School Khandwadi"],
+                        "taluka_id": ["T05", "T05", "T05"], "enrolled": [108, 109, 60]})
+    crosswalk = pd.DataFrame({"short_code": ["SC00001"], "udise_code": ["00990510101"]})
+    log = FixLog()
+    links = _link_attendance(att, crosswalk, schools, "attendance.pdf", log).set_index("short_code")["udise_code"].to_dict()
+    assert links == {"SC00001": "00990510101", "SC74534": "00990514801", "SC15731": "00990518601"}
+    assert log.total("link_unresolved") == 0

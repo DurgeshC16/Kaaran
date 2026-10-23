@@ -21,10 +21,9 @@ from . import mapping as M
 from . import normalize as N
 from .readers import FORMATS, csv_rows, pdf_lines, pdf_page_count, xlsx_rows
 
-# Name matching for attendance short codes missing from the crosswalk: candidates are roster schools
-# of the same taluka that are not already linked. A unique best match is required.
+# Name matching for attendance short codes missing from the crosswalk: candidates are roster schools of the
+# same taluka not already linked; pairs are assigned one-to-one, best similarity first (ties: closest enrolment).
 NAME_MATCH_MIN = 0.6
-NAME_MATCH_MARGIN = 0.05
 NAME_ABBREVIATIONS = ((r"\bzpps\b", "zp primary school"), (r"\bps\b", "primary school"), (r"\bno(\d)", r"no \1"))
 SECTION_PATTERNS = {
     "month_year_taluka": re.compile(
@@ -305,20 +304,29 @@ def _link_attendance(att: pd.DataFrame, crosswalk: pd.DataFrame, schools: pd.Dat
             links.append((r.short_code, cw[r.short_code], "crosswalk", 1.0))
     log.add("link_crosswalk", len(links), file, None, "short codes linked through crosswalk.xlsx")
     unmatched = pdf_schools[~pdf_schools["short_code"].isin(cw)]
-    matched, unresolved = [], []
+    # One-to-one assignment within each taluka: best-scoring (name similarity, then closest enrolment) pairs
+    # first; each school and each short code is used once. Pairs below NAME_MATCH_MIN are never accepted.
+    enrol = schools.set_index("udise_code")["enrol_total"]
+    pairs = []
     for r in unmatched.itertuples(index=False):
         cands = schools[(schools["taluka_id"] == r.taluka_id) & ~schools["udise_code"].isin(linked)]
         q = _norm_name(r.school_name)
-        scored = sorted(((difflib.SequenceMatcher(None, q, _norm_name(n)).ratio(), c) for n, c in
-                         zip(cands["school_name"], cands["udise_code"])), reverse=True)
-        if scored and scored[0][0] >= NAME_MATCH_MIN and (len(scored) == 1 or scored[0][0] - scored[1][0] >= NAME_MATCH_MARGIN):
-            links.append((r.short_code, scored[0][1], "name_match", round(scored[0][0], 3)))
-            linked.add(scored[0][1])
-            matched.append(r.short_code)
-        else:
-            unresolved.append(r.short_code)
+        for n, c in zip(cands["school_name"], cands["udise_code"]):
+            score = difflib.SequenceMatcher(None, q, _norm_name(n)).ratio()
+            if score >= NAME_MATCH_MIN:
+                total = enrol.get(c)
+                gap = abs(float(r.enrolled) - float(total)) / max(float(total), 1.0) if pd.notna(r.enrolled) and pd.notna(total) else 1.0
+                pairs.append((-round(score, 6), round(gap, 6), r.short_code, c))
+    taken_codes, matched = set(), []
+    for neg_score, _, short, udise in sorted(pairs):
+        if short in matched or udise in taken_codes:
+            continue
+        links.append((short, udise, "name_match", round(-neg_score, 3)))
+        taken_codes.add(udise)
+        matched.append(short)
+    unresolved = [s for s in unmatched["short_code"] if s not in matched]
     log.add("link_name_match", len(matched), file, None,
-            f"short codes missing from the crosswalk, matched by name within the taluka (min {NAME_MATCH_MIN}, margin {NAME_MATCH_MARGIN})",
+            f"short codes missing from the crosswalk, matched one-to-one by name within the taluka (min similarity {NAME_MATCH_MIN})",
             matched)
     log.add("link_unresolved", len(unresolved), file, None, "short codes that could not be linked; rows kept in ingest_unresolved", unresolved)
     return pd.DataFrame(links, columns=["short_code", "udise_code", "link_method", "link_score"])
