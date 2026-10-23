@@ -28,17 +28,27 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - src/kaaran/ingest, trust, causes, twins, brief, llm, api: the engines (later phases)
 - tests/: pytest suites
 - data/synthetic/: generated data (git-ignored except small samples)
-- docs/: specs (see docs/SYNTHETIC_DATA_SPEC.md)
+- docs/: specs (see docs/SYNTHETIC_DATA_SPEC.md); docs/source/ holds local-only originals (git-ignored)
 - prompts/: LLM prompt templates (later phases)
 
 ## Working agreement
 - Start every session by reading PROGRESS.md.
+- Read docs/PROJECT_CONTEXT.md for judging criteria, product scope and MVP priorities.
 - For changes touching more than two files, propose a short plan first and wait for approval.
 - Do not read whole data files. Use head(), schema summaries and row counts.
 - Do not add dependencies without asking. Prefer what is already installed.
-- Commit after tests pass, with a clear one-line message.
+- Commit after tests pass (see Git workflow).
 - Keep replies short. Do not recap diffs I can see in git.
 - At the end of a task, update PROGRESS.md (done, next task, decisions made).
+
+## Git workflow
+- Remote: origin = https://github.com/DurgeshC16/Kaaran.git, branch main.
+- After each completed stage or meaningful change, with tests green:
+  1. Run `git status` and confirm no .env, data/real/ or docs/source/ files are staged.
+  2. Commit, then immediately `git push`.
+- Commit message: first line `phaseN: <what was just done>` (max 72 chars), then a body listing what changed, how many tests pass, decisions made, and what is next.
+- Never force-push.
+- Never push failing tests unless the message starts with `wip:` and explains why.
 
 ## Compaction
 When compacting, keep: current phase, decisions made, failing tests, list of files changed.

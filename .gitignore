@@ -14,6 +14,9 @@ data/synthetic/*
 !data/synthetic/.gitkeep
 data/real/
 
+# local-only reference files (problem statement, deck, guidelines)
+docs/source/
+
 # editor / OS
 .vscode/
 .DS_Store
