@@ -4,8 +4,17 @@ Deadline: 2026-11-01 (submit by afternoon).
 Budget: development <= $180, runtime/evals <= $60, demo/judging <= $40. Reserve untouched.
 Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 
-## Current phase: 3 next (AI layers, Oct 25-27). Phase 2 done 2026-10-23 (planned Oct 23-25).
+## Current phase: 3 (AI layers, Oct 25-27; started Oct 23)
 
+Phase 3 stages:
+- [x] Stage 0: LLM foundation (anthropic 2.1.0, wrapper with cache/replay, usage log, spend cap; auth + model ids verified live)
+- [ ] Stage 1: mapping proposer (Messy-File Reader) + variant_b hold-out layout
+- [ ] Stage 2: intent parser
+- [ ] Stage 3: Brief Writer (Marathi + English, placeholders)
+- [ ] Stage 4: verifier
+- [ ] Stage 5: guardrail tests + brief eval + sample briefs
+
+Phase 2 (deterministic engines): done 2026-10-23.
 Phase 1 (Foundation): done 2026-10-23 (synthetic generator, 27 tests, see "Phase 1 result").
 
 Phase 2 stages:
@@ -88,6 +97,17 @@ Phase 3 (Oct 25-27), AI layers:
 - 2026-10-23 Phase 2B: poverty arrives as a 7th raw file (taluka_profile.csv, percentages); without it, twins drop the covariate and add caveat.poverty_not_available.
 - 2026-10-23 Phase 2B: packs keep district-wide RED_FLAG/INSUFFICIENT findings as appendix context, but only the focus taluka's CLEARED list.
 - 2026-10-23 Phase 2B: the eval re-runs every query provenance. It found 3 real provenance errors (the correlations cited more rows than they used), now fixed.
+- 2026-10-23 (user) taluka_profile.csv stays as the 7th raw file.
+- 2026-10-23 (user) The "attendance tested, inconclusive" line appears only in the brief's appendix.
+- 2026-10-23 Phase 3 plan approved with the recommended defaults:
+  - Models from env: MAIN claude-sonnet-5-5, LIGHT claude-haiku-5-5 (.env.example).
+  - Server-side refusal fallback ("default") on MAIN calls.
+  - Recorded LLM responses are committed in llm_cache/ (synthetic inputs only), so tests, evals and the demo replay offline.
+  - Spend cap per process: KAARAN_MAX_LIVE_USD=15. Live tests are opt-in with `pytest --live`.
+  - Claude writes {{n:}}, {{e:}}, {{s:}} and {{p:}} placeholders; code fills values and names.
+  - variant_b layout covers the xlsx and csv files; the PDF stays rule-parsed.
+  - Brief output is Markdown (mr + en); the PDF comes in Phase 4. The Marathi wording needs native-speaker review.
+- 2026-10-23 LLM settings resolve environment > .env > .env.example, so model ids are never hard-coded. ANTHROPIC_API_KEY comes from the environment.
 
 ## Spend ledger
 | Date | What | Spend ($) | Cumulative ($) |

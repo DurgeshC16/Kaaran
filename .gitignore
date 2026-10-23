@@ -24,3 +24,6 @@ Thumbs.db
 
 # Claude Code workflow scripts (session artefacts)
 .claude/workflows/
+
+# LLM usage log (local; recorded responses in llm_cache/ ARE committed)
+data/llm_usage.jsonl

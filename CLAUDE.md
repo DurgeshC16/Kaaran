@@ -23,6 +23,7 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Setup: `py -3.11 -m venv .venv` then `.venv\Scripts\python -m pip install -e .[dev]` (versions pinned in pyproject.toml)
 - Fast tests (everyday default): `.venv\Scripts\python -m pytest -q -m "not slow"`
 - Full tests (run before every commit): `.venv\Scripts\python -m pytest -q` (adds `slow`: pdfplumber PDF reading, extra seeds)
+- Live LLM tests (cost money, opt-in): `.venv\Scripts\python -m pytest -q --live -m live`. Normal runs replay recorded responses from `llm_cache/` (KAARAN_LLM_MODE=replay); `live` records new ones, `off` disables the LLM
 - Generate data: `.venv\Scripts\python -m kaaran.synth --seed 42 --out data/synthetic/demo`
 - Ingest raw files into DuckDB: `.venv\Scripts\python -m kaaran.ingest data/synthetic/demo/raw --db data/synthetic/demo/kaaran.duckdb` (writes ingest_report.json next to the db; `--write-mapping` dumps the rule-based mapping JSON)
 - Trust checks: `.venv\Scripts\python -m kaaran.trust --db data/synthetic/demo/kaaran.duckdb` (writes trust_flags / trust_missing / trust_annotations tables, trust_report.json, trust_evidence.json)

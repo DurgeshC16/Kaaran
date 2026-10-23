@@ -112,3 +112,33 @@ def load_clean(folder) -> dict[str, pd.DataFrame]:
 
 def load_truth(folder) -> dict:
     return json.loads((folder / "ground_truth.json").read_text(encoding="utf-8"))
+
+
+# ---------- LLM: tests never call the API unless run with --live ----------
+
+
+def pytest_addoption(parser):
+    parser.addoption("--live", action="store_true", default=False, help="run tests that call the Anthropic API (costs money)")
+
+
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--live"):
+        return
+    skip = pytest.mark.skip(reason="calls the Anthropic API; run with --live")
+    for item in items:
+        if "live" in item.keywords:
+            item.add_marker(skip)
+
+
+@pytest.fixture(autouse=True)
+def _llm_replay_mode(request, monkeypatch, tmp_path):
+    """Default: replay recorded responses only (no network); usage goes to a throwaway log."""
+    from kaaran.llm import reset_client
+
+    live = request.config.getoption("--live") and "live" in request.keywords
+    monkeypatch.setenv("KAARAN_LLM_MODE", "live" if live else "replay")
+    if not live:
+        monkeypatch.setenv("KAARAN_LLM_USAGE_LOG", str(tmp_path / "llm_usage.jsonl"))
+    reset_client(None)
+    yield
+    reset_client(None)

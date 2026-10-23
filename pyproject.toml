@@ -18,6 +18,7 @@ dependencies = [
     "pdfplumber==0.11.10",
     "pypdfium2==5.14.0",
     "duckdb==2.0.0",
+    "anthropic==2.1.0",
 ]
 
 [project.optional-dependencies]
@@ -30,4 +31,5 @@ where = ["src"]
 testpaths = ["tests"]
 markers = [
     "slow: slow tests (pdfplumber PDF reading, multi-seed runs); skip with -m \"not slow\"",
+    "live: calls the Anthropic API (costs money); run only with --live",
 ]
