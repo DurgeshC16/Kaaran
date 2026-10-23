@@ -10,15 +10,15 @@ Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 - [x] Repo initialised, GitHub remote (origin DurgeshC16/Kaaran, branch main), first commit pushed
 - [x] Plan for scaffold + generator approved (2026-10-23)
 - [x] Housekeeping: repo flattened, CLAUDE.md git workflow, spec v2
-- [ ] Scaffold: pyproject, package layout, pytest runs
-- [ ] Clean truth tables with planted truths T1-T8 + ground_truth.json
-- [ ] Tests prove each planted truth from the clean tables
+- [x] Scaffold: pyproject, package layout, pytest runs
+- [x] Clean truth tables with planted truths T1-T8 + ground_truth.json
+- [x] Tests prove each planted truth from the clean tables
 - [ ] Messiness layer + raw file writers (xlsx, csv, pdf)
 - [ ] Determinism test (same seed -> identical hashes)
 - [ ] PROGRESS.md updated, pushed
 
 ## Next task
-Scaffold: .venv (Python 3.11), pyproject, package layout, smoke test.
+Messiness layer + raw file writers (xlsx, csv, pdf), messiness log, manifest.
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
