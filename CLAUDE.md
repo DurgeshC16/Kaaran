@@ -31,6 +31,8 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Evidence Brief (Marathi + English): `.venv\Scripts\python -m kaaran.brief data/synthetic/demo/raw --focus Pandharpur --out-dir out` (`--no-llm` = template brief)
 - Eval scorecard vs answer key: `.venv\Scripts\python -m kaaran.eval --seed 42` (repeat `--seed`; `--names fictional`; `--layout variant_b --proposer llm`)
 - Intent eval (25 questions): `.venv\Scripts\python -m kaaran.eval.intent --tier light --tier main --tier rule`
+- Brief eval (verifier pass, invented numbers, cost): `.venv\Scripts\python -m kaaran.eval.brief --seed 42 [--samples data/samples]`
+- Prompt-injection check: `.venv\Scripts\python -m kaaran.eval.guardrails`
 - Mapping eval (baseline vs LLM, both layouts): `.venv\Scripts\python -m kaaran.eval.mapping --seed 42` (`KAARAN_LLM_MODE=live` to record new responses)
 
 ## Layout

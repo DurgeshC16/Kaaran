@@ -4,7 +4,7 @@ Deadline: 2026-11-01 (submit by afternoon).
 Budget: development <= $180, runtime/evals <= $60, demo/judging <= $40. Reserve untouched.
 Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 
-## Current phase: 3 (AI layers, Oct 25-27; started Oct 23)
+## Current phase: 4 next (web demo + PDF, Oct 27-29). Phase 3 (AI layers) done 2026-10-23.
 
 Phase 3 stages:
 - [x] Stage 0: LLM foundation (anthropic 2.1.0, wrapper with cache/replay, usage log, spend cap; auth + model ids verified live)
@@ -12,7 +12,7 @@ Phase 3 stages:
 - [x] Stage 2: intent parser
 - [x] Stage 3: Brief Writer (Marathi + English, placeholders)
 - [x] Stage 4: verifier
-- [ ] Stage 5: guardrail tests + brief eval + sample briefs
+- [x] Stage 5: guardrail tests + brief eval + sample briefs
 
 Phase 2 (deterministic engines): done 2026-10-23.
 Phase 1 (Foundation): done 2026-10-23 (synthetic generator, 27 tests, see "Phase 1 result").
@@ -25,6 +25,20 @@ Phase 2 stages:
 - [x] Phase 2B: Stage 4 causes, Stage 5 twins (+ taluka profile file), Stage 6 analyze + eval harness, Stage 7 real sample pack
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
+
+## Phase 3 result (2026-10-23)
+- LLM layer (`src/kaaran/llm`): anthropic 2.1.0. The wrapper has a replay cache (`llm_cache/`, 62 recordings committed), a usage log and a per-process spend cap. Tests and evals replay offline; live is opt-in (`pytest --live`, `KAARAN_LLM_MODE=live`).
+- Mapping proposer (Messy-File Reader), seeds 42, 7 and 2026:
+  - default layout: baseline 100%, LLM 100%;
+  - hold-out variant_b: baseline 0% (invalid), LLM 100% on the first attempt, scorecard 8/8;
+  - about $0.05 and 13-15 s per proposal.
+- Intent parser (25 questions): LIGHT/Haiku 92% (misses conservative), MAIN/Sonnet 100%, rule fallback 88%. LIGHT kept; about $0.0002 per question.
+- Brief Writer + verifier (5 seeds: 42, 2026, 1, 99, 7 fictional): first-attempt verifier pass 100% (12/12 findings), 0 template fallbacks, **0 invented numbers**, **about $0.049 and 17-19 s per brief** (claude-sonnet-5-5).
+  - Template fallback brief when the API is unavailable.
+  - Samples for native-speaker review: `data/samples/brief_seed42_mr.md`, `brief_seed2026_mr.md`, `brief_seed7_fictional_mr.md` (+ `_en`).
+- Prompt injection: an instruction in a spreadsheet header plus a short instruction cell reached the model as data and did not change the mapping. Longer injected text is masked out of the summary.
+- **Live spend in Phase 3: $0.84** (67 calls: mapping $0.39, briefs $0.34, intent $0.11, auth $0.0006).
+- Tests: 167 passed, 3 skipped (live); full suite about 3 min.
 
 ## Phase 2B result (2026-10-23)
 - Causes: `src/kaaran/causes` covers the trend (paired t, ranks, persistence) and 4 hypotheses: election duty, maths vacancy, infrastructure, attendance. Labels come from `src/kaaran/confidence.py`; thresholds are in docs/CONFIDENCE_RULES.md.
@@ -46,13 +60,12 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - Code: src/kaaran/synth/{config,rng,entities,plant,tables,ground_truth,messy,writers,generate,__main__}.py; tests/{conftest,test_smoke,test_truths_clean,test_raw_files,test_cli,test_determinism}.py.
 
 ## Next task
-Phase 3 (Oct 25-27), AI layers:
-- Prerequisite: auth and model set.
-- Mapping proposer: Claude proposes the mapping JSON from headers plus low-variety column values. It is validated by `kaaran.ingest.mapping.validate`, and the fixture `data/samples/mapping_baseline.json` is the target.
-- Intent parser: a Marathi question -> focus taluka + question key.
-- Brief Writer: reads `llm_view(pack)` and writes `{{n:<id>}}` placeholders; code fills in `display.mr`.
-- Verifier: checks every number in the text against the pack.
-- Eval: extend the eval with brief checks.
+Phase 4 (Oct 27-29), web demo + PDF:
+- FastAPI app: question (text, Marathi recording later) + file upload -> intent -> ingest (LLM mapping, rule fallback) -> trust -> analyze -> brief.
+- Devanagari one-page PDF of the brief.
+- School drill-down from the full pack, done in code (never from the LLM).
+- Show the SYNTHETIC banner everywhere.
+- Native-speaker review of data/samples/brief_seed*_mr.md, in parallel with user testing.
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
@@ -110,6 +123,9 @@ Phase 3 (Oct 25-27), AI layers:
 - 2026-10-23 LLM settings resolve environment > .env > .env.example, so model ids are never hard-coded. ANTHROPIC_API_KEY comes from the environment.
 - 2026-10-23 Intent parser stays on LIGHT (claude-haiku-5-5). 25 questions: LIGHT 92% (both misses conservative: it asked or refused, never a wrong taluka), MAIN 100%; the rule was to switch only if LIGHT is >10 points worse. Cost per question about $0.0002 (LIGHT) vs $0.0043 (MAIN).
 - 2026-10-23 Prompts are not tuned on the eval questions (to avoid overfitting the 25-question set).
+- 2026-10-23 Correlational wording fix: the "association, not cause" caveat goes on WEAK findings only.
+- 2026-10-23 Brief prose is per finding (not per section), so the verifier can check that placeholders belong to the finding. Marathi case endings go on "तालुका" (stem changes of place names need a native form).
+- 2026-10-23 The verifier allows the connective "त्यामुळे" (therefore) and negated causal sentences. Every other causal word outside a STRONG cause fails.
 
 ## Spend ledger
 | Date | What | Spend ($) | Cumulative ($) |
