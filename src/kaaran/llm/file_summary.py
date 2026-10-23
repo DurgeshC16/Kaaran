@@ -100,7 +100,7 @@ def profile_column(values: list) -> dict:
     if not vals:
         return {"filled": "empty"}
     shapes = Counter(_shape(v) for v in vals)
-    main, n = shapes.most_common(1)[0]
+    main = shapes.most_common(1)[0][0]
     prof = {"filled": "mostly" if filled >= 0.8 else ("partly" if filled >= 0.2 else "rarely"), "shape": main}
     if len(shapes) > 1:
         prof["other_shapes"] = sorted(s for s in shapes if s != main)
