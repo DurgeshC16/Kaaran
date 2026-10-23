@@ -29,6 +29,7 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Trust checks: `.venv\Scripts\python -m kaaran.trust --db data/synthetic/demo/kaaran.duckdb` (writes trust_flags / trust_missing / trust_annotations tables, trust_report.json, trust_evidence.json)
 - Evidence pack: `.venv\Scripts\python -m kaaran.analyze data/synthetic/demo/raw --focus Pandharpur --out evidence.json`
 - Eval scorecard vs answer key: `.venv\Scripts\python -m kaaran.eval --seed 42` (repeat `--seed`; `--names fictional`; `--layout variant_b --proposer llm`)
+- Intent eval (25 questions): `.venv\Scripts\python -m kaaran.eval.intent --tier light --tier main --tier rule`
 - Mapping eval (baseline vs LLM, both layouts): `.venv\Scripts\python -m kaaran.eval.mapping --seed 42` (`KAARAN_LLM_MODE=live` to record new responses)
 
 ## Layout

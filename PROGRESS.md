@@ -9,7 +9,7 @@ Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 Phase 3 stages:
 - [x] Stage 0: LLM foundation (anthropic 2.1.0, wrapper with cache/replay, usage log, spend cap; auth + model ids verified live)
 - [x] Stage 1: mapping proposer (Messy-File Reader) + variant_b hold-out layout
-- [ ] Stage 2: intent parser
+- [x] Stage 2: intent parser
 - [ ] Stage 3: Brief Writer (Marathi + English, placeholders)
 - [ ] Stage 4: verifier
 - [ ] Stage 5: guardrail tests + brief eval + sample briefs
@@ -108,6 +108,8 @@ Phase 3 (Oct 25-27), AI layers:
   - variant_b layout covers the xlsx and csv files; the PDF stays rule-parsed.
   - Brief output is Markdown (mr + en); the PDF comes in Phase 4. The Marathi wording needs native-speaker review.
 - 2026-10-23 LLM settings resolve environment > .env > .env.example, so model ids are never hard-coded. ANTHROPIC_API_KEY comes from the environment.
+- 2026-10-23 Intent parser stays on LIGHT (claude-haiku-5-5). 25 questions: LIGHT 92% (both misses conservative: it asked or refused, never a wrong taluka), MAIN 100%; the rule was to switch only if LIGHT is >10 points worse. Cost per question about $0.0002 (LIGHT) vs $0.0043 (MAIN).
+- 2026-10-23 Prompts are not tuned on the eval questions (to avoid overfitting the 25-question set).
 
 ## Spend ledger
 | Date | What | Spend ($) | Cumulative ($) |
