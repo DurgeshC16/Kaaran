@@ -21,7 +21,8 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 
 ## Commands (Windows)
 - Setup: `py -3.11 -m venv .venv` then `.venv\Scripts\python -m pip install -e .[dev]` (versions pinned in pyproject.toml)
-- Tests: `.venv\Scripts\python -m pytest -q`
+- Fast tests (everyday default): `.venv\Scripts\python -m pytest -q -m "not slow"`
+- Full tests (run before every commit): `.venv\Scripts\python -m pytest -q` (adds `slow`: pdfplumber PDF reading, extra seeds)
 - Generate data: `.venv\Scripts\python -m kaaran.synth --seed 42 --out data/synthetic/demo`
 
 ## Layout
@@ -47,7 +48,7 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - After each completed stage or meaningful change, with tests green:
   1. Run `git status` and confirm no .env, data/real/ or docs/source/ files are staged.
   2. Commit, then immediately `git push`.
-- Commit message: first line `phaseN: <what was just done>` (max 72 chars), then a body listing what changed, how many tests pass, decisions made, and what is next.
+- Commit message: subject `phaseN: <what was done>`, then a body with as much detail as needed: what changed, how many tests pass, decisions made, and what is next. Concise but complete.
 - Never force-push.
 - Never push failing tests unless the message starts with `wip:` and explains why.
 

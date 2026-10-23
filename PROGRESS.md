@@ -4,18 +4,18 @@ Deadline: 2026-11-01 (submit by afternoon).
 Budget: development <= $180, runtime/evals <= $60, demo/judging <= $40. Reserve untouched.
 Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 
-## Current phase: 1 done (Foundation; planned Oct 18-19, finished Oct 23). Next: phase 2
+## Current phase: 2 (Deterministic core engines, no LLM; Oct 23-25)
 
-- [ ] Auth works (`/status` shows the API key), model set (`/model opusplan`)
-- [x] Repo initialised, GitHub remote (origin DurgeshC16/Kaaran, branch main), first commit pushed
-- [x] Plan for scaffold + generator approved (2026-10-23)
-- [x] Housekeeping: repo flattened, CLAUDE.md git workflow, spec v2
-- [x] Scaffold: pyproject, package layout, pytest runs
-- [x] Clean truth tables with planted truths T1-T8 + ground_truth.json
-- [x] Tests prove each planted truth from the clean tables
-- [x] Messiness layer + raw file writers (xlsx, csv, pdf), messiness log, manifest
-- [x] Determinism test (same seed -> identical hashes, checked in a fresh process)
-- [x] PROGRESS.md updated, pushed
+Phase 1 (Foundation): done 2026-10-23 (synthetic generator, 27 tests, see "Phase 1 result").
+
+Phase 2 stages:
+- [x] Stage 0: housekeeping (schedule, slow marker, CLAUDE.md commands and git rule)
+- [ ] Stage 1: evidence contract (docs/EVIDENCE_SCHEMA.md, sample evidence pack)
+- [ ] Stage 2: ingest (raw files -> DuckDB with provenance, mapping JSON, ingest report, round trip)
+- [ ] Stage 3: trust checks (flat runs, jumps, missing data, duplicates; docs/CONFIDENCE_RULES.md)
+- [ ] Phase 2B: causes, twins, confidence rules, eval harness (Oct 24-25)
+
+Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
 
 ## Phase 1 result
 - Generator: `python -m kaaran.synth --seed 42 --out data/synthetic/demo [--names fictional] [--clean-only]`, about 5 s.
@@ -44,15 +44,27 @@ Re-plan phase 2 dates (phase 1 finished 4 days late), then phase 2: DuckDB store
 - 2026-10-23 Library versions pinned exactly in pyproject.toml (hash identity depends on them).
 - 2026-10-23 Dependencies approved: numpy, pandas, pyarrow, openpyxl, reportlab, pdfplumber, pytest. Fuzzy matching uses stdlib difflib; config is Python/JSON (no PyYAML).
 
+- 2026-10-23 Phase 2 plan approved with the recommended defaults, adjusted after a read-only 3-lens review:
+  - DuckDB (pinned) is the store; `<data_dir>/kaaran.duckdb`, git-ignored.
+  - PDF text via pypdfium2 (0.3 s vs 15 s); pdfplumber kept only for independent cross-check tests (marked slow).
+  - Poverty index: no raw file has it. Deferred: twins match on size, enrolment, election duty with a "poverty not available" caveat; a taluka profile file only if time remains after 2B.
+  - Round trip: expected rows = clean rows the raw files should contain (attendance = PDF months minus logged omissions), matched at 100%; omissions must appear as missing in trust.
+  - Labels: the six requested + RULED_OUT (cause tested, no link) + CLEARED (low but natural, passed trust). DATA findings use RED_FLAG / INSUFFICIENT / CLEARED only.
+  - Ingest fixes (dedup, name-matched links, normalisation) never count as flags; only trust labels do.
+  - Expected attendance months = months present in the file (10), not 12.
+  - Bare-year convention auto-detected (end-year gives 0 duplicate school-years, start-year 821).
+  - 2B stats: numpy only (t-statistics, effect sizes); constants get their own rationale, never copied from ground_truth.json.
+  - Tests: fast = `-m "not slow"`, full suite before every commit; no default addopts change.
+
 ## Spend ledger
 | Date | What | Spend ($) | Cumulative ($) |
 |------|------|-----------|----------------|
 
-## Phases ahead
-2. Core engines, no LLM (Oct 20-22): store, trust checks, cause tester, twin finder
-3. AI layers + eval harness (Oct 23-25): file reader, intent parser, brief writer, verifier
-4. Interface (Oct 26-27): web demo, voice, Devanagari PDF
-5. Users + real data (Oct 28-29)
-6. Hardening + deploy (Oct 30)
-7. Video + deck (Oct 31)
-8. Submit (Nov 1)
+## Schedule (re-planned 2026-10-23)
+- Phase 2, deterministic core engines: Oct 23-25
+- Phase 3, AI layers: Oct 25-27
+- Phase 4, web demo + PDF: Oct 27-29
+- User testing: in parallel, until Oct 28
+- Hardening and deploy: Oct 30
+- Video and deck: Oct 31
+- Submit: Nov 1 afternoon

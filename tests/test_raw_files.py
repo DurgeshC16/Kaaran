@@ -89,7 +89,7 @@ def test_raw_files_exist_and_open(raw):
     assert len(pd.read_csv(raw / "election_duty.csv", skiprows=1)) > 0
 
 
-def test_every_file_carries_synthetic_marker(raw, demo_dir, pdf_pages):
+def test_every_file_carries_synthetic_marker(raw, demo_dir):
     for name in ("udise_2023.xlsx", "crosswalk.xlsx", "teacher_posts.xlsx"):
         wb = openpyxl.load_workbook(raw / name)
         assert "SYNTHETIC" in wb.properties.title
@@ -98,9 +98,13 @@ def test_every_file_carries_synthetic_marker(raw, demo_dir, pdf_pages):
     for name in ("pat_scores.csv", "election_duty.csv"):
         first = (raw / name).read_text(encoding="utf-8-sig").splitlines()[0]
         assert "SYNTHETIC" in first
-    assert all("SYNTHETIC" in page for page in pdf_pages)
     for name in ("ground_truth.json", "manifest.json"):
         assert json.loads((demo_dir / name).read_text(encoding="utf-8"))["synthetic"] is True
+
+
+@pytest.mark.slow
+def test_every_pdf_page_carries_synthetic_marker(pdf_pages):
+    assert all("SYNTHETIC" in page for page in pdf_pages)
 
 
 def test_messiness_log_covers_every_raw_file(gt):
@@ -165,6 +169,7 @@ def test_udise_workbook_messiness(raw, gt, clean, profile):
 # ---------- 2. attendance_jan-dec.pdf ----------
 
 
+@pytest.mark.slow
 def test_attendance_pdf_structure(pdf_pages, pdf_rows, gt, clean, demo_dir):
     file = "attendance_jan-dec.pdf"
     pages_with_rows = [p for p in pdf_pages if any(ROW.match(line) for line in p.splitlines())]
@@ -195,6 +200,7 @@ def test_attendance_pdf_structure(pdf_pages, pdf_rows, gt, clean, demo_dir):
     assert set(focus_flat["month"]) == set(truths["T5"]["expected"]["focus_months"])
 
 
+@pytest.mark.slow
 def test_attendance_pdf_names_are_messy(pdf_rows, gt, clean):
     file = "attendance_jan-dec.pdf"
     names = clean["schools"].set_index("short_code")["school_name"]
@@ -217,6 +223,7 @@ def normalise(name: str) -> str:
     return " ".join(name.split())
 
 
+@pytest.mark.slow
 def test_crosswalk_join_and_fuzzy_fallback(pdf_rows, crosswalk, profile, gt, clean):
     file = "crosswalk.xlsx"
     assert {"Short Code", "UDISE Code"} <= set(crosswalk.columns)

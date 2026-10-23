@@ -26,3 +26,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "slow: slow tests (pdfplumber PDF reading, multi-seed runs); skip with -m \"not slow\"",
+]
