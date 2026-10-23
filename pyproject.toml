@@ -19,6 +19,9 @@ dependencies = [
     "pypdfium2==5.14.0",
     "duckdb==2.0.0",
     "anthropic==2.1.0",
+    "fastapi==0.161.1",
+    "uvicorn==0.54.0",
+    "httpx==0.28.1",
 ]
 
 [project.optional-dependencies]
@@ -26,6 +29,9 @@ dev = ["pytest==9.1.1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+kaaran = ["api/static/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

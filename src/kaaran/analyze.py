@@ -6,6 +6,7 @@ CLI: python -m kaaran.analyze data/synthetic/demo/raw --focus Pandharpur --out e
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import sys
 from dataclasses import dataclass
@@ -83,6 +84,11 @@ def analyze(raw_dir: str | Path, focus_name: str, db_path: str | Path | None = N
             proposer: str = "rule") -> Analysis:
     ing = ingest(raw_dir, db_path, mapping, proposer)
     trust = run_trust(ing.tables, ing.report)
+    return analyze_tables(ing, trust, focus_name)
+
+
+def analyze_tables(ing: IngestResult, trust: TrustResult, focus_name: str) -> Analysis:
+    """Pack for one focus taluka from an existing ingest + trust run (reusable across questions)."""
     focus = resolve_taluka(ing.tables, focus_name)
     b, results = run_causes(ing.tables, trust, focus)
     twin = find_twin(b, ing.tables, analysis_scores(ing.tables, trust), trust, focus)
@@ -93,8 +99,8 @@ def analyze(raw_dir: str | Path, focus_name: str, db_path: str | Path | None = N
         results["trend"]["related"].append(vac["id"])
     _actions(b, results, twin, trust.fragment, focus)
     # District-wide RED_FLAG / INSUFFICIENT findings stay (context); CLEARED lists only for the focus taluka.
-    trust_fragment = dict(trust.fragment)
-    trust_fragment["findings"] = [f for f in trust.fragment["findings"]
+    trust_fragment = copy.deepcopy(trust.fragment)  # never edit the shared trust result in place
+    trust_fragment["findings"] = [f for f in trust_fragment["findings"]
                                   if f["label"] != "CLEARED" or f["params"]["taluka"]["entity"] == focus]
     fragment = E.merge_fragments(trust_fragment, b.fragment())
     synthetic = bool(ing.report["synthetic"])

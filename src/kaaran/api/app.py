@@ -1,0 +1,189 @@
+"""FastAPI app: web demo, brief downloads and evidence drill-down, WhatsApp webhook and a local WhatsApp simulator.
+
+Run: python -m kaaran.api  (http://127.0.0.1:8000 ; simulator at /whatsapp)
+"""
+
+from __future__ import annotations
+
+import json
+import threading
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
+from pydantic import BaseModel, Field
+
+from ..brief.pdf import PdfUnavailable, find_browser
+from ..llm.client import get_client
+from ..service import LANGS, MAX_QUESTION_CHARS, Service, get_service, number_detail, set_detail
+from ..whatsapp import Bot, Gateway, simulate, valid_signature, verify_challenge
+
+STATIC = Path(__file__).resolve().parent / "static"
+
+
+class AskIn(BaseModel):
+    question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS * 2)
+    dataset: str | None = None
+
+
+class SimIn(BaseModel):
+    sender: str = Field(default="demo-officer", min_length=1, max_length=40)
+    text: str = Field(default="", max_length=MAX_QUESTION_CHARS * 2)
+
+
+def _lang(lang: str) -> str:
+    if lang not in LANGS:
+        raise HTTPException(400, f"lang must be one of {LANGS}")
+    return lang
+
+
+def create_app(service: Service | None = None, gateway: Gateway | None = None, warm: bool = True) -> FastAPI:
+    svc = service or get_service()
+    gw = gateway or Gateway(svc)
+    sim_bot = Bot(svc)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if warm:  # ingest + trust + packs in the background (default dataset first); questions are then fast
+            def prepare_all():
+                for key in [svc.default] + [k for k in svc.datasets if k != svc.default]:
+                    svc.workspace(key).prepare()
+
+            threading.Thread(target=prepare_all, daemon=True).start()
+        yield
+
+    app = FastAPI(title="Kaaran demo", version="0.4.0", lifespan=lifespan)
+    app.state.service, app.state.gateway = svc, gw
+
+    # ---------- pages ----------
+
+    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+    def index():
+        return FileResponse(STATIC / "index.html", media_type="text/html; charset=utf-8")
+
+    @app.get("/whatsapp", response_class=HTMLResponse, include_in_schema=False)
+    def whatsapp_page():
+        return FileResponse(STATIC / "whatsapp.html", media_type="text/html; charset=utf-8")
+
+    @app.get("/healthz")
+    def healthz():
+        client = get_client()
+        return {"ok": True, "llm_mode": client.mode, "pdf_browser": bool(find_browser()),
+                "whatsapp": gw.cfg.status(), "default_dataset": svc.default}
+
+    # ---------- web API ----------
+
+    @app.get("/api/datasets")
+    def datasets():
+        out = []
+        for key, spec in svc.datasets.items():
+            ws = svc.workspace(key)
+            item = {"id": key, "label": {"mr": spec.label_mr, "en": spec.label_en}, "default": key == svc.default,
+                    "ready": ws.ingest is not None}
+            if ws.ingest is not None:
+                item["examples"] = ws.examples()
+            out.append(item)
+        return out
+
+    @app.get("/api/datasets/{dataset}/examples")
+    def examples(dataset: str):
+        try:
+            return svc.workspace(dataset).examples()
+        except KeyError as e:
+            raise HTTPException(404, str(e)) from e
+
+    @app.post("/api/ask")
+    def ask(body: AskIn):
+        if body.dataset is not None and body.dataset not in svc.datasets:
+            raise HTTPException(404, f"unknown dataset {body.dataset!r}")
+        return svc.ask(body.question, body.dataset).to_dict()
+
+    def _brief(brief_id: str):
+        try:
+            return svc.resolve_brief(brief_id)
+        except KeyError as e:
+            raise HTTPException(404, str(e)) from e
+
+    @app.get("/api/briefs/{brief_id}/pdf")
+    def brief_pdf(brief_id: str, lang: str = "mr"):
+        ws, focus = _brief(brief_id)
+        try:
+            path = ws.pdf(focus, _lang(lang))
+        except PdfUnavailable as e:
+            raise HTTPException(503, f"PDF unavailable: {e}") from e
+        name = ws.pack(focus)["entities"][focus]["name_en"].replace(" ", "_")
+        return FileResponse(path, media_type="application/pdf", filename=f"Kaaran_{name}_{lang}.pdf")
+
+    @app.get("/api/briefs/{brief_id}/print", response_class=HTMLResponse)
+    def brief_print(brief_id: str, lang: str = "mr"):
+        """The exact HTML the PDF is printed from (fallback when no browser is available for PDF)."""
+        from ..brief.html import print_document
+
+        ws, focus = _brief(brief_id)
+        b = ws.brief(focus)
+        return HTMLResponse(print_document(ws.pack(focus), b.prose, _lang(lang), b.sources))
+
+    @app.get("/api/briefs/{brief_id}/evidence")
+    def brief_evidence(brief_id: str):
+        ws, focus = _brief(brief_id)
+        name = ws.pack(focus)["entities"][focus]["name_en"].replace(" ", "_")
+        return JSONResponse(ws.pack(focus), headers={"Content-Disposition": f'attachment; filename="evidence_{name}.json"'})
+
+    @app.get("/api/briefs/{brief_id}/number")
+    def brief_number(brief_id: str, id: str = Query(min_length=1, max_length=200)):
+        ws, focus = _brief(brief_id)
+        pack = ws.pack(focus)
+        if id not in pack["numbers"]:
+            raise HTTPException(404, f"unknown number {id!r}")
+        return number_detail(pack, id)
+
+    @app.get("/api/briefs/{brief_id}/set")
+    def brief_set(brief_id: str, id: str = Query(min_length=1, max_length=200)):
+        ws, focus = _brief(brief_id)
+        pack = ws.pack(focus)
+        if id not in pack["entity_sets"]:
+            raise HTTPException(404, f"unknown set {id!r}")
+        return set_detail(pack, id)
+
+    # ---------- WhatsApp: real webhook ----------
+
+    @app.get("/whatsapp/webhook", response_class=PlainTextResponse)
+    def webhook_verify(mode: str | None = Query(None, alias="hub.mode"), token: str | None = Query(None, alias="hub.verify_token"),
+                       challenge: str | None = Query(None, alias="hub.challenge")):
+        echoed = verify_challenge(mode, token, challenge, gw.cfg.verify_token)
+        if echoed is None:
+            raise HTTPException(403, "verification failed")
+        return PlainTextResponse(echoed)
+
+    @app.post("/whatsapp/webhook")
+    async def webhook_receive(request: Request, background: BackgroundTasks):
+        raw = await request.body()
+        if not valid_signature(raw, request.headers.get("x-hub-signature-256"), gw.cfg.app_secret):
+            gw.log(dir="in", status="rejected", error="bad or missing X-Hub-Signature-256 (is WHATSAPP_APP_SECRET set?)")
+            raise HTTPException(403, "invalid signature")
+        try:
+            payload = json.loads(raw)
+        except ValueError as e:
+            raise HTTPException(400, "body is not JSON") from e
+        for msg in gw.accept(payload):
+            background.add_task(gw.process, msg)
+        return {"ok": True}
+
+    @app.get("/api/whatsapp/status")
+    def whatsapp_status():
+        return {"config": gw.cfg.status(), "events": list(gw.events)}
+
+    # ---------- WhatsApp: local simulator (same bot logic, nothing leaves the machine) ----------
+
+    @app.post("/api/whatsapp/simulate")
+    def whatsapp_simulate(body: SimIn):
+        out = []
+        for r in simulate(sim_bot, "sim:" + body.sender, body.text):
+            item = {"kind": r.kind, "text": r.text, "lang": r.lang}
+            if r.kind == "document":
+                item |= {"filename": r.filename, "url": f"/api/briefs/{r.brief_id}/pdf?lang={r.lang}"}
+            out.append(item)
+        return {"replies": out}
+
+    return app

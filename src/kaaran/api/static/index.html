@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="mr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>कारण (Kaaran) - पुरावा अहवाल</title>
+<style>
+  :root { --ink:#16202a; --muted:#5b6670; --line:#d9dee3; --bg:#f5f7f9; --accent:#0b57d0; --warn:#fff3cd; --warnb:#e0b100; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Noto Sans Devanagari","Nirmala UI","Mangal","Segoe UI",system-ui,sans-serif; color:var(--ink); background:var(--bg); line-height:1.5; }
+  header { background:#12324f; color:#fff; padding:10px 18px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+  header h1 { font-size:18px; margin:0 12px 0 0; font-weight:700; }
+  header .sub { font-size:13px; opacity:.85; }
+  header .spacer { flex:1; }
+  header select, header button, header a { font:inherit; font-size:13px; }
+  header a { color:#cfe3ff; }
+  .seg button { border:1px solid #8fb0d6; background:transparent; color:#fff; padding:3px 10px; cursor:pointer; }
+  .seg button.on { background:#fff; color:#12324f; }
+  .seg button:first-child { border-radius:4px 0 0 4px; } .seg button:last-child { border-radius:0 4px 4px 0; }
+  .synthetic { background:var(--warn); border-bottom:1px solid var(--warnb); padding:6px 18px; font-weight:600; font-size:13px; }
+  main { display:grid; grid-template-columns: 340px 1fr; gap:16px; padding:16px 18px; max-width:1400px; margin:0 auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .card { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px; }
+  textarea { width:100%; min-height:84px; font:inherit; padding:8px; border:1px solid var(--line); border-radius:6px; resize:vertical; }
+  .btn { background:var(--accent); color:#fff; border:0; border-radius:6px; padding:8px 16px; font:inherit; cursor:pointer; }
+  .btn:disabled { opacity:.5; cursor:wait; }
+  .btn.ghost { background:#fff; color:var(--accent); border:1px solid var(--accent); text-decoration:none; display:inline-block; font-size:13px; padding:5px 10px; }
+  .chips { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+  .chip { text-align:left; background:#eef3fb; border:1px solid #d3e0f5; border-radius:6px; padding:6px 9px; cursor:pointer; font:inherit; font-size:13px; }
+  .chip:hover { background:#e1ebfa; }
+  h2.small { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:14px 0 6px; }
+  .history { list-style:none; padding:0; margin:0; font-size:13px; }
+  .history li { padding:5px 6px; border-radius:4px; cursor:pointer; color:#234; }
+  .history li:hover { background:#eef1f4; }
+  .history li .st { font-size:11px; color:var(--muted); margin-left:4px; }
+  .empty { color:var(--muted); padding:30px 10px; text-align:center; }
+  .reply { white-space:pre-wrap; font-size:15px; }
+  .reply.clarify { border-left:4px solid #e0b100; padding-left:10px; }
+  .reply.refuse { border-left:4px solid #b00020; padding-left:10px; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:10px; }
+  .meta { display:flex; flex-wrap:wrap; gap:6px; font-size:12px; color:var(--muted); margin:6px 0 10px; }
+  .pill { border:1px solid var(--line); border-radius:10px; padding:1px 8px; background:#fafbfc; }
+  .pill.ok { border-color:#2e7d32; color:#2e7d32; } .pill.bad { border-color:#b00020; color:#b00020; }
+  .notes { background:#eef6ee; border:1px solid #cfe6cf; border-radius:6px; padding:6px 10px; margin-bottom:10px; font-size:14px; }
+  .question-echo { font-size:14px; color:var(--muted); margin-bottom:6px; }
+  /* brief fragment */
+  .brief-title { font-size:20px; margin:4px 0 6px; }
+  .brief .banner { background:var(--warn); border:1px solid var(--warnb); padding:4px 8px; font-weight:600; font-size:13px; margin-bottom:6px; border-radius:4px; }
+  .brief section { margin-top:10px; }
+  .brief h3 { font-size:15px; margin:8px 0 4px; border-bottom:1px solid var(--line); padding-bottom:2px; }
+  .brief .finding { margin:4px 0 6px; }
+  .brief .caveat { font-size:12.5px; color:#555; margin-left:14px; font-style:italic; }
+  .brief .na { color:#777; }
+  .brief .footer { margin-top:10px; font-size:12px; color:var(--muted); border-top:1px solid var(--line); padding-top:4px; }
+  .brief ul.actions { padding-left:18px; margin:4px 0; }
+  .brief .owner { color:#333; font-style:italic; }
+  .badge { display:inline-block; font-size:11.5px; font-weight:700; padding:0 6px; border-radius:3px; border:1px solid; margin-right:4px; }
+  .strong { color:#0b6e4f; } .weak { color:#a15c00; } .insufficient { color:#555; } .redflag { color:#b00020; }
+  .learn { color:#0b57d0; } .ruledout { color:#44546a; } .cleared { color:#2e7d32; } .action { color:#6a1b9a; }
+  .num, .set { font-weight:700; color:#0b4fb3; border-bottom:1px dashed #0b4fb3; cursor:pointer; }
+  .num:hover, .set:hover { background:#e7efff; }
+  .sec-appendix { opacity:.85; font-size:14px; }
+  /* drawer */
+  #drawer { position:fixed; top:0; right:0; width:min(460px,100%); height:100%; background:#fff; border-left:1px solid var(--line); box-shadow:-4px 0 18px rgba(0,0,0,.08); padding:16px; overflow:auto; transform:translateX(105%); transition:transform .18s; z-index:10; }
+  #drawer.open { transform:none; }
+  #drawer .close { float:right; background:none; border:0; font-size:22px; cursor:pointer; }
+  #drawer h3 { margin:0 0 8px; font-size:17px; }
+  #drawer .big { font-size:26px; font-weight:700; }
+  #drawer table { width:100%; border-collapse:collapse; font-size:13px; }
+  #drawer td, #drawer th { border-bottom:1px solid #eee; padding:4px; text-align:left; vertical-align:top; }
+  #drawer .prov { background:#f6f8fa; border:1px solid #e4e8ec; border-radius:6px; padding:8px; margin:6px 0; font-size:13px; }
+  #drawer code { font-size:12px; word-break:break-all; }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid #9bb7e0; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; margin-right:6px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .error { color:#b00020; }
+</style>
+</head>
+<body>
+<header>
+  <h1>कारण <span style="font-weight:400">(Kaaran)</span></h1>
+  <span class="sub" id="tagline"></span>
+  <span class="spacer"></span>
+  <label class="sub" for="dataset" id="lbl-dataset"></label>
+  <select id="dataset"></select>
+  <span class="seg" role="group" aria-label="language"><button id="lang-mr" class="on">मराठी</button><button id="lang-en">English</button></span>
+  <a href="/whatsapp" id="link-wa"></a>
+</header>
+<div class="synthetic" id="synthetic"></div>
+<main>
+  <div>
+    <div class="card">
+      <form id="ask-form">
+        <label for="q" id="lbl-q" style="font-weight:600"></label>
+        <textarea id="q" maxlength="900"></textarea>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
+          <button class="btn" id="ask-btn" type="submit"></button>
+          <span id="status" class="sub" style="font-size:13px"></span>
+        </div>
+      </form>
+      <h2 class="small" id="lbl-examples"></h2>
+      <div class="chips" id="examples"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2 class="small" style="margin-top:0" id="lbl-history"></h2>
+      <ul class="history" id="history"></ul>
+    </div>
+  </div>
+  <div class="card" id="answer"><div class="empty" id="empty"></div></div>
+</main>
+<aside id="drawer" aria-live="polite"><button class="close" id="drawer-close" aria-label="close">×</button><div id="drawer-body"></div></aside>
+
+<script>
+const UI = {
+  mr: { tagline:"शिक्षण अधिकाऱ्यांसाठी AI डेटा विश्लेषक", dataset:"डेटा:", wa:"WhatsApp डेमो →",
+        synthetic:"⚠️ कृत्रिम (SYNTHETIC) डेमो डेटा - येथील आकडे खरे नाहीत आणि निष्कर्ष खरे नाहीत.",
+        q:"तुमचा प्रश्न (मराठी किंवा English)", ask:"विचारा", examples:"उदाहरण प्रश्न", history:"आधीचे प्रश्न",
+        empty:"डावीकडे प्रश्न टाइप करा किंवा उदाहरण निवडा. प्रत्येक आकड्यावर क्लिक करून त्याचा स्रोत पाहा.",
+        working:"विश्लेषण सुरू आहे...", loading:"डेटा तयार होत आहे (पहिल्यांदा काही सेकंद)...",
+        pdf:"PDF (मराठी)", pdfen:"PDF (English)", evidence:"पुरावा पॅक (JSON)",
+        intent_llm:"प्रश्न समजला: AI", intent_rule:"प्रश्न समजला: नियम (AI उपलब्ध नाही)",
+        words_llm:"मजकूर: AI + कोड तपासणी", words_tpl:"मजकूर: ठरावीक साचे", verified:"तपासणी: उत्तीर्ण", notverified:"तपासणी: अयशस्वी",
+        secs:"से.", your_q:"प्रश्न:", source:"स्रोत", computed:"गणना", inputs:"यावरून", file:"फाईल", sheet:"शीट", page:"पान",
+        rows:"ओळी", view:"टेबल", filter:"अट", nrows:"ओळींची संख्या", constant:"नियमातील ठरलेली मर्यादा", more:"आणखी",
+        schools:"शाळा", talukas:"तालुके", code:"UDISE कोड", name:"नाव", taluka:"तालुका", synth_note:"कृत्रिम डेटा: स्रोत फाईल्स डेमोसाठी तयार केल्या आहेत.",
+        err:"त्रुटी:" },
+  en: { tagline:"AI data analyst for education officers", dataset:"Data:", wa:"WhatsApp demo →",
+        synthetic:"⚠️ SYNTHETIC demo data - the figures here are not real and the findings are not real.",
+        q:"Your question (Marathi or English)", ask:"Ask", examples:"Example questions", history:"Earlier questions",
+        empty:"Type a question on the left or pick an example. Click any figure to see where it comes from.",
+        working:"Analysing...", loading:"Preparing data (a few seconds the first time)...",
+        pdf:"PDF (Marathi)", pdfen:"PDF (English)", evidence:"Evidence pack (JSON)",
+        intent_llm:"Question read by: AI", intent_rule:"Question read by: rules (AI unavailable)",
+        words_llm:"Wording: AI + code checks", words_tpl:"Wording: fixed templates", verified:"Checks: passed", notverified:"Checks: failed",
+        secs:"s", your_q:"Question:", source:"Source", computed:"Computed as", inputs:"From", file:"File", sheet:"Sheet", page:"Page",
+        rows:"Rows", view:"Table", filter:"Filter", nrows:"Rows matched", constant:"Fixed threshold in the rule", more:"more",
+        schools:"Schools", talukas:"Talukas", code:"UDISE code", name:"Name", taluka:"Taluka", synth_note:"Synthetic data: the source files were generated for the demo.",
+        err:"Error:" },
+};
+const state = { lang:"mr", dataset:null, datasets:[], answer:null, history:[], busy:false };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function t(k) { return UI[state.lang][k]; }
+
+function applyUI() {
+  document.documentElement.lang = state.lang;
+  for (const [id, key] of [["tagline","tagline"],["lbl-dataset","dataset"],["link-wa","wa"],["synthetic","synthetic"],["lbl-q","q"],
+                           ["ask-btn","ask"],["lbl-examples","examples"],["lbl-history","history"]]) $(id).textContent = t(key);
+  $("lang-mr").classList.toggle("on", state.lang === "mr");
+  $("lang-en").classList.toggle("on", state.lang === "en");
+  renderDatasets(); renderExamples(); renderHistory(); renderAnswer();
+}
+
+function renderDatasets() {
+  const sel = $("dataset");
+  sel.innerHTML = state.datasets.map(d => `<option value="${esc(d.id)}" ${d.id === state.dataset ? "selected" : ""}>${esc(d.label[state.lang])}</option>`).join("");
+}
+
+function current() { return state.datasets.find(d => d.id === state.dataset); }
+
+function renderExamples() {
+  const d = current();
+  const box = $("examples");
+  if (!d || !d.examples) { box.innerHTML = `<div class="sub"><span class="spinner"></span>${esc(t("loading"))}</div>`; return; }
+  box.innerHTML = d.examples.map((e, i) => `<button class="chip" data-i="${i}" type="button">${esc(e.text)}</button>`).join("");
+}
+
+function renderHistory() {
+  $("history").innerHTML = state.history.map((h, i) =>
+    `<li data-i="${i}">${esc(h.question)}<span class="st">${esc(h.status === "ok" ? "✓" : h.status)}</span></li>`).join("");
+}
+
+function renderAnswer() {
+  const a = state.answer, box = $("answer");
+  if (!a) { box.innerHTML = `<div class="empty">${esc(t("empty"))}</div>`; return; }
+  if (a.error) { box.innerHTML = `<div class="error">${esc(t("err"))} ${esc(a.error)}</div>`; return; }
+  const L = state.lang, info = a.info || {};
+  const q = `<div class="question-echo"><b>${esc(t("your_q"))}</b> ${esc(a.question)}</div>`;
+  const pills = [`<span class="pill">${esc(info.intent_source === "llm" ? t("intent_llm") : t("intent_rule"))}</span>`];
+  if (a.status !== "ok") {
+    box.innerHTML = q + `<div class="meta">${pills.join("")}</div><div class="reply ${esc(a.status)}">${esc(a.reply[L])}</div>`;
+    return;
+  }
+  const llmWords = (info.wording || []).some(w => w.startsWith("llm"));
+  pills.push(`<span class="pill">${esc(llmWords ? t("words_llm") : t("words_tpl"))}</span>`);
+  pills.push(`<span class="pill ${info.verified ? "ok" : "bad"}">${esc(info.verified ? t("verified") : t("notverified"))}</span>`);
+  pills.push(`<span class="pill">${esc(info.seconds)} ${esc(t("secs"))}</span>`);
+  const id = encodeURIComponent(a.brief_id);
+  const tools = `<div class="toolbar">
+      <a class="btn ghost" href="/api/briefs/${id}/pdf?lang=mr" target="_blank" rel="noopener">⬇ ${esc(t("pdf"))}</a>
+      <a class="btn ghost" href="/api/briefs/${id}/pdf?lang=en" target="_blank" rel="noopener">⬇ ${esc(t("pdfen"))}</a>
+      <a class="btn ghost" href="/api/briefs/${id}/evidence" target="_blank" rel="noopener">{ } ${esc(t("evidence"))}</a></div>`;
+  const notes = (a.summary[L].notes || []).length ? `<div class="notes">${a.summary[L].notes.map(n => "👉 " + esc(n)).join("<br>")}</div>` : "";
+  box.innerHTML = q + tools + `<div class="meta">${pills.join("")}</div>` + notes + a.html[L];   // brief HTML is built and escaped by the server
+}
+
+async function loadDatasets() {
+  const r = await fetch("/api/datasets");
+  state.datasets = await r.json();
+  if (!state.dataset) state.dataset = (state.datasets.find(d => d.default) || state.datasets[0]).id;
+  renderDatasets(); renderExamples();
+  const d = current();
+  if (d && !d.examples) {   // first use of this dataset: the server prepares it (generates it if missing)
+    const r2 = await fetch(`/api/datasets/${encodeURIComponent(d.id)}/examples`);
+    if (r2.ok) { d.examples = await r2.json(); d.ready = true; }
+    if (d.id === state.dataset) renderExamples();
+  }
+}
+
+async function ask(question) {
+  if (state.busy || !question.trim()) return;
+  state.busy = true; $("ask-btn").disabled = true;
+  $("status").innerHTML = `<span class="spinner"></span>${esc(t("working"))}`;
+  try {
+    const r = await fetch("/api/ask", { method:"POST", headers:{"Content-Type":"application/json"},
+                                       body: JSON.stringify({ question, dataset: state.dataset }) });
+    const body = await r.json();
+    if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+    state.answer = body; state.history.unshift(body); state.history = state.history.slice(0, 20);
+  } catch (e) {
+    state.answer = { error: e.message };
+  } finally {
+    state.busy = false; $("ask-btn").disabled = false; $("status").textContent = "";
+    renderAnswer(); renderHistory();
+  }
+}
+
+function openDrawer(html) { $("drawer-body").innerHTML = html; $("drawer").classList.add("open"); }
+
+function provHtml(p) {
+  const rows = [];
+  if (p.kind === "constant") return `<div class="prov">${esc(t("constant"))}: <code>${esc(p.rule_id)} / ${esc(p.name)}</code></div>`;
+  if (p.file) rows.push(`<b>${esc(t("file"))}:</b> ${esc(p.file)}`);
+  if (p.sheet) rows.push(`<b>${esc(t("sheet"))}:</b> ${esc(p.sheet)}`);
+  if (p.page) rows.push(`<b>${esc(t("page"))}:</b> ${esc(p.page)}${p.section ? " · " + esc(p.section) : ""}`);
+  if (p.view) rows.push(`<b>${esc(t("view"))}:</b> ${esc(p.view)}`);
+  if (p.where) rows.push(`<b>${esc(t("filter"))}:</b> <code>${esc(JSON.stringify(p.where))}</code>`);
+  if (p.columns) rows.push(`<b>Columns:</b> ${esc(p.columns.join(", "))}`);
+  for (const k of ["rows", "sr_no"]) if (p[k]) rows.push(`<b>${esc(k === "rows" ? t("rows") : "Sr. No.")}:</b> ${esc(p[k].join(", "))}${p[k + "_total"] ? ` (+${p[k + "_total"] - p[k].length} ${esc(t("more"))})` : ""}`);
+  if (p.n_rows !== undefined) rows.push(`<b>${esc(t("nrows"))}:</b> ${esc(p.n_rows)}`);
+  return `<div class="prov">${rows.join("<br>")}</div>`;
+}
+
+async function showNumber(nid) {
+  const a = state.answer; if (!a || !a.brief_id) return;
+  const r = await fetch(`/api/briefs/${encodeURIComponent(a.brief_id)}/number?id=${encodeURIComponent(nid)}`);
+  if (!r.ok) return;
+  const n = await r.json(), L = state.lang;
+  let h = `<h3>${esc(t("source"))}</h3><div class="big">${esc(n.display[L])}</div>`;
+  if (n.entity) h += `<div class="sub">${esc(n.entity[L])}${n.of ? " · " + esc(n.of) : ""}</div>`;
+  if (n.op) h += `<p><b>${esc(t("computed"))}:</b> <code>${esc(n.op)}</code>${n.inputs.length ? `<br><b>${esc(t("inputs"))}:</b> ` + n.inputs.map(i => esc(i.display[L])).join(", ") : ""}</p>`;
+  h += n.provenance.map(provHtml).join("");
+  h += `<p class="sub" style="color:#777"><code>${esc(n.id)}</code></p>`;
+  if (n.synthetic) h += `<p style="font-size:12px;color:#a15c00">${esc(t("synth_note"))}</p>`;
+  openDrawer(h);
+}
+
+async function showSet(sid) {
+  const a = state.answer; if (!a || !a.brief_id) return;
+  const r = await fetch(`/api/briefs/${encodeURIComponent(a.brief_id)}/set?id=${encodeURIComponent(sid)}`);
+  if (!r.ok) return;
+  const s = await r.json(), L = state.lang;
+  const schools = s.kind === "school";
+  let h = `<h3>${esc(schools ? t("schools") : t("talukas"))}: ${esc(s.size)}</h3><p class="sub"><code>${esc(s.rule_id)}</code></p>`;
+  h += `<table><tr><th>${esc(schools ? t("code") : "ID")}</th><th>${esc(t("name"))}</th>${schools ? `<th>${esc(t("taluka"))}</th>` : ""}</tr>` +
+       s.members.map(m => `<tr><td><code>${esc(m.code || m.id)}</code></td><td>${esc(m.name[L])}</td>${schools ? `<td>${esc(m.taluka ? m.taluka[L] : "")}</td>` : ""}</tr>`).join("") + "</table>";
+  if (s.synthetic) h += `<p style="font-size:12px;color:#a15c00">${esc(t("synth_note"))}</p>`;
+  openDrawer(h);
+}
+
+$("ask-form").addEventListener("submit", (e) => { e.preventDefault(); ask($("q").value); });
+$("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask($("q").value); } });
+$("examples").addEventListener("click", (e) => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  const ex = current().examples[+b.dataset.i]; $("q").value = ex.text; ask(ex.text);
+});
+$("history").addEventListener("click", (e) => {
+  const li = e.target.closest("li"); if (!li) return;
+  state.answer = state.history[+li.dataset.i]; $("q").value = state.answer.question; renderAnswer();
+});
+$("dataset").addEventListener("change", (e) => { state.dataset = e.target.value; state.answer = null; renderAnswer(); loadDatasets(); });
+$("lang-mr").addEventListener("click", () => { state.lang = "mr"; applyUI(); });
+$("lang-en").addEventListener("click", () => { state.lang = "en"; applyUI(); });
+$("answer").addEventListener("click", (e) => {
+  const n = e.target.closest(".num"); if (n) return showNumber(n.dataset.n);
+  const s = e.target.closest(".set"); if (s) return showSet(s.dataset.s);
+});
+$("drawer-close").addEventListener("click", () => $("drawer").classList.remove("open"));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("drawer").classList.remove("open"); });
+
+const params = new URLSearchParams(location.search);   // shareable demo links: /?q=...&lang=en&dataset=fictional
+if (params.get("lang") === "en") state.lang = "en";
+if (params.get("dataset")) state.dataset = params.get("dataset");
+applyUI();
+loadDatasets().then(() => { if (params.get("q")) { $("q").value = params.get("q"); ask(params.get("q")); } });
+</script>
+</body>
+</html>

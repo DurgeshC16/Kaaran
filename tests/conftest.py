@@ -142,3 +142,15 @@ def _llm_replay_mode(request, monkeypatch, tmp_path):
     reset_client(None)
     yield
     reset_client(None)
+
+
+# ---------- demo service (web + WhatsApp) over the session's seed-42 data ----------
+
+
+@pytest.fixture(scope="session")
+def demo_service(demo_dir):
+    """Service over the generated seed-42 folder (PDFs and caches go to the temp folder, never the repo)."""
+    from kaaran.service import DatasetSpec, Service
+
+    spec = DatasetSpec("demo", 42, "solapur", str(demo_dir), "डेमो", "Demo")
+    return Service({"demo": spec}, default="demo")

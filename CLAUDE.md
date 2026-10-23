@@ -32,6 +32,7 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Eval scorecard vs answer key: `.venv\Scripts\python -m kaaran.eval --seed 42` (repeat `--seed`; `--names fictional`; `--layout variant_b --proposer llm`)
 - Intent eval (25 questions): `.venv\Scripts\python -m kaaran.eval.intent --tier light --tier main --tier rule`
 - Brief eval (verifier pass, invented numbers, cost): `.venv\Scripts\python -m kaaran.eval.brief --seed 42 [--samples data/samples]`
+- Demo server (web + WhatsApp webhook): `.venv\Scripts\python -m kaaran.api` (http://127.0.0.1:8000, simulator at /whatsapp; setup in docs/DEMO.md)
 - Prompt-injection check: `.venv\Scripts\python -m kaaran.eval.guardrails`
 - Mapping eval (baseline vs LLM, both layouts): `.venv\Scripts\python -m kaaran.eval.mapping --seed 42` (`KAARAN_LLM_MODE=live` to record new responses)
 
@@ -44,7 +45,10 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - src/kaaran/llm: Anthropic wrapper (cache/replay, usage log, spend cap), file summaries, mapping proposer
 - llm_cache/: recorded LLM responses (committed; synthetic inputs only)
 - src/kaaran/brief: Brief Writer (texts.py wording, render.py placeholder filling, writer.py LLM + fallback)
-- src/kaaran/api: later (Phase 4)
+- src/kaaran/service.py: demo service (datasets, cached packs/briefs, question -> clarify | refuse | brief + summary)
+- src/kaaran/brief/html.py, pdf.py: interactive/print HTML brief; PDF via headless Edge/Chrome
+- src/kaaran/whatsapp.py: WhatsApp bot, Cloud API client, webhook signature + de-duplication
+- src/kaaran/api: FastAPI app (web demo, drill-down, PDF, webhook, simulator) and static pages
 - tests/: pytest suites
 - data/synthetic/: generated data (git-ignored except small samples)
 - docs/: specs (see docs/SYNTHETIC_DATA_SPEC.md); docs/source/ holds local-only originals (git-ignored)

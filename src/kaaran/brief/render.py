@@ -142,7 +142,8 @@ def render_markdown(pack: dict, prose: dict[str, dict], lang: str, sources: dict
     if pack.get("synthetic"):
         lines += [f"> **{X.BANNER[i]}**", ""]
     q = X.QUESTION.get(pack["scope"].get("question"))
-    if q:
+    trend = next((f for f in pack["findings"] if f["type"] == "TREND"), None)
+    if q and trend is not None and trend["template_key"].startswith("trend.decline"):  # "why did it fall?" only if it fell
         lines += [f"**{'प्रश्न' if lang == 'mr' else 'Question'}:** {q[i].format(taluka=focus_name)}", ""]
     outline = {o["section"]: o["finding_ids"] for o in pack["outline"]}
     for name in list(X.REQUIRED_SECTIONS) + ["appendix"]:

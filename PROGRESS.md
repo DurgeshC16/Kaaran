@@ -4,7 +4,14 @@ Deadline: 2026-11-01 (submit by afternoon).
 Budget: development <= $180, runtime/evals <= $60, demo/judging <= $40. Reserve untouched.
 Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 
-## Current phase: 4 next (web demo + PDF, Oct 27-29). Phase 3 (AI layers) done 2026-10-23.
+## Current phase: 4 in progress. Web demo + WhatsApp demo (typed questions, synthetic data) done 2026-10-24. Phase 3 (AI layers) done 2026-10-23.
+
+Phase 4 stages:
+- [x] Demo service, HTML/PDF brief, web demo with click-to-source and school drill-down
+- [x] WhatsApp: Cloud API webhook (signature, dedupe), bot (summary + PDF), local simulator
+- [ ] Voice in (Marathi speech-to-text) and voice summary out
+- [ ] Officer file upload (web), then WhatsApp media
+- [ ] Deploy (public link) + real Meta test number connected
 
 Phase 3 stages:
 - [x] Stage 0: LLM foundation (anthropic 2.1.0, wrapper with cache/replay, usage log, spend cap; auth + model ids verified live)
@@ -25,6 +32,25 @@ Phase 2 stages:
 - [x] Phase 2B: Stage 4 causes, Stage 5 twins (+ taluka profile file), Stage 6 analyze + eval harness, Stage 7 real sample pack
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
+
+## Phase 4 result, part 1: web + WhatsApp demo (2026-10-24)
+- Run: `python -m kaaran.api` -> http://127.0.0.1:8000 (web), /whatsapp (simulator), /whatsapp/webhook (Meta). Setup and demo script: docs/DEMO.md.
+- `src/kaaran/service.py`:
+  - Datasets: `solapur` (seed 42) and `fictional` (seed 7), generated if missing.
+  - Ingest, trust and all taluka packs are built once per dataset (about 5 s). Briefs and PDFs are cached.
+  - `ask()` runs intent -> clarify | refuse | brief, then a code-built summary with "which section answers you" notes.
+- `brief/html.py` + `brief/pdf.py`: interactive HTML (numbers and school counts are click targets) and a one-page A4 PDF via headless Edge/Chrome (Devanagari shaped correctly; about 2 s).
+- Web UI (no external resources): Marathi/English toggle, examples, history, PDF/evidence downloads, drawers for sources (file, sheet/page, rows, derivation) and school/taluka lists.
+- `whatsapp.py`:
+  - Graph v26.0 client: text messages, PDF upload to /media, document messages.
+  - Webhook: HMAC-SHA256 check of X-Hub-Signature-256 (POST rejected without the app secret), message-id de-duplication.
+  - Background processing; masked event log.
+  - Commands: help, english, marathi. Typed questions only.
+- Recorded for the offline demo: example-question intents (14, all correct) and AI wording for all 22 briefs (11 talukas x 2 datasets). All 22 passed the verifier on the first attempt, with 0 template fallbacks.
+- **Live spend: $0.64** (about $0.03 per brief).
+- Fix: the Markdown brief shows "why did it fall?" only when the trend is a decline.
+- Tests: 203 passed, 3 skipped (live), full suite about 5 min. New: test_service, test_whatsapp, test_api.
+- Not done in this part: voice in/out, file upload, template messages after 24 h, deploy, connecting a real Meta number (needs the user's credentials and a tunnel).
 
 ## Phase 3 result (2026-10-23)
 - LLM layer (`src/kaaran/llm`): anthropic 2.1.0. The wrapper has a replay cache (`llm_cache/`, 62 recordings committed), a usage log and a per-process spend cap. Tests and evals replay offline; live is opt-in (`pytest --live`, `KAARAN_LLM_MODE=live`).
@@ -60,12 +86,13 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - Code: src/kaaran/synth/{config,rng,entities,plant,tables,ground_truth,messy,writers,generate,__main__}.py; tests/{conftest,test_smoke,test_truths_clean,test_raw_files,test_cli,test_determinism}.py.
 
 ## Next task
-Phase 4 (Oct 27-29), web demo + PDF:
-- FastAPI app: question (text, Marathi recording later) + file upload -> intent -> ingest (LLM mapping, rule fallback) -> trust -> analyze -> brief.
-- Devanagari one-page PDF of the brief.
-- School drill-down from the full pack, done in code (never from the LLM).
-- Show the SYNTHETIC banner everywhere.
-- Native-speaker review of data/samples/brief_seed*_mr.md, in parallel with user testing.
+Phase 4, part 2:
+- Connect the real WhatsApp test number. User steps: Meta app + `.env` values + tunnel, as in docs/DEMO.md section 3.
+- Then demo-record the WhatsApp segment.
+- Voice in/out (Bhashini or Google STT/TTS; needs a decision on the provider and keys).
+- Officer file upload on the web (needs `python-multipart`, a new dependency to approve). It runs the LLM mapping proposer on the uploaded files.
+- Deploy (public link) and user testing; native-speaker review of the Marathi briefs and the UI strings.
+- Move `data/Report_Solapur_IND27496.pdf` (real data, untracked) into `data/real/` (git-ignored).
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
@@ -126,17 +153,10 @@ Phase 4 (Oct 27-29), web demo + PDF:
 - 2026-10-23 Correlational wording fix: the "association, not cause" caveat goes on WEAK findings only.
 - 2026-10-23 Brief prose is per finding (not per section), so the verifier can check that placeholders belong to the finding. Marathi case endings go on "तालुका" (stem changes of place names need a native form).
 - 2026-10-23 The verifier allows the connective "त्यामुळे" (therefore) and negated causal sentences. Every other causal word outside a STRONG cause fails.
-
-## Spend ledger
-| Date | What | Spend ($) | Cumulative ($) |
-|------|------|-----------|----------------|
-| 2026-10-23 13:55 | Phase 1 + Phase 2 stages 0-3 (incl. three Opus plan reviews) | 35 | 35 |
-
-## Schedule (re-planned 2026-10-23)
-- Phase 2, deterministic core engines: Oct 23-25
-- Phase 3, AI layers: Oct 25-27
-- Phase 4, web demo + PDF: Oct 27-29
-- User testing: in parallel, until Oct 28
-- Hardening and deploy: Oct 30
-- Video and deck: Oct 31
-- Submit: Nov 1 afternoon
+- 2026-10-24 Phase 4 demo scope (user): typed questions only, on the existing synthetic datasets. Voice in/out and file upload through WhatsApp are deferred.
+- 2026-10-24 Dependencies added for the demo: fastapi 0.161.1, uvicorn 0.54.0, httpx 0.28.1 (pinned). File upload would need python-multipart (not added).
+- 2026-10-24 PDF = the print HTML rendered by headless Edge/Chrome (reportlab cannot shape Devanagari). Without a browser, the PDF link returns 503 and /print serves the HTML.
+- 2026-10-24 One brief type per taluka (the evidence pack). The question decides the taluka, and a code-written note points to the section that answers it. Comparisons answer the first taluka and ask for a second question.
+- 2026-10-24 Replies are Marathi first. WhatsApp switches language per sender with "english" / "marathi".
+- 2026-10-24 WhatsApp webhook POSTs must carry a valid X-Hub-Signature-256. Without WHATSAPP_APP_SECRET every POST is rejected (no unsigned mode).
+- 2026-10-24 The brief and PDF never name schools (verifier). School lists appear only in the local web drill-down.
