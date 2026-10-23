@@ -76,7 +76,7 @@ Ids are deterministic and meaningful (e.g. `n.score_mean.T08.2025-26`, `set.vaca
 - **Badges**: badge text keys are `label.<TYPE>.<LABEL>`, so the Marathi wording can differ by type (a WEAK cause vs a WEAK trend).
 - **Criteria**: `criteria[]` lists each rule criterion `{id, number?, threshold?, passed}`, so the brief can explain why a label was given.
 
-## Template keys (registry v1; required params)
+## Template keys (registry v2; required params)
 - `trend.decline_rank`, `trend.rise_rank`: taluka, period, score_from, score_to, change, rank_from, rank_to
 - `trend.no_clear_change`: taluka, period, change
 - `cause.election.similar_blocks_no_drop`: taluka, period, focus_change, similar (set), n_similar_no_drop
@@ -92,6 +92,22 @@ Ids are deterministic and meaningful (e.g. `n.score_mean.T08.2025-26`, `set.vaca
 - `action.verify_registers`: taluka, schools (set)
 - `action.collect_missing_data`: taluka, schools (set)
 
+Added in v2:
+- WEAK uses "associated with" wording: `trend.decline_weak`, `cause.vacancy.associated`, `cause.election.associated`, `cause.infra.associated`, `cause.attendance.associated`.
+- RULED_OUT uses "no link found" wording: `cause.vacancy.no_link`, `cause.election.no_link`, `cause.infra.no_link`, `cause.attendance.no_link`.
+- INSUFFICIENT: `cause.inconclusive` (taluka, hypothesis text key); `twin.none_found` (focus).
+- `cause.vacancy.concentrated` is the only causal-sounding key. The validator rejects it unless the label is STRONG.
+
+Required params for the v2 keys:
+- `trend.decline_weak`: as `trend.decline_rank`
+- `cause.vacancy.associated`: taluka, subject, schools, group_change, others_change
+- `cause.vacancy.no_link`: taluka, subject, group_change, others_change
+- `cause.election.associated`: as `cause.election.similar_blocks_no_drop`
+- `cause.election.no_link`: taluka, period, focus_change
+- `cause.infra.associated`, `cause.attendance.associated`: taluka, r
+- `cause.inconclusive`: taluka, hypothesis
+- `twin.none_found`: focus
+
 **Caveat keys**:
 - `caveat.synthetic_data`
 - `caveat.associated_not_caused`
@@ -101,7 +117,7 @@ Ids are deterministic and meaningful (e.g. `n.score_mean.T08.2025-26`, `set.vaca
 - `caveat.small_sample`
 - `caveat.flagged_data_excluded` (schools)
 
-**Text keys**: `subject.maths`, `subject.language`, `question.why_decline`.
+**Text keys**: `subject.maths`, `subject.language`, `question.why_decline`, `hypothesis.vacancy|election|infrastructure|attendance`.
 
 ## What may go to an LLM (rule 5)
 Only `llm_view(pack)`:

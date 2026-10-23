@@ -17,7 +17,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 SCHEMA_VERSION = "1.0"
-TEMPLATE_REGISTRY_VERSION = "1"
+TEMPLATE_REGISTRY_VERSION = "2"
 
 FINDING_TYPES = ("TREND", "CAUSE", "TWIN", "DATA", "ACTION")
 LABELS = ("STRONG", "WEAK", "INSUFFICIENT", "RED_FLAG", "LEARN_FROM", "ACTION", "RULED_OUT", "CLEARED")
@@ -56,7 +56,7 @@ CANONICAL_VIEWS = {
 # Rule ids; each must be described in docs/CONFIDENCE_RULES.md.
 RULE_IDS = (
     "TREND-STRONG", "TREND-WEAK", "TREND-INSUFFICIENT",
-    "CAUSE-SCHOOL-EXPOSURE", "CAUSE-ELECTION", "CAUSE-RULED-OUT", "CAUSE-INSUFFICIENT",
+    "CAUSE-SCHOOL-EXPOSURE", "CAUSE-ELECTION", "CAUSE-CORRELATION", "CAUSE-RULED-OUT", "CAUSE-INSUFFICIENT",
     "TWIN-LEARN-FROM", "TWIN-NONE",
     "TRUST-FLAT-SCHOOL", "TRUST-FLAT-TALUKA", "TRUST-JUMP-ATTENDANCE", "TRUST-SPIKE-SCORE",
     "TRUST-MISSING-SCHOOL", "TRUST-INSUFFICIENT-TALUKA", "TRUST-DUPLICATE-CONFLICT", "TRUST-CLEARED",
@@ -80,7 +80,19 @@ TEMPLATE_KEYS = {
     "action.exposure_visit": {"twin", "focus"},
     "action.verify_registers": {"taluka", "schools"},
     "action.collect_missing_data": {"taluka", "schools"},
+    # v2: association wording (WEAK), "no link" wording (RULED_OUT) and an inconclusive key (INSUFFICIENT).
+    # Only cause.vacancy.concentrated is causal in tone, and it is used only when the STRONG criteria pass.
+    "trend.decline_weak": {"taluka", "period", "score_from", "score_to", "change", "rank_from", "rank_to"},
+    "cause.vacancy.associated": {"taluka", "subject", "schools", "group_change", "others_change"},
+    "cause.vacancy.no_link": {"taluka", "subject", "group_change", "others_change"},
+    "cause.election.associated": {"taluka", "period", "focus_change", "similar", "n_similar_no_drop"},
+    "cause.election.no_link": {"taluka", "period", "focus_change"},
+    "cause.infra.associated": {"taluka", "r"},
+    "cause.attendance.associated": {"taluka", "r"},
+    "cause.inconclusive": {"taluka", "hypothesis"},
+    "twin.none_found": {"focus"},
 }
+CAUSAL_TEMPLATE_KEYS = {"cause.vacancy.concentrated"}  # only with a STRONG label
 CAVEAT_KEYS = {
     "caveat.synthetic_data": set(),
     "caveat.associated_not_caused": set(),
@@ -90,7 +102,8 @@ CAVEAT_KEYS = {
     "caveat.small_sample": set(),
     "caveat.flagged_data_excluded": {"schools"},
 }
-TEXT_KEYS = {"subject.maths", "subject.language", "question.why_decline"}
+TEXT_KEYS = {"subject.maths", "subject.language", "question.why_decline",
+             "hypothesis.vacancy", "hypothesis.election", "hypothesis.infrastructure", "hypothesis.attendance"}
 DERIVATION_OPS = ("mean", "sum", "count", "count_distinct", "diff", "ratio", "pct", "share_of_decline", "rank_desc",
                   "paired_t", "corr", "max_run", "set_size", "mean_change", "count_where")
 
@@ -353,6 +366,8 @@ def validate(pack: dict) -> list[str]:
             p.append(f"{fid}: unknown template_key {key!r}")
         else:
             _check_params(f.get("params", {}), TEMPLATE_KEYS[key], fid, pack, p)
+        if key in CAUSAL_TEMPLATE_KEYS and f.get("label") != "STRONG":
+            p.append(f"{fid}: causal wording {key!r} is only allowed with a STRONG label")
         if ftype == "CAUSE" and f.get("hypothesis") not in HYPOTHESES:
             p.append(f"{fid}: CAUSE needs hypothesis in {HYPOTHESES}")
         for c in f.get("criteria", []):
@@ -389,3 +404,86 @@ def contains_identifiers(obj) -> list[str]:
     """School-level identifiers (9-11 digit codes) found anywhere in obj; used to test llm_view."""
     text = json.dumps(obj, ensure_ascii=False)
     return re.findall(r"(?<![0-9a-f])\d{9,11}(?![0-9a-f])", text)
+
+
+# ---------- builder used by the engines ----------
+
+
+class Builder:
+    """Accumulates entities, sets, periods, numbers and findings with deterministic ids."""
+
+    def __init__(self, tables: dict) -> None:
+        self.tables = tables
+        self.entities: dict = {}
+        self.entity_sets: dict = {}
+        self.periods: dict = {}
+        self.numbers: dict = {}
+        self.findings: list = []
+        t = tables["talukas"]
+        self._talukas = {r.taluka_id: r for r in t.itertuples(index=False)}
+        self._schools = tables["schools"].set_index("udise_code")
+
+    def source(self, view: str) -> str:
+        return str(self.tables[view]["src_id"].iloc[0])
+
+    def taluka(self, tid: str) -> str:
+        r = self._talukas[tid]
+        self.entities[tid] = {"kind": "taluka", "code": r.block_code, "name_en": r.taluka,
+                              **({"name_mr": r.taluka_mr} if isinstance(r.taluka_mr, str) and r.taluka_mr else {})}
+        return tid
+
+    def school_set(self, sid: str, rule_id: str, codes) -> str:
+        for c in codes:
+            self.entities[f"S{c}"] = {"kind": "school", "code": c, "name_en": self._schools.at[c, "school_name"],
+                                      "taluka": self.taluka(self._schools.at[c, "taluka_id"])}
+        self.entity_sets[sid] = {"kind": "school", "rule_id": rule_id, "members": [f"S{c}" for c in sorted(codes)]}
+        return sid
+
+    def taluka_set(self, sid: str, rule_id: str, tids) -> str:
+        self.entity_sets[sid] = {"kind": "taluka", "rule_id": rule_id, "members": [self.taluka(t) for t in sorted(tids)]}
+        return sid
+
+    def period(self, kind: str, frm: str, to: str) -> str:
+        pid = f"p.{frm}" if frm == to else f"p.{frm}_{to}"
+        self.periods[pid] = {"kind": kind, "from": frm, "to": to}
+        return pid
+
+    def query(self, view: str, where: dict, n_rows: int) -> dict:
+        return {"kind": "query", "source": self.source(view), "view": view, "where": where, "n_rows": max(int(n_rows), 1)}
+
+    @staticmethod
+    def constant(rule_id: str, name: str) -> dict:
+        return {"kind": "constant", "rule_id": rule_id, "name": name}
+
+    def number(self, nid: str, value, unit: str, decimals: int, prov=None, op=None, inputs=None, entity=None, n=None, **extra) -> str:
+        d = {"value": round(float(value), decimals) if decimals else int(round(float(value))), "unit": unit, "decimals": decimals, **extra}
+        if n is not None:
+            d["n"] = int(n)
+        if entity:
+            d["entity"] = entity
+        if op:
+            d["derivation"] = {"op": op, "inputs": list(inputs or [])}
+        d["provenance"] = list(prov or [])
+        self.numbers[nid] = d
+        return nid
+
+    def finding(self, **f) -> dict:
+        f.setdefault("criteria", [])
+        f.setdefault("sample", {})
+        f.setdefault("caveats", [])
+        f.setdefault("related", [])
+        self.findings.append(f)
+        return f
+
+    def fragment(self) -> dict:
+        return {"entities": self.entities, "entity_sets": self.entity_sets, "periods": self.periods,
+                "numbers": self.numbers, "findings": self.findings}
+
+
+def merge_fragments(*fragments: dict) -> dict:
+    out = {"entities": {}, "entity_sets": {}, "periods": {}, "numbers": {}, "findings": []}
+    for fr in fragments:
+        for k in ("entities", "entity_sets", "periods", "numbers"):
+            out[k].update(fr.get(k, {}))
+        out["findings"] += fr.get("findings", [])
+    return out

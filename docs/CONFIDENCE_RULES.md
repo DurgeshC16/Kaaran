@@ -45,16 +45,38 @@ Full raw pipeline (generate -> ingest raw files -> trust) on 20 seeds: 1, 2, 3, 
 
 The sweep caught one real defect, which is fixed. Name matching first required a unique best match per short code. In seeds 1 and 2, two schools missing from the crosswalk had near-identical names (Palewadi / Palwad), so both were left unresolved and wrongly looked like schools with no attendance. Matching is now a one-to-one assignment within the taluka.
 
-## Analysis rules (Phase 2B)
+## Analysis rules (Phase 2B, implemented in src/kaaran/confidence.py)
+Inputs: canonical tables after trust exclusions (flagged score/attendance cells removed). Talukas marked INSUFFICIENT get INSUFFICIENT findings.
+
+The scores metric is the unweighted mean of school means. Changes run from the first to the last year in the file.
+
+**Trend**
+
+| rule_id | Gives | Rule and constants | Rationale |
+|---|---|---|---|
+| TREND-STRONG | TREND STRONG (`trend.decline_rank` / `trend.rise_rank`) | School-level paired t <= `TREND_T_STRONG` = -3, abs(change) >= `TREND_MIN_CHANGE` = 2 points, and below (above) the starting level in each of the last `TREND_PERSIST_YEARS` = 3 years | t <= -3 is about p < 0.005 for ~100+ schools. 2 points is about one between-taluka SD. Persistence separates a decline from a one-year dip ("holds across years") |
+| TREND-WEAK | TREND WEAK (`trend.decline_weak` or `trend.no_clear_change`) | Paired t <= `TREND_T_WEAK` = -2 without the other criteria, or no clear change | A pattern that does not meet the STRONG bar |
+| TREND-INSUFFICIENT | TREND INSUFFICIENT | The taluka is INSUFFICIENT in trust | Too much data missing to judge |
+
+**Causes**
+
+| rule_id | Gives | Rule and constants | Rationale |
+|---|---|---|---|
+| CAUSE-SCHOOL-EXPOSURE | CAUSE STRONG (`cause.vacancy.concentrated`), else WEAK (`cause.vacancy.associated`) | Exposure = a school reported 0 working maths teachers from some year after the first. STRONG needs all four: (1) Welch t of first-to-last change, exposed vs unexposed in the focus taluka, <= `EXPOSURE_T_STRONG` = -3; (2) the exposed schools account for >= `EXPOSURE_MIN_SHARE` = 50% of the taluka's decline; (3) the same comparison outside the focus taluka (>= 3 exposed schools) gives t <= `REPLICATION_T` = -3; (4) before exposure the exposed schools changed by no more than `PRE_EXPOSURE_MAX_CHANGE` = 2 points. WEAK if only t <= -2 | The documented STRONG criteria: effect, size ("main" cause), replication elsewhere and timing. This is the only case where causal wording is allowed |
+| CAUSE-ELECTION | CAUSE WEAK (`cause.election.similar_blocks_no_drop`, or `cause.election.associated`) | Exposure = >= `ELECTION_HEAVY_PCT` = 30% of teachers deployed in >= `ELECTION_HEAVY_MONTHS` = 2 months of a year. The focus taluka "dropped" if its change into the exposure year is <= `DROP_POINTS` = -1.0. If it dropped and >= `SIMILAR_NO_DROP_SHARE` = 2/3 of the other exposed talukas did not, the result is "similar blocks with the same duty did not drop" | -1.0 is about 2 standard errors of a taluka mean. Exposure is at taluka level with about 7 units, so this is never STRONG |
+| CAUSE-CORRELATION | CAUSE WEAK (`cause.infra.associated` / `cause.attendance.associated`) | abs(t) of the correlation >= `CORR_T_ASSOCIATED` = 3 | Association only, never causal |
+| CAUSE-RULED-OUT | CAUSE RULED_OUT (`*.no_link`) | Correlation abs(t) < `CORR_T_NO_LINK` = 2. For infrastructure, the worst-infrastructure taluka must also have changed by no more than `LOWEST_INFRA_STABLE` = 1 point. Election: the focus taluka did not drop. Vacancy: t > -2 | Officers read it as "no link found in this data" |
+| CAUSE-INSUFFICIENT | CAUSE INSUFFICIENT (`cause.inconclusive`) | Between the no-link and association bars, a failed stability check, fewer than 10 schools, or an INSUFFICIENT taluka | Honest "cannot tell" |
+
+**Correlational hypotheses**
+- Infrastructure index (pre-registered): the mean of the district-standardised toilets, library (1/0), drinking water (1/0) and classrooms per enrolled pupil, correlated with each school's score change.
+- Attendance: the school's mean attendance in the school year the attendance file mostly covers, with flagged months excluded, correlated with the score change into that year.
+- Both are tested on schools **not exposed to a STRONG school-level cause**, so the main cause's large drops cannot create or hide a secondary correlation.
+  - Without this rule, seed 42 showed a chance attendance correlation of t = -3.2; it is -2.5 without the 11 vacancy schools, which gives "inconclusive".
+  - Infrastructure stays below abs(t) = 1.7 on 10 seeds either way.
+
 | rule_id | Gives |
 |---|---|
-| TREND-STRONG | TREND STRONG |
-| TREND-WEAK | TREND WEAK |
-| TREND-INSUFFICIENT | TREND INSUFFICIENT |
-| CAUSE-SCHOOL-EXPOSURE | CAUSE STRONG (school-level exposure, e.g. maths vacancy) |
-| CAUSE-ELECTION | CAUSE WEAK (similar exposed talukas did not drop) |
-| CAUSE-RULED-OUT | CAUSE RULED_OUT (no link found in this data) |
-| CAUSE-INSUFFICIENT | CAUSE INSUFFICIENT |
-| TWIN-LEARN-FROM | TWIN LEARN_FROM |
+| TWIN-LEARN-FROM | TWIN LEARN_FROM (Stage 5) |
 | TWIN-NONE | TWIN INSUFFICIENT (no similar taluka did better) |
 | ACTION-CATALOG | ACTION (from a fixed catalog keyed by the supporting finding) |
