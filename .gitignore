@@ -21,3 +21,6 @@ docs/source/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Claude Code workflow scripts (session artefacts)
+.claude/workflows/

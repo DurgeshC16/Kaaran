@@ -1,0 +1,2384 @@
+{
+ "schema_version": "1.0",
+ "template_registry_version": "1",
+ "engine_version": "0.1.0",
+ "mapping_sha256": null,
+ "synthetic": true,
+ "marker": "SYNTHETIC DEMO DATA - NOT REAL",
+ "illustrative": true,
+ "note": "Hand-built sample from seed-42 data so UI/PDF work can start; replaced by the Phase 2B pipeline output.",
+ "scope": {
+  "district": "D99",
+  "focus": "T08",
+  "subject": "subject.maths",
+  "std": 3,
+  "period": "p.2021-22_2025-26",
+  "question": "question.why_decline"
+ },
+ "sources": [
+  {
+   "id": "S1",
+   "file": "pat_scores.csv",
+   "kind": "csv",
+   "sha256": "569bb9a9f6b24f7dd8b8cc0ae273574bb1118ac54605ede9794087bba5eb4ef1",
+   "synthetic": true,
+   "marker_at": "line 1"
+  },
+  {
+   "id": "S2",
+   "file": "attendance_jan-dec.pdf",
+   "kind": "pdf",
+   "sha256": "310e29f8adfe7e170c24ece8c71e65d513c6503a7f513713382008453c9a9a2e",
+   "synthetic": true,
+   "marker_at": "header of every page"
+  },
+  {
+   "id": "S3",
+   "file": "udise_2023.xlsx",
+   "kind": "xlsx",
+   "sha256": "7fc46549b41e9bce0ad345de04afab749c4086b9127fc287f19b4ac7118e5d8e",
+   "synthetic": true,
+   "marker_at": "cell A1 of every sheet"
+  },
+  {
+   "id": "S4",
+   "file": "teacher_posts.xlsx",
+   "kind": "xlsx",
+   "sha256": "8a86890b74d502cf930a39497ddf78e8c54c72544f557b131dc526cb69281965",
+   "synthetic": true,
+   "marker_at": "cell A1 of every sheet"
+  },
+  {
+   "id": "S5",
+   "file": "election_duty.csv",
+   "kind": "csv",
+   "sha256": "aefe4485d462c474eff1d3b0647e68f10ee40bcf0506626897a93746d34c7953",
+   "synthetic": true,
+   "marker_at": "line 1"
+  },
+  {
+   "id": "S6",
+   "file": "crosswalk.xlsx",
+   "kind": "xlsx",
+   "sha256": "d59480831f2b28b6cf2a63d65dc19ec0f5b83830e2cc329295ee321f6bf65d72",
+   "synthetic": true,
+   "marker_at": "cell A1 of every sheet"
+  }
+ ],
+ "entities": {
+  "D99": {
+   "kind": "district",
+   "code": "99",
+   "name_en": "SYNTHETIC DEMO DISTRICT"
+  },
+  "T01": {
+   "kind": "taluka",
+   "code": "01",
+   "name_en": "Akkalkot",
+   "name_mr": "अक्कलकोट"
+  },
+  "T02": {
+   "kind": "taluka",
+   "code": "02",
+   "name_en": "Barshi",
+   "name_mr": "बार्शी"
+  },
+  "T03": {
+   "kind": "taluka",
+   "code": "03",
+   "name_en": "Karmala",
+   "name_mr": "करमाळा"
+  },
+  "T04": {
+   "kind": "taluka",
+   "code": "04",
+   "name_en": "Madha",
+   "name_mr": "माढा"
+  },
+  "T05": {
+   "kind": "taluka",
+   "code": "05",
+   "name_en": "Malshiras",
+   "name_mr": "माळशिरस"
+  },
+  "T06": {
+   "kind": "taluka",
+   "code": "06",
+   "name_en": "Mangalvedha",
+   "name_mr": "मंगळवेढा"
+  },
+  "T07": {
+   "kind": "taluka",
+   "code": "07",
+   "name_en": "Mohol",
+   "name_mr": "मोहोळ"
+  },
+  "T08": {
+   "kind": "taluka",
+   "code": "08",
+   "name_en": "Pandharpur",
+   "name_mr": "पंढरपूर"
+  },
+  "T09": {
+   "kind": "taluka",
+   "code": "09",
+   "name_en": "Sangola",
+   "name_mr": "सांगोला"
+  },
+  "T10": {
+   "kind": "taluka",
+   "code": "10",
+   "name_en": "North Solapur",
+   "name_mr": "उत्तर सोलापूर"
+  },
+  "T11": {
+   "kind": "taluka",
+   "code": "11",
+   "name_en": "South Solapur",
+   "name_mr": "दक्षिण सोलापूर"
+  },
+  "S00990801001": {
+   "kind": "school",
+   "code": "00990801001",
+   "name_en": "ZP Primary School Pedwad",
+   "taluka": "T08"
+  },
+  "S00990801801": {
+   "kind": "school",
+   "code": "00990801801",
+   "name_en": "ZP Primary School Varwadi",
+   "taluka": "T08"
+  },
+  "S00990803101": {
+   "kind": "school",
+   "code": "00990803101",
+   "name_en": "ZP Primary School Jawangaon",
+   "taluka": "T08"
+  },
+  "S00990803401": {
+   "kind": "school",
+   "code": "00990803401",
+   "name_en": "ZP Primary School Savur",
+   "taluka": "T08"
+  },
+  "S00990803402": {
+   "kind": "school",
+   "code": "00990803402",
+   "name_en": "ZP Primary School Savur No. 2",
+   "taluka": "T08"
+  },
+  "S00990804001": {
+   "kind": "school",
+   "code": "00990804001",
+   "name_en": "ZP Primary School Nimbwade",
+   "taluka": "T08"
+  },
+  "S00990804601": {
+   "kind": "school",
+   "code": "00990804601",
+   "name_en": "ZP Kendra Primary School Upewadi",
+   "taluka": "T08"
+  },
+  "S00990806201": {
+   "kind": "school",
+   "code": "00990806201",
+   "name_en": "ZP Marathi Primary School Palewadi",
+   "taluka": "T08"
+  },
+  "S00990808501": {
+   "kind": "school",
+   "code": "00990808501",
+   "name_en": "ZP Primary School Khandale",
+   "taluka": "T08"
+  },
+  "S00990808601": {
+   "kind": "school",
+   "code": "00990808601",
+   "name_en": "ZP Kendra Primary School Borwadi",
+   "taluka": "T08"
+  },
+  "S00990808701": {
+   "kind": "school",
+   "code": "00990808701",
+   "name_en": "ZP Primary School Takwadi",
+   "taluka": "T08"
+  },
+  "S00990808902": {
+   "kind": "school",
+   "code": "00990808902",
+   "name_en": "ZP Primary School Lonkheda No. 2",
+   "taluka": "T08"
+  },
+  "S00990809001": {
+   "kind": "school",
+   "code": "00990809001",
+   "name_en": "ZP Primary School Wakangaon",
+   "taluka": "T08"
+  },
+  "S00990809101": {
+   "kind": "school",
+   "code": "00990809101",
+   "name_en": "ZP Primary School Vedpur",
+   "taluka": "T08"
+  },
+  "S00990809201": {
+   "kind": "school",
+   "code": "00990809201",
+   "name_en": "ZP Primary School Dhokwade",
+   "taluka": "T08"
+  },
+  "S00990809303": {
+   "kind": "school",
+   "code": "00990809303",
+   "name_en": "ZP Primary School Hingale No. 3",
+   "taluka": "T08"
+  },
+  "S00990809401": {
+   "kind": "school",
+   "code": "00990809401",
+   "name_en": "ZP Marathi Primary School Bhalwade",
+   "taluka": "T08"
+  },
+  "S00990809801": {
+   "kind": "school",
+   "code": "00990809801",
+   "name_en": "ZP Primary School Anewade",
+   "taluka": "T08"
+  },
+  "S00990809902": {
+   "kind": "school",
+   "code": "00990809902",
+   "name_en": "ZP Kendra Primary School Borangaon No. 2",
+   "taluka": "T08"
+  },
+  "S00990810601": {
+   "kind": "school",
+   "code": "00990810601",
+   "name_en": "ZP Marathi Primary School Mhasgaon",
+   "taluka": "T08"
+  },
+  "S00990811601": {
+   "kind": "school",
+   "code": "00990811601",
+   "name_en": "ZP Primary School Dhokgaon",
+   "taluka": "T08"
+  },
+  "S00990811901": {
+   "kind": "school",
+   "code": "00990811901",
+   "name_en": "ZP Primary School Wangaon",
+   "taluka": "T08"
+  },
+  "S00990811902": {
+   "kind": "school",
+   "code": "00990811902",
+   "name_en": "ZP Marathi Primary School Wangaon No. 2",
+   "taluka": "T08"
+  },
+  "S00990812901": {
+   "kind": "school",
+   "code": "00990812901",
+   "name_en": "ZP Primary School Vedgaon",
+   "taluka": "T08"
+  },
+  "S00990813801": {
+   "kind": "school",
+   "code": "00990813801",
+   "name_en": "ZP Primary School Anegaon",
+   "taluka": "T08"
+  },
+  "S00990815601": {
+   "kind": "school",
+   "code": "00990815601",
+   "name_en": "ZP Marathi Primary School Borewadi",
+   "taluka": "T08"
+  },
+  "S00990815801": {
+   "kind": "school",
+   "code": "00990815801",
+   "name_en": "ZP Urdu Primary School Maldari",
+   "taluka": "T08"
+  },
+  "S00990816901": {
+   "kind": "school",
+   "code": "00990816901",
+   "name_en": "ZP Primary School Kavphal",
+   "taluka": "T08"
+  },
+  "S00990818401": {
+   "kind": "school",
+   "code": "00990818401",
+   "name_en": "ZP Marathi Primary School Gadur",
+   "taluka": "T08"
+  },
+  "S00990818501": {
+   "kind": "school",
+   "code": "00990818501",
+   "name_en": "ZP Primary School Pimur",
+   "taluka": "T08"
+  },
+  "S00990820502": {
+   "kind": "school",
+   "code": "00990820502",
+   "name_en": "ZP Urdu Primary School Ranphal No. 2",
+   "taluka": "T08"
+  },
+  "S00990822501": {
+   "kind": "school",
+   "code": "00990822501",
+   "name_en": "ZP Primary School Shivwade",
+   "taluka": "T08"
+  },
+  "S00990825101": {
+   "kind": "school",
+   "code": "00990825101",
+   "name_en": "ZP Marathi Primary School Anoli",
+   "taluka": "T08"
+  },
+  "S00990825201": {
+   "kind": "school",
+   "code": "00990825201",
+   "name_en": "ZP Marathi Primary School Vargaon",
+   "taluka": "T08"
+  },
+  "S00990825402": {
+   "kind": "school",
+   "code": "00990825402",
+   "name_en": "ZP Primary School Sirewadi No. 2",
+   "taluka": "T08"
+  },
+  "S00990826701": {
+   "kind": "school",
+   "code": "00990826701",
+   "name_en": "ZP Primary School Hingdari",
+   "taluka": "T08"
+  },
+  "S00990827202": {
+   "kind": "school",
+   "code": "00990827202",
+   "name_en": "ZP Primary School Anetanda No. 2",
+   "taluka": "T08"
+  },
+  "S00990828202": {
+   "kind": "school",
+   "code": "00990828202",
+   "name_en": "ZP Primary School Kavwad No. 2",
+   "taluka": "T08"
+  },
+  "S00990830301": {
+   "kind": "school",
+   "code": "00990830301",
+   "name_en": "ZP Kendra Primary School Hingewadi",
+   "taluka": "T08"
+  },
+  "S00990831201": {
+   "kind": "school",
+   "code": "00990831201",
+   "name_en": "ZP Primary School Bhalner",
+   "taluka": "T08"
+  },
+  "S00990831901": {
+   "kind": "school",
+   "code": "00990831901",
+   "name_en": "ZP Urdu Primary School Dhankheda",
+   "taluka": "T08"
+  },
+  "S00990831902": {
+   "kind": "school",
+   "code": "00990831902",
+   "name_en": "ZP Urdu Primary School Dhankheda No. 2",
+   "taluka": "T08"
+  },
+  "S00990834001": {
+   "kind": "school",
+   "code": "00990834001",
+   "name_en": "ZP Marathi Primary School Bhalphal",
+   "taluka": "T08"
+  },
+  "S00990834302": {
+   "kind": "school",
+   "code": "00990834302",
+   "name_en": "ZP Primary School Khandphal No. 2",
+   "taluka": "T08"
+  },
+  "S00990835001": {
+   "kind": "school",
+   "code": "00990835001",
+   "name_en": "ZP Primary School Pimner",
+   "taluka": "T08"
+  },
+  "S00990835003": {
+   "kind": "school",
+   "code": "00990835003",
+   "name_en": "ZP Primary School Pimner No. 3",
+   "taluka": "T08"
+  },
+  "S00990835801": {
+   "kind": "school",
+   "code": "00990835801",
+   "name_en": "ZP Primary School Savwadi",
+   "taluka": "T08"
+  },
+  "S00990836603": {
+   "kind": "school",
+   "code": "00990836603",
+   "name_en": "ZP Primary School Upoli No. 3",
+   "taluka": "T08"
+  },
+  "S00990836701": {
+   "kind": "school",
+   "code": "00990836701",
+   "name_en": "ZP Primary School Ranale",
+   "taluka": "T08"
+  },
+  "S00990837401": {
+   "kind": "school",
+   "code": "00990837401",
+   "name_en": "ZP Marathi Primary School Shivpur",
+   "taluka": "T08"
+  },
+  "S00990837701": {
+   "kind": "school",
+   "code": "00990837701",
+   "name_en": "ZP Primary School Chinangaon",
+   "taluka": "T08"
+  },
+  "S00990839202": {
+   "kind": "school",
+   "code": "00990839202",
+   "name_en": "ZP Marathi Primary School Shivwadi No. 2",
+   "taluka": "T08"
+  },
+  "S00990839501": {
+   "kind": "school",
+   "code": "00990839501",
+   "name_en": "ZP Urdu Primary School Sonalewadi",
+   "taluka": "T08"
+  }
+ },
+ "entity_sets": {
+  "set.vacancy_maths.T08": {
+   "kind": "school",
+   "rule_id": "CAUSE-SCHOOL-EXPOSURE",
+   "members": [
+    "S00990804001",
+    "S00990804601",
+    "S00990811901",
+    "S00990815601",
+    "S00990816901",
+    "S00990820502",
+    "S00990822501",
+    "S00990825402",
+    "S00990831201",
+    "S00990831902",
+    "S00990835801"
+   ]
+  },
+  "set.election_comparison.2024-25": {
+   "kind": "taluka",
+   "rule_id": "CAUSE-ELECTION",
+   "members": [
+    "T01",
+    "T02",
+    "T04",
+    "T05",
+    "T07",
+    "T09"
+   ]
+  },
+  "set.flat_attendance.T08": {
+   "kind": "school",
+   "rule_id": "TRUST-FLAT-TALUKA",
+   "members": [
+    "S00990801001",
+    "S00990801801",
+    "S00990803401",
+    "S00990803402",
+    "S00990808501",
+    "S00990808601",
+    "S00990808902",
+    "S00990809801",
+    "S00990811601",
+    "S00990811902",
+    "S00990813801",
+    "S00990815801",
+    "S00990818401",
+    "S00990818501",
+    "S00990826701",
+    "S00990827202",
+    "S00990830301",
+    "S00990834001",
+    "S00990835001",
+    "S00990836603",
+    "S00990836701",
+    "S00990839202",
+    "S00990839501"
+   ]
+  },
+  "set.cleared.T08": {
+   "kind": "school",
+   "rule_id": "TRUST-CLEARED",
+   "members": [
+    "S00990803101",
+    "S00990806201",
+    "S00990808701",
+    "S00990809001",
+    "S00990809101",
+    "S00990809201",
+    "S00990809303",
+    "S00990809401",
+    "S00990809902",
+    "S00990810601",
+    "S00990812901",
+    "S00990825101",
+    "S00990825201",
+    "S00990828202",
+    "S00990831901",
+    "S00990834302",
+    "S00990835003",
+    "S00990837401",
+    "S00990837701"
+   ]
+  }
+ },
+ "periods": {
+  "p.2021-22_2025-26": {
+   "kind": "year_range",
+   "from": "2021-22",
+   "to": "2025-26"
+  },
+  "p.2023-24": {
+   "kind": "academic_year",
+   "from": "2023-24",
+   "to": "2023-24"
+  },
+  "p.2024-25": {
+   "kind": "academic_year",
+   "from": "2024-25",
+   "to": "2024-25"
+  },
+  "p.2024-08_2024-11": {
+   "kind": "month_range",
+   "from": "2024-08",
+   "to": "2024-11"
+  }
+ },
+ "numbers": {
+  "n.score_mean.T08.2021-22": {
+   "value": 56.0,
+   "unit": "score",
+   "decimals": 1,
+   "n": 140,
+   "entity": "T08",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T08",
+      "academic_year": "2021-22",
+      "subject": "maths"
+     },
+     "n_rows": 140
+    }
+   ],
+   "display": {
+    "en": "56.0",
+    "mr": "५६.०"
+   }
+  },
+  "n.score_mean.T08.2025-26": {
+   "value": 52.7,
+   "unit": "score",
+   "decimals": 1,
+   "n": 140,
+   "entity": "T08",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T08",
+      "academic_year": "2025-26",
+      "subject": "maths"
+     },
+     "n_rows": 140
+    }
+   ],
+   "display": {
+    "en": "52.7",
+    "mr": "५२.७"
+   }
+  },
+  "n.score_change.T08.2021-22_2025-26": {
+   "value": -3.3,
+   "unit": "score_change",
+   "decimals": 1,
+   "entity": "T08",
+   "derivation": {
+    "op": "diff",
+    "inputs": [
+     "n.score_mean.T08.2025-26",
+     "n.score_mean.T08.2021-22"
+    ]
+   },
+   "provenance": [],
+   "display": {
+    "en": "3.3",
+    "mr": "३.३"
+   },
+   "direction": "down"
+  },
+  "n.rank.T08.2021-22": {
+   "value": 4,
+   "unit": "rank",
+   "decimals": 0,
+   "out_of": 11,
+   "entity": "T08",
+   "derivation": {
+    "op": "rank_desc",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "academic_year": "2021-22",
+      "subject": "maths"
+     },
+     "n_rows": 1279
+    }
+   ],
+   "display": {
+    "en": "4",
+    "mr": "४"
+   }
+  },
+  "n.rank.T08.2025-26": {
+   "value": 9,
+   "unit": "rank",
+   "decimals": 0,
+   "out_of": 11,
+   "entity": "T08",
+   "derivation": {
+    "op": "rank_desc",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "academic_year": "2025-26",
+      "subject": "maths"
+     },
+     "n_rows": 1282
+    }
+   ],
+   "display": {
+    "en": "9",
+    "mr": "९"
+   }
+  },
+  "n.paired_t.T08.2021-22_2025-26": {
+   "value": -3.7,
+   "unit": "t_stat",
+   "decimals": 2,
+   "n": 140,
+   "entity": "T08",
+   "derivation": {
+    "op": "paired_t",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T08",
+      "academic_year": [
+       "2021-22",
+       "2025-26"
+      ],
+      "subject": "maths"
+     },
+     "n_rows": 280
+    }
+   ],
+   "display": {
+    "en": "-3.70",
+    "mr": "-३.७०"
+   }
+  },
+  "n.score_mean.T08.2024-25": {
+   "value": 53.4,
+   "unit": "score",
+   "decimals": 1,
+   "n": 140,
+   "entity": "T08",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T08",
+      "academic_year": "2024-25",
+      "subject": "maths"
+     },
+     "n_rows": 140
+    }
+   ],
+   "display": {
+    "en": "53.4",
+    "mr": "५३.४"
+   }
+  },
+  "n.score_mean.T08.2023-24": {
+   "value": 55.4,
+   "unit": "score",
+   "decimals": 1,
+   "n": 140,
+   "entity": "T08",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T08",
+      "academic_year": "2023-24",
+      "subject": "maths"
+     },
+     "n_rows": 140
+    }
+   ],
+   "display": {
+    "en": "55.4",
+    "mr": "५५.४"
+   }
+  },
+  "n.score_change.T08.2023-24_2024-25": {
+   "value": -2.1,
+   "unit": "score_change",
+   "decimals": 1,
+   "entity": "T08",
+   "derivation": {
+    "op": "diff",
+    "inputs": [
+     "n.score_mean.T08.2024-25",
+     "n.score_mean.T08.2023-24"
+    ]
+   },
+   "provenance": [],
+   "display": {
+    "en": "2.1",
+    "mr": "२.१"
+   },
+   "direction": "down"
+  },
+  "n.count.election_no_drop.2024-25": {
+   "value": 5,
+   "unit": "count",
+   "decimals": 0,
+   "of": "talukas",
+   "derivation": {
+    "op": "count_where",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": [
+       "T01",
+       "T02",
+       "T04",
+       "T05",
+       "T07",
+       "T09"
+      ],
+      "academic_year": [
+       "2023-24",
+       "2024-25"
+      ],
+      "subject": "maths"
+     },
+     "n_rows": 1467
+    },
+    {
+     "kind": "constant",
+     "rule_id": "CAUSE-ELECTION",
+     "name": "DROP_POINTS"
+    }
+   ],
+   "display": {
+    "en": "5",
+    "mr": "५"
+   }
+  },
+  "n.score_change.vacancy_maths.T08": {
+   "value": -28.0,
+   "unit": "score_change",
+   "decimals": 1,
+   "n": 11,
+   "entity": "T08",
+   "derivation": {
+    "op": "mean_change",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "udise_code": [
+       "00990804001",
+       "00990804601",
+       "00990811901",
+       "00990815601",
+       "00990816901",
+       "00990820502",
+       "00990822501",
+       "00990825402",
+       "00990831201",
+       "00990831902",
+       "00990835801"
+      ],
+      "academic_year": [
+       "2021-22",
+       "2025-26"
+      ],
+      "subject": "maths"
+     },
+     "n_rows": 22
+    }
+   ],
+   "display": {
+    "en": "28.0",
+    "mr": "२८.०"
+   },
+   "direction": "down"
+  },
+  "n.score_change.other_schools.T08": {
+   "value": -1.2,
+   "unit": "score_change",
+   "decimals": 1,
+   "n": 129,
+   "entity": "T08",
+   "derivation": {
+    "op": "mean_change",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T08",
+      "academic_year": [
+       "2021-22",
+       "2025-26"
+      ],
+      "subject": "maths"
+     },
+     "n_rows": 280
+    }
+   ],
+   "display": {
+    "en": "1.2",
+    "mr": "१.२"
+   },
+   "direction": "down"
+  },
+  "n.pct.share_of_decline.vacancy_maths.T08": {
+   "value": 66.5,
+   "unit": "pct",
+   "decimals": 1,
+   "entity": "T08",
+   "derivation": {
+    "op": "share_of_decline",
+    "inputs": [
+     "n.score_change.vacancy_maths.T08",
+     "n.score_change.T08.2021-22_2025-26"
+    ]
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S4",
+     "view": "teacher_posts",
+     "where": {
+      "taluka_id": "T08",
+      "academic_year": "2023-24",
+      "subject": "maths",
+      "working": 0
+     },
+     "n_rows": 11
+    }
+   ],
+   "display": {
+    "en": "66.5%",
+    "mr": "६६.५%"
+   }
+  },
+  "n.score_mean.T05.2025-26": {
+   "value": 60.5,
+   "unit": "score",
+   "decimals": 1,
+   "n": 134,
+   "entity": "T05",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T05",
+      "academic_year": "2025-26",
+      "subject": "maths"
+     },
+     "n_rows": 134
+    }
+   ],
+   "display": {
+    "en": "60.5",
+    "mr": "६०.५"
+   }
+  },
+  "n.score_mean.T05.2021-22": {
+   "value": 54.0,
+   "unit": "score",
+   "decimals": 1,
+   "n": 134,
+   "entity": "T05",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T05",
+      "academic_year": "2021-22",
+      "subject": "maths"
+     },
+     "n_rows": 134
+    }
+   ],
+   "display": {
+    "en": "54.0",
+    "mr": "५४.०"
+   }
+  },
+  "n.score_change.T05.2021-22_2025-26": {
+   "value": 6.5,
+   "unit": "score_change",
+   "decimals": 1,
+   "entity": "T05",
+   "derivation": {
+    "op": "diff",
+    "inputs": [
+     "n.score_mean.T05.2025-26",
+     "n.score_mean.T05.2021-22"
+    ]
+   },
+   "provenance": [],
+   "display": {
+    "en": "6.5",
+    "mr": "६.५"
+   },
+   "direction": "up"
+  },
+  "n.score_mean.T09.2025-26": {
+   "value": 55.3,
+   "unit": "score",
+   "decimals": 1,
+   "n": 138,
+   "entity": "T09",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T09",
+      "academic_year": "2025-26",
+      "subject": "maths"
+     },
+     "n_rows": 138
+    }
+   ],
+   "display": {
+    "en": "55.3",
+    "mr": "५५.३"
+   }
+  },
+  "n.score_mean.T09.2021-22": {
+   "value": 55.6,
+   "unit": "score",
+   "decimals": 1,
+   "n": 138,
+   "entity": "T09",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T09",
+      "academic_year": "2021-22",
+      "subject": "maths"
+     },
+     "n_rows": 138
+    }
+   ],
+   "display": {
+    "en": "55.6",
+    "mr": "५५.६"
+   }
+  },
+  "n.score_change.T09.2021-22_2025-26": {
+   "value": -0.3,
+   "unit": "score_change",
+   "decimals": 1,
+   "entity": "T09",
+   "derivation": {
+    "op": "diff",
+    "inputs": [
+     "n.score_mean.T09.2025-26",
+     "n.score_mean.T09.2021-22"
+    ]
+   },
+   "provenance": [],
+   "display": {
+    "en": "0.3",
+    "mr": "०.३"
+   },
+   "direction": "down"
+  },
+  "n.rank.T05.2021-22": {
+   "value": 8,
+   "unit": "rank",
+   "decimals": 0,
+   "out_of": 11,
+   "entity": "T05",
+   "derivation": {
+    "op": "rank_desc",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "academic_year": "2021-22",
+      "subject": "maths"
+     },
+     "n_rows": 1279
+    }
+   ],
+   "display": {
+    "en": "8",
+    "mr": "८"
+   }
+  },
+  "n.rank.T05.2025-26": {
+   "value": 3,
+   "unit": "rank",
+   "decimals": 0,
+   "out_of": 11,
+   "entity": "T05",
+   "derivation": {
+    "op": "rank_desc",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "academic_year": "2025-26",
+      "subject": "maths"
+     },
+     "n_rows": 1282
+    }
+   ],
+   "display": {
+    "en": "3",
+    "mr": "३"
+   }
+  },
+  "n.count.schools.T05": {
+   "value": 134,
+   "unit": "count",
+   "decimals": 0,
+   "of": "schools",
+   "entity": "T05",
+   "derivation": {
+    "op": "count",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S3",
+     "view": "schools",
+     "where": {
+      "taluka_id": "T05"
+     },
+     "n_rows": 134
+    }
+   ],
+   "display": {
+    "en": "134",
+    "mr": "१३४"
+   }
+  },
+  "n.count.schools.T08": {
+   "value": 140,
+   "unit": "count",
+   "decimals": 0,
+   "of": "schools",
+   "entity": "T08",
+   "derivation": {
+    "op": "count",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S3",
+     "view": "schools",
+     "where": {
+      "taluka_id": "T08"
+     },
+     "n_rows": 140
+    }
+   ],
+   "display": {
+    "en": "140",
+    "mr": "१४०"
+   }
+  },
+  "n.count.months.flat_run.T08": {
+   "value": 4,
+   "unit": "months",
+   "decimals": 0,
+   "entity": "T08",
+   "derivation": {
+    "op": "max_run",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 128,
+     "section": "Taluka: Pandharpur | 2024-08",
+     "sr_no": [
+      1,
+      7,
+      16,
+      21,
+      24,
+      33,
+      36,
+      37,
+      41
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 129,
+     "section": "Taluka: Pandharpur | 2024-08",
+     "sr_no": [
+      46,
+      64,
+      67,
+      68,
+      72,
+      83,
+      91,
+      94
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 130,
+     "section": "Taluka: Pandharpur | 2024-08",
+     "sr_no": [
+      113,
+      118,
+      123,
+      132,
+      135,
+      136
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 130,
+     "section": "Taluka: Pandharpur | 2024-09",
+     "sr_no": [
+      1,
+      7,
+      15,
+      20,
+      23,
+      32,
+      35,
+      36
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 131,
+     "section": "Taluka: Pandharpur | 2024-09",
+     "sr_no": [
+      40,
+      45,
+      62,
+      65,
+      66,
+      70,
+      81,
+      90,
+      93
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 132,
+     "section": "Taluka: Pandharpur | 2024-09",
+     "sr_no": [
+      112,
+      117,
+      122,
+      131,
+      134,
+      135
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 132,
+     "section": "Taluka: Pandharpur | 2024-10",
+     "sr_no": [
+      1,
+      7,
+      16,
+      21,
+      24,
+      32,
+      35,
+      36
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 133,
+     "section": "Taluka: Pandharpur | 2024-10",
+     "sr_no": [
+      40,
+      45,
+      62,
+      65,
+      66,
+      70,
+      81,
+      90,
+      93
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 134,
+     "section": "Taluka: Pandharpur | 2024-10",
+     "sr_no": [
+      112,
+      117,
+      122,
+      131,
+      134,
+      135
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 134,
+     "section": "Taluka: Pandharpur | 2024-11",
+     "sr_no": [
+      1,
+      7,
+      16,
+      21,
+      24,
+      33
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 135,
+     "section": "Taluka: Pandharpur | 2024-11",
+     "sr_no": [
+      36,
+      37,
+      41,
+      46,
+      63,
+      66,
+      67,
+      71,
+      81,
+      90,
+      93
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 136,
+     "section": "Taluka: Pandharpur | 2024-11",
+     "sr_no": [
+      112,
+      117,
+      122,
+      131,
+      133,
+      134
+     ],
+     "columns": [
+      "%"
+     ]
+    }
+   ],
+   "display": {
+    "en": "4",
+    "mr": "४"
+   }
+  },
+  "n.pct.flat_share.T08": {
+   "value": 16.4,
+   "unit": "pct",
+   "decimals": 1,
+   "entity": "T08",
+   "derivation": {
+    "op": "pct",
+    "inputs": [
+     "n.count.schools.T08"
+    ]
+   },
+   "provenance": [
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 128,
+     "section": "Taluka: Pandharpur | 2024-08",
+     "sr_no": [
+      1,
+      7,
+      16,
+      21,
+      24,
+      33,
+      36,
+      37,
+      41
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 129,
+     "section": "Taluka: Pandharpur | 2024-08",
+     "sr_no": [
+      46,
+      64,
+      67,
+      68,
+      72,
+      83,
+      91,
+      94
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 130,
+     "section": "Taluka: Pandharpur | 2024-08",
+     "sr_no": [
+      113,
+      118,
+      123,
+      132,
+      135,
+      136
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 130,
+     "section": "Taluka: Pandharpur | 2024-09",
+     "sr_no": [
+      1,
+      7,
+      15,
+      20,
+      23,
+      32,
+      35,
+      36
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 131,
+     "section": "Taluka: Pandharpur | 2024-09",
+     "sr_no": [
+      40,
+      45,
+      62,
+      65,
+      66,
+      70,
+      81,
+      90,
+      93
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 132,
+     "section": "Taluka: Pandharpur | 2024-09",
+     "sr_no": [
+      112,
+      117,
+      122,
+      131,
+      134,
+      135
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 132,
+     "section": "Taluka: Pandharpur | 2024-10",
+     "sr_no": [
+      1,
+      7,
+      16,
+      21,
+      24,
+      32,
+      35,
+      36
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 133,
+     "section": "Taluka: Pandharpur | 2024-10",
+     "sr_no": [
+      40,
+      45,
+      62,
+      65,
+      66,
+      70,
+      81,
+      90,
+      93
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 134,
+     "section": "Taluka: Pandharpur | 2024-10",
+     "sr_no": [
+      112,
+      117,
+      122,
+      131,
+      134,
+      135
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 134,
+     "section": "Taluka: Pandharpur | 2024-11",
+     "sr_no": [
+      1,
+      7,
+      16,
+      21,
+      24,
+      33
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 135,
+     "section": "Taluka: Pandharpur | 2024-11",
+     "sr_no": [
+      36,
+      37,
+      41,
+      46,
+      63,
+      66,
+      67,
+      71,
+      81,
+      90,
+      93
+     ],
+     "columns": [
+      "%"
+     ]
+    },
+    {
+     "kind": "cells",
+     "source": "S2",
+     "page": 136,
+     "section": "Taluka: Pandharpur | 2024-11",
+     "sr_no": [
+      112,
+      117,
+      122,
+      131,
+      133,
+      134
+     ],
+     "columns": [
+      "%"
+     ]
+    }
+   ],
+   "display": {
+    "en": "16.4%",
+    "mr": "१६.४%"
+   }
+  },
+  "n.pct.flat_share.rest_of_district": {
+   "value": 2.6,
+   "unit": "pct",
+   "decimals": 1,
+   "n": 1152,
+   "entity": "D99",
+   "derivation": {
+    "op": "pct",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S2",
+     "view": "attendance",
+     "where": {
+      "month": [
+       "2024-06",
+       "2024-07",
+       "2024-08",
+       "2024-09",
+       "2024-10",
+       "2024-11",
+       "2024-12"
+      ],
+      "attendance_pct": 100.0
+     },
+     "n_rows": 120
+    }
+   ],
+   "display": {
+    "en": "2.6%",
+    "mr": "२.६%"
+   }
+  },
+  "n.corr.infra_vs_change.T08": {
+   "value": -0.05,
+   "unit": "corr",
+   "decimals": 2,
+   "n": 140,
+   "entity": "T08",
+   "derivation": {
+    "op": "corr",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S3",
+     "view": "schools",
+     "where": {
+      "taluka_id": "T08"
+     },
+     "n_rows": 140
+    },
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T08",
+      "academic_year": [
+       "2021-22",
+       "2025-26"
+      ],
+      "subject": "maths"
+     },
+     "n_rows": 280
+    }
+   ],
+   "display": {
+    "en": "-0.05",
+    "mr": "-०.०५"
+   }
+  },
+  "n.score_mean.T03.2025-26": {
+   "value": 52.0,
+   "unit": "score",
+   "decimals": 1,
+   "n": 116,
+   "entity": "T03",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T03",
+      "academic_year": "2025-26",
+      "subject": "maths"
+     },
+     "n_rows": 116
+    }
+   ],
+   "display": {
+    "en": "52.0",
+    "mr": "५२.०"
+   }
+  },
+  "n.score_mean.T03.2021-22": {
+   "value": 52.0,
+   "unit": "score",
+   "decimals": 1,
+   "n": 115,
+   "entity": "T03",
+   "derivation": {
+    "op": "mean",
+    "inputs": []
+   },
+   "provenance": [
+    {
+     "kind": "query",
+     "source": "S1",
+     "view": "scores",
+     "where": {
+      "taluka_id": "T03",
+      "academic_year": "2021-22",
+      "subject": "maths"
+     },
+     "n_rows": 115
+    }
+   ],
+   "display": {
+    "en": "52.0",
+    "mr": "५२.०"
+   }
+  },
+  "n.score_change.T03.2021-22_2025-26": {
+   "value": 0.0,
+   "unit": "score_change",
+   "decimals": 1,
+   "entity": "T03",
+   "derivation": {
+    "op": "diff",
+    "inputs": [
+     "n.score_mean.T03.2025-26",
+     "n.score_mean.T03.2021-22"
+    ]
+   },
+   "provenance": [],
+   "display": {
+    "en": "0.0",
+    "mr": "०.०"
+   },
+   "direction": "flat"
+  }
+ },
+ "findings": [
+  {
+   "id": "F1",
+   "type": "TREND",
+   "label": "STRONG",
+   "rule_id": "TREND-STRONG",
+   "template_key": "trend.decline_rank",
+   "params": {
+    "taluka": {
+     "entity": "T08"
+    },
+    "period": {
+     "period": "p.2021-22_2025-26"
+    },
+    "score_from": {
+     "number": "n.score_mean.T08.2021-22"
+    },
+    "score_to": {
+     "number": "n.score_mean.T08.2025-26"
+    },
+    "change": {
+     "number": "n.score_change.T08.2021-22_2025-26"
+    },
+    "rank_from": {
+     "number": "n.rank.T08.2021-22"
+    },
+    "rank_to": {
+     "number": "n.rank.T08.2025-26"
+    }
+   },
+   "criteria": [
+    {
+     "id": "paired_t_max",
+     "number": "n.paired_t.T08.2021-22_2025-26",
+     "threshold": -3.0,
+     "passed": true
+    },
+    {
+     "id": "min_drop",
+     "number": "n.score_change.T08.2021-22_2025-26",
+     "threshold": 2.0,
+     "passed": true
+    },
+    {
+     "id": "below_start_last_3_years",
+     "passed": true
+    }
+   ],
+   "sample": {
+    "n_schools": 140,
+    "n_talukas": 11
+   },
+   "caveats": [
+    {
+     "template_key": "caveat.synthetic_data",
+     "params": {}
+    },
+    {
+     "template_key": "caveat.concentrated_in_few_schools",
+     "params": {
+      "schools": {
+       "set": "set.vacancy_maths.T08"
+      }
+     }
+    }
+   ],
+   "related": [
+    "F3"
+   ]
+  },
+  {
+   "id": "F2",
+   "type": "CAUSE",
+   "label": "WEAK",
+   "rule_id": "CAUSE-ELECTION",
+   "hypothesis": "election",
+   "origin": "default",
+   "template_key": "cause.election.similar_blocks_no_drop",
+   "params": {
+    "taluka": {
+     "entity": "T08"
+    },
+    "period": {
+     "period": "p.2024-25"
+    },
+    "focus_change": {
+     "number": "n.score_change.T08.2023-24_2024-25"
+    },
+    "similar": {
+     "set": "set.election_comparison.2024-25"
+    },
+    "n_similar_no_drop": {
+     "number": "n.count.election_no_drop.2024-25"
+    }
+   },
+   "criteria": [
+    {
+     "id": "share_similar_no_drop_min",
+     "threshold": 0.67,
+     "passed": true
+    }
+   ],
+   "sample": {
+    "n_talukas": 7
+   },
+   "caveats": [
+    {
+     "template_key": "caveat.synthetic_data",
+     "params": {}
+    },
+    {
+     "template_key": "caveat.associated_not_caused",
+     "params": {}
+    }
+   ],
+   "related": []
+  },
+  {
+   "id": "F3",
+   "type": "CAUSE",
+   "label": "STRONG",
+   "rule_id": "CAUSE-SCHOOL-EXPOSURE",
+   "hypothesis": "vacancy",
+   "origin": "default",
+   "template_key": "cause.vacancy.concentrated",
+   "params": {
+    "taluka": {
+     "entity": "T08"
+    },
+    "subject": {
+     "text_key": "subject.maths"
+    },
+    "schools": {
+     "set": "set.vacancy_maths.T08"
+    },
+    "since": {
+     "period": "p.2023-24"
+    },
+    "group_change": {
+     "number": "n.score_change.vacancy_maths.T08"
+    },
+    "others_change": {
+     "number": "n.score_change.other_schools.T08"
+    },
+    "share_of_decline": {
+     "number": "n.pct.share_of_decline.vacancy_maths.T08"
+    }
+   },
+   "criteria": [
+    {
+     "id": "effect_t_min",
+     "passed": true
+    },
+    {
+     "id": "replicates_outside_focus",
+     "passed": true
+    },
+    {
+     "id": "timing_exposure_before_drop",
+     "passed": true
+    },
+    {
+     "id": "share_of_decline_min",
+     "number": "n.pct.share_of_decline.vacancy_maths.T08",
+     "threshold": 50.0,
+     "passed": true
+    }
+   ],
+   "sample": {
+    "n_schools": 140
+   },
+   "caveats": [
+    {
+     "template_key": "caveat.synthetic_data",
+     "params": {}
+    },
+    {
+     "template_key": "caveat.associated_not_caused",
+     "params": {}
+    }
+   ],
+   "related": [
+    "F1"
+   ]
+  },
+  {
+   "id": "F4",
+   "type": "TWIN",
+   "label": "LEARN_FROM",
+   "rule_id": "TWIN-LEARN-FROM",
+   "template_key": "twin.learn_from",
+   "params": {
+    "twin": {
+     "entity": "T05"
+    },
+    "focus": {
+     "entity": "T08"
+    },
+    "twin_change": {
+     "number": "n.score_change.T05.2021-22_2025-26"
+    },
+    "twin_rank_from": {
+     "number": "n.rank.T05.2021-22"
+    },
+    "twin_rank_to": {
+     "number": "n.rank.T05.2025-26"
+    },
+    "n_schools_twin": {
+     "number": "n.count.schools.T05"
+    },
+    "n_schools_focus": {
+     "number": "n.count.schools.T08"
+    },
+    "decoy": {
+     "entity": "T09"
+    },
+    "decoy_change": {
+     "number": "n.score_change.T09.2021-22_2025-26"
+    }
+   },
+   "criteria": [
+    {
+     "id": "size_within_pct",
+     "threshold": 10.0,
+     "passed": true
+    },
+    {
+     "id": "enrolment_within_pct",
+     "threshold": 10.0,
+     "passed": true
+    },
+    {
+     "id": "same_election_exposure",
+     "passed": true
+    },
+    {
+     "id": "improved_min",
+     "number": "n.score_change.T05.2021-22_2025-26",
+     "threshold": 3.0,
+     "passed": true
+    }
+   ],
+   "sample": {
+    "n_talukas": 3
+   },
+   "caveats": [
+    {
+     "template_key": "caveat.synthetic_data",
+     "params": {}
+    },
+    {
+     "template_key": "caveat.poverty_not_available",
+     "params": {}
+    }
+   ],
+   "related": []
+  },
+  {
+   "id": "F5",
+   "type": "DATA",
+   "label": "RED_FLAG",
+   "rule_id": "TRUST-FLAT-TALUKA",
+   "template_key": "data.flat_attendance",
+   "params": {
+    "taluka": {
+     "entity": "T08"
+    },
+    "schools": {
+     "set": "set.flat_attendance.T08"
+    },
+    "months": {
+     "period": "p.2024-08_2024-11"
+    },
+    "n_months": {
+     "number": "n.count.months.flat_run.T08"
+    },
+    "share": {
+     "number": "n.pct.flat_share.T08"
+    },
+    "rest_share": {
+     "number": "n.pct.flat_share.rest_of_district"
+    }
+   },
+   "criteria": [
+    {
+     "id": "flat_run_min_months",
+     "threshold": 3,
+     "passed": true
+    },
+    {
+     "id": "taluka_min_flat_schools",
+     "threshold": 10,
+     "passed": true
+    },
+    {
+     "id": "share_vs_rest_min_ratio",
+     "threshold": 3.0,
+     "passed": true
+    }
+   ],
+   "sample": {
+    "n_schools": 140
+   },
+   "caveats": [
+    {
+     "template_key": "caveat.synthetic_data",
+     "params": {}
+    },
+    {
+     "template_key": "caveat.flagged_data_excluded",
+     "params": {
+      "schools": {
+       "set": "set.flat_attendance.T08"
+      }
+     }
+    }
+   ],
+   "related": []
+  },
+  {
+   "id": "F6",
+   "type": "CAUSE",
+   "label": "RULED_OUT",
+   "rule_id": "CAUSE-RULED-OUT",
+   "hypothesis": "infrastructure",
+   "origin": "default",
+   "template_key": "cause.infra.no_link",
+   "params": {
+    "taluka": {
+     "entity": "T08"
+    },
+    "r": {
+     "number": "n.corr.infra_vs_change.T08"
+    },
+    "lowest_infra_taluka": {
+     "entity": "T03"
+    },
+    "lowest_infra_change": {
+     "number": "n.score_change.T03.2021-22_2025-26"
+    }
+   },
+   "criteria": [
+    {
+     "id": "abs_t_max",
+     "threshold": 2.0,
+     "passed": true
+    },
+    {
+     "id": "lowest_infra_taluka_stable",
+     "threshold": 1.0,
+     "passed": true
+    }
+   ],
+   "sample": {
+    "n_schools": 140
+   },
+   "caveats": [
+    {
+     "template_key": "caveat.synthetic_data",
+     "params": {}
+    },
+    {
+     "template_key": "caveat.static_infra_snapshot",
+     "params": {}
+    }
+   ],
+   "related": []
+  },
+  {
+   "id": "F7",
+   "type": "DATA",
+   "label": "CLEARED",
+   "rule_id": "TRUST-CLEARED",
+   "template_key": "data.cleared_low_attendance",
+   "params": {
+    "taluka": {
+     "entity": "T08"
+    },
+    "schools": {
+     "set": "set.cleared.T08"
+    }
+   },
+   "criteria": [
+    {
+     "id": "district_bottom_share",
+     "threshold": 0.05,
+     "passed": true
+    },
+    {
+     "id": "no_trust_flag",
+     "passed": true
+    }
+   ],
+   "sample": {
+    "n_schools": 140
+   },
+   "caveats": [
+    {
+     "template_key": "caveat.synthetic_data",
+     "params": {}
+    }
+   ],
+   "related": []
+  },
+  {
+   "id": "F8",
+   "type": "ACTION",
+   "label": "ACTION",
+   "rule_id": "ACTION-CATALOG",
+   "template_key": "action.redeploy_teachers",
+   "params": {
+    "taluka": {
+     "entity": "T08"
+    },
+    "subject": {
+     "text_key": "subject.maths"
+    },
+    "schools": {
+     "set": "set.vacancy_maths.T08"
+    }
+   },
+   "action": {
+    "actor_role": "DEO",
+    "based_on": [
+     "F3"
+    ],
+    "horizon": "this_month",
+    "within_officer_powers": true,
+    "targets": "set.vacancy_maths.T08"
+   },
+   "criteria": [],
+   "sample": {},
+   "caveats": [],
+   "related": [
+    "F3"
+   ]
+  },
+  {
+   "id": "F9",
+   "type": "ACTION",
+   "label": "ACTION",
+   "rule_id": "ACTION-CATALOG",
+   "template_key": "action.exposure_visit",
+   "params": {
+    "twin": {
+     "entity": "T05"
+    },
+    "focus": {
+     "entity": "T08"
+    }
+   },
+   "action": {
+    "actor_role": "BEO",
+    "based_on": [
+     "F4"
+    ],
+    "horizon": "this_month",
+    "within_officer_powers": true
+   },
+   "criteria": [],
+   "sample": {},
+   "caveats": [],
+   "related": [
+    "F4"
+   ]
+  },
+  {
+   "id": "F10",
+   "type": "ACTION",
+   "label": "ACTION",
+   "rule_id": "ACTION-CATALOG",
+   "template_key": "action.verify_registers",
+   "params": {
+    "taluka": {
+     "entity": "T08"
+    },
+    "schools": {
+     "set": "set.flat_attendance.T08"
+    }
+   },
+   "action": {
+    "actor_role": "KENDRA_PRAMUKH",
+    "based_on": [
+     "F5"
+    ],
+    "horizon": "this_week",
+    "within_officer_powers": true,
+    "targets": "set.flat_attendance.T08"
+   },
+   "criteria": [],
+   "sample": {},
+   "caveats": [],
+   "related": [
+    "F5"
+   ]
+  }
+ ],
+ "outline": [
+  {
+   "section": "trend",
+   "finding_ids": [
+    "F1"
+   ]
+  },
+  {
+   "section": "election_check",
+   "finding_ids": [
+    "F2"
+   ]
+  },
+  {
+   "section": "main_cause",
+   "finding_ids": [
+    "F3"
+   ]
+  },
+  {
+   "section": "twin",
+   "finding_ids": [
+    "F4"
+   ]
+  },
+  {
+   "section": "data_warning",
+   "finding_ids": [
+    "F5",
+    "F7"
+   ]
+  },
+  {
+   "section": "action",
+   "finding_ids": [
+    "F8",
+    "F9",
+    "F10"
+   ]
+  },
+  {
+   "section": "appendix",
+   "finding_ids": [
+    "F6"
+   ]
+  }
+ ]
+}
