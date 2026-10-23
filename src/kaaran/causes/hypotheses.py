@@ -157,8 +157,8 @@ def infrastructure(b: Builder, tables: dict, sc: pd.DataFrame, focus: str, insuf
     low_change = change_number(b, sc, tm, lowest, y0, y1)
     stable = abs(tm.loc[lowest, y1] - tm.loc[lowest, y0]) <= K.LOWEST_INFRA_STABLE
     nr = b.number(f"n.corr.infra_vs_change.{focus}", r, "corr", 2,
-                  [b.query("schools", {"taluka_id": focus}, int((schools["taluka_id"] == focus).sum())),
-                   b.query("scores", {"taluka_id": focus, "academic_year": [y0, y1], "subject": SUBJECT}, 2 * n)],
+                  [b.query("schools", {"udise_code": codes}, len(codes)),
+                   b.query("scores", {"udise_code": codes, "academic_year": [y0, y1], "subject": SUBJECT}, 2 * len(codes))],
                   "corr", entity=focus, n=n)
     label, key, criteria = K.correlation_label("infrastructure", t, stable, insufficient, {"r": nr, "lowest_change": low_change})
     if key == "cause.inconclusive":
@@ -189,10 +189,14 @@ def attendance(b: Builder, tables: dict, sc: pd.DataFrame, att: pd.DataFrame, fo
     change = (wide[year] - wide[prev]).dropna()
     codes = [c for c in a.index if c in change.index and c not in exclude]
     r, t, n = corr_t(a[codes], change[codes])
-    nr = b.number(f"n.corr.attendance_vs_change.{focus}", 0.0 if np.isnan(r) else r, "corr", 2,
-                  [b.query("attendance", {"taluka_id": focus, "academic_year": year}, int(((att["taluka_id"] == focus) & (att["academic_year"] == year)).sum())),
-                   b.query("scores", {"taluka_id": focus, "academic_year": [prev, year], "subject": SUBJECT}, 2 * n)],
-                  "corr", entity=focus, n=n)
+    canon = tables["attendance"]
+    n_att = int((canon["udise_code"].isin(codes) & (canon["academic_year"] == year)).sum())
+    prov = [b.query("attendance", {"udise_code": codes, "academic_year": year}, n_att),
+            b.query("scores", {"udise_code": codes, "academic_year": [prev, year], "subject": SUBJECT}, 2 * len(codes))]
+    used = int((att["udise_code"].isin(codes) & (att["academic_year"] == year)).sum())
+    if used < n_att:  # months removed by trust flags are named, not hidden
+        prov += [b.constant("TRUST-FLAT-SCHOOL", "excluded_months"), b.constant("TRUST-JUMP-ATTENDANCE", "excluded_months")]
+    nr = b.number(f"n.corr.attendance_vs_change.{focus}", 0.0 if np.isnan(r) else r, "corr", 2, prov, "corr", entity=focus, n=n)
     label, key, criteria = K.correlation_label("attendance", 0.0 if np.isnan(t) else t, None, insufficient or n < 10, {"r": nr})
     sample = {"n_schools": n}
     if key == "cause.inconclusive":

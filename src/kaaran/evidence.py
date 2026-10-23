@@ -487,3 +487,40 @@ def merge_fragments(*fragments: dict) -> dict:
             out[k].update(fr.get(k, {}))
         out["findings"] += fr.get("findings", [])
     return out
+
+
+def prune(pack: dict) -> dict:
+    """Drop sets, entities, periods and numbers that no finding (or the scope) references."""
+    out = copy.deepcopy(pack)
+    refs = {"number": set(), "entity": set(), "set": set(), "period": set()}
+
+    def walk_params(params):
+        for ref in params.values():
+            kind, value = next(iter(ref.items()))
+            if kind in refs:
+                refs[kind].add(value)
+
+    for f in out["findings"]:
+        walk_params(f.get("params", {}))
+        for c in f.get("caveats", []):
+            walk_params(c.get("params", {}))
+        for c in f.get("criteria", []):
+            if "number" in c:
+                refs["number"].add(c["number"])
+        if f.get("action", {}).get("targets"):
+            refs["set"].add(f["action"]["targets"])
+    stack = list(refs["number"])
+    while stack:  # numbers referenced through derivations
+        for inp in out["numbers"].get(stack.pop(), {}).get("derivation", {}).get("inputs", []):
+            if inp not in refs["number"]:
+                refs["number"].add(inp)
+                stack.append(inp)
+    out["numbers"] = {k: v for k, v in out["numbers"].items() if k in refs["number"]}
+    out["entity_sets"] = {k: v for k, v in out["entity_sets"].items() if k in refs["set"]}
+    out["periods"] = {k: v for k, v in out["periods"].items() if k in refs["period"] or k == out["scope"].get("period")}
+    keep = set(refs["entity"]) | {out["scope"].get("district"), out["scope"].get("focus")}
+    keep |= {m for s in out["entity_sets"].values() for m in s["members"]}
+    keep |= {n["entity"] for n in out["numbers"].values() if "entity" in n}
+    keep |= {out["entities"][k]["taluka"] for k in list(keep) if k in out["entities"] and "taluka" in out["entities"][k]}
+    out["entities"] = {k: v for k, v in out["entities"].items() if k in keep}
+    return out

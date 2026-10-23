@@ -26,12 +26,16 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Generate data: `.venv\Scripts\python -m kaaran.synth --seed 42 --out data/synthetic/demo`
 - Ingest raw files into DuckDB: `.venv\Scripts\python -m kaaran.ingest data/synthetic/demo/raw --db data/synthetic/demo/kaaran.duckdb` (writes ingest_report.json next to the db; `--write-mapping` dumps the rule-based mapping JSON)
 - Trust checks: `.venv\Scripts\python -m kaaran.trust --db data/synthetic/demo/kaaran.duckdb` (writes trust_flags / trust_missing / trust_annotations tables, trust_report.json, trust_evidence.json)
+- Evidence pack: `.venv\Scripts\python -m kaaran.analyze data/synthetic/demo/raw --focus Pandharpur --out evidence.json`
+- Eval scorecard vs answer key: `.venv\Scripts\python -m kaaran.eval --seed 42` (repeat `--seed`; `--names fictional`)
 
 ## Layout
 - src/kaaran/synth: synthetic data generator and answer key
 - src/kaaran/evidence.py: Evidence pack contract (docs/EVIDENCE_SCHEMA.md)
 - src/kaaran/ingest, trust: raw files -> DuckDB with provenance; trust checks (docs/CONFIDENCE_RULES.md)
-- src/kaaran/causes, twins, brief, llm, api: later engines
+- src/kaaran/causes, twins, confidence.py, analyze.py: cause tester, twin finder, label rules, end-to-end pack
+- src/kaaran/eval: scorecard against ground_truth.json (the only engine-side reader of the answer key)
+- src/kaaran/brief, llm, api: later engines
 - tests/: pytest suites
 - data/synthetic/: generated data (git-ignored except small samples)
 - docs/: specs (see docs/SYNTHETIC_DATA_SPEC.md); docs/source/ holds local-only originals (git-ignored)

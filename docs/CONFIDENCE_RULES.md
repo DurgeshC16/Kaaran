@@ -84,6 +84,29 @@ The scores metric is the unweighted mean of school means. Changes run from the f
 
 Without a poverty source, the covariate is dropped and the finding carries `caveat.poverty_not_available`.
 
-| rule_id | Gives |
-|---|---|
-| ACTION-CATALOG | ACTION (from a fixed catalog keyed by the supporting finding; see Stage 6) |
+**Actions**
+
+| rule_id | Gives | Catalog (supporting finding -> action, actor) |
+|---|---|---|
+| ACTION-CATALOG | ACTION | STRONG vacancy cause -> `action.redeploy_teachers` to the exposed schools (DEO, this month). TWIN LEARN_FROM -> `action.exposure_visit` to the twin (BEO, this month). Focus taluka flat-attendance RED_FLAG -> `action.verify_registers` in the flagged schools (Kendra Pramukh, this week). Focus taluka INSUFFICIENT -> `action.collect_missing_data` (BEO). Every action is within the named officer's powers; the officer confirms before it is forwarded |
+
+**Brief outline (src/kaaran/analyze.py)**
+- trend: the TREND finding
+- election_check: the election CAUSE
+- main_cause: the best other CAUSE with label STRONG or WEAK (STRONG first)
+- twin: the TWIN finding
+- data_warning: DATA findings about the focus taluka
+- action: the ACTION findings
+- appendix: everything else (other hypotheses, district-wide DATA findings)
+
+Only the focus taluka's CLEARED list is kept in a pack.
+
+## Eval scorecard (src/kaaran/eval)
+`python -m kaaran.eval --seed 42` runs the whole pipeline on the raw files and scores it against ground_truth.json. It reports:
+- truths recovered (x/8)
+- wrong verdicts
+- false flags (flagged schools outside the planted T5/T6 sets; any T8 school flagged)
+- invented numbers (no provenance and no derivation)
+- provenance mismatches: each query provenance is re-run on the canonical tables; its row count, and for means, counts and ranks also its value, must match
+
+Result on 2026-10-24 for seeds 42, 7 (fictional names), 2026, 1 and 99: 8/8 on every seed, with 0 false flags, 0 invented numbers and 0 provenance mismatches.
