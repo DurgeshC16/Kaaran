@@ -79,6 +79,14 @@ def int_(values: pd.Series) -> tuple[pd.Series, dict]:
     return nums.map(lambda x: None if x is None else int(round(x))).astype("Int64"), {}
 
 
+def share(values: pd.Series) -> tuple[pd.Series, dict]:
+    """A 0-1 share; columns written as percentages (any value above 1) are divided by 100."""
+    nums = values.map(_number)
+    as_percent = bool(nums.dropna().gt(1).any())
+    out = nums.map(lambda x: None if x is None else (x / 100 if as_percent else x)).astype("Float64")
+    return out, {"percent_to_share": int(nums.notna().sum()) if as_percent else 0}
+
+
 def yes_no(values: pd.Series) -> tuple[pd.Series, dict]:
     marathi = Counter()
     out = []
@@ -201,5 +209,5 @@ def _first_parse(s: str, preferred: str) -> dt.date | None:
     return next((p for f in DATE_FORMATS.values() if (p := _parse(s, f))), None)
 
 
-REGISTRY = {"text": text, "code": code, "udise11": udise11, "float": float_, "int": int_, "yes_no": yes_no,
+REGISTRY = {"text": text, "code": code, "udise11": udise11, "float": float_, "int": int_, "share": share, "yes_no": yes_no,
             "subject": subject, "academic_year": academic_year, "date": dates}

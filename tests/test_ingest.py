@@ -43,7 +43,7 @@ def test_rule_based_mapping_matches_committed_baseline(demo_dir):
     assert validate(committed, demo_dir / "raw") == []
     roles = {e["role"] for e in committed["entries"]}
     assert roles == {"school_profile", "enrolment", "infrastructure", "crosswalk", "scores", "teacher_posts",
-                     "election_duty", "attendance_pdf"}
+                     "election_duty", "attendance_pdf", "taluka_profile"}
 
 
 @pytest.mark.parametrize(
@@ -97,6 +97,7 @@ HANDLING = {
     "rows_omitted": (DOWNSTREAM, "trust: reported as missing months (Stage 3)"),
     "school_name_abbreviated": (DOWNSTREAM, "links are correct (round trip)"),
     "school_name_misspelt": (DOWNSTREAM, "links are correct (round trip)"),
+    "poverty_as_percent": (EXACT, "percent_to_share"),
 }
 
 
@@ -113,7 +114,7 @@ def test_every_messiness_item_is_handled(ingested, seed, names):
             assert fixes(result, fix, file, sheet) == m["count"], (kind, sheet)
         elif kind == "code_stored_as_number":
             assert fixes(result, fix, file, sheet) == m["count"]
-        elif kind in ("exact_duplicate_rows", "negative_vacancy_convention"):
+        elif kind in ("exact_duplicate_rows", "negative_vacancy_convention", "poverty_as_percent"):
             assert fixes(result, fix, file) == m["count"], kind
         elif kind == "crosswalk_missing_schools":  # logged on the crosswalk, fixed while linking PDF rows
             assert fixes(result, fix) == m["count"], kind
@@ -184,7 +185,7 @@ def test_round_trip_matches_clean_tables(ingested, seed, names):
     taluka_id = clean["schools"].set_index("udise_code")["taluka_key"].map(tid)
 
     ct = clean["talukas"].assign(taluka_id="T" + clean["talukas"]["block_code"])
-    assert _match(ct, t["talukas"], ["taluka_id"], ["taluka", "taluka_mr", "n_schools"], []) == 1.0
+    assert _match(ct, t["talukas"], ["taluka_id"], ["taluka", "taluka_mr", "n_schools"], ["poverty_index"]) == 1.0
 
     cs = clean["schools"].assign(taluka_id=clean["schools"]["udise_code"].map(taluka_id))
     cols = ["short_code", "school_name", "village", "taluka_id", "cluster_code", "cluster", "enrol_std1", "enrol_std2",

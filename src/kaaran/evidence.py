@@ -36,14 +36,14 @@ SOURCE_KINDS = ("xlsx", "csv", "pdf")
 PERIOD_KINDS = ("academic_year", "year_range", "month", "month_range")
 PARAM_KINDS = ("number", "entity", "set", "period", "text_key")
 
-UNITS = ("score", "score_change", "pct", "pct_point_change", "count", "rank", "t_stat", "corr", "months")
+UNITS = ("score", "score_change", "pct", "pct_point_change", "count", "rank", "t_stat", "corr", "months", "index")
 CHANGE_UNITS = ("score_change", "pct_point_change")
 COUNT_OF = ("schools", "talukas", "months", "years", "teachers", "students", "rows")
 
 # Canonical DuckDB views (built in Stage 2). Columns mirror the clean truth tables plus ids;
 # every view also carries src_id, src_sheet, src_page, src_section, src_row.
 CANONICAL_VIEWS = {
-    "talukas": ("taluka_id", "block_code", "taluka", "taluka_mr", "n_schools"),
+    "talukas": ("taluka_id", "block_code", "taluka", "taluka_mr", "n_schools", "poverty_index"),
     "schools": ("udise_code", "short_code", "school_name", "village", "taluka_id", "cluster_code", "cluster",
                 "enrol_std1", "enrol_std2", "enrol_std3", "enrol_std4", "enrol_std5", "enrol_total",
                 "toilets", "library", "drinking_water", "classrooms"),

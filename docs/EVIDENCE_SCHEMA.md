@@ -31,7 +31,7 @@ Ids are deterministic and meaningful (e.g. `n.score_mean.T08.2025-26`, `set.vaca
   - `pct` and `pct_point_change`.
   - `count`, which needs `of`: schools, talukas, months, years, teachers, students or rows.
   - `rank`, which needs `out_of`.
-  - `t_stat`, `corr`, `months`.
+  - `t_stat`, `corr`, `months`, `index` (e.g. a standardised similarity distance).
 - **Display**: `finalize()` fills `display` with one formatter: Decimal ROUND_HALF_UP, Indian digit grouping, Devanagari digits for `mr`. Nobody else rounds.
   - Change units show the magnitude only. `direction` (`up|down|flat`) carries the sign, so Marathi can say "घसरण" or "वाढ".
 - **Changes add up**: a displayed change equals the difference of its displayed inputs, within one last-digit unit. The validator checks every `diff`.
@@ -51,7 +51,7 @@ Ids are deterministic and meaningful (e.g. `n.score_mean.T08.2025-26`, `set.vaca
 - PDF: 1-based page + section heading (`Taluka: <name> | <YYYY-MM>`) + Sr No. Sr No alone is not unique on a page.
 
 **Canonical views** are built by ingest (Stage 2). Their columns mirror the clean truth tables plus ids, and every row also carries `src_id, src_sheet, src_page, src_section, src_row`.
-- `talukas`: taluka_id, block_code, taluka, taluka_mr, n_schools
+- `talukas`: taluka_id, block_code, taluka, taluka_mr, n_schools, poverty_index (0-1 share; null when no profile file)
 - `schools`: udise_code, short_code, school_name, village, taluka_id, cluster_code, cluster, enrol_std1-5, enrol_total, toilets, library, drinking_water, classrooms
 - `scores`: udise_code, taluka_id, academic_year, std, subject (`maths`), mean_score, students_appeared
 - `attendance`: udise_code, taluka_id, academic_year, month, enrolled, present_avg, attendance_pct

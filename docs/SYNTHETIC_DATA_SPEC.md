@@ -68,6 +68,7 @@ Written to `data/synthetic/<name>/raw/`. Every injected messiness item is record
 4. `pat_scores.csv`: SCHOOL_CD, Year, Std, Subject, Avg_Marks, Students_Appeared. Year formats mixed ("2023-24", "23-24", 2024). A bare year is the END year: 2024 = 2023-24. Subject labels mixed (Maths / Math / गणित). UTF-8 with BOM. First line is a SYNTHETIC title line (read with `skiprows=1`). About 2% exact duplicate rows.
 5. `teacher_posts.xlsx`: sanctioned vs working posts by subject, one sheet per academic year. As-on dates vary. Vacancies sometimes stored as negative numbers.
 6. `election_duty.csv`: taluka, period from/to, deployed teacher percentage, in an Election Commission schedule style with two date formats. SYNTHETIC title line first.
+7. `taluka_profile.csv` (added 2026-10-24, Phase 2B): taluka and poverty headcount ratio, in a district-handbook style. Poverty is stored as a percentage (42.0) rather than a share (0.42), and one taluka name is a spelling variant. SYNTHETIC title line first. The twin finder needs this file.
 
 Optional, later: Devanagari school names (Noto Sans Devanagari, OFL licence), Devanagari in the PDF, and a scanned-image attendance sheet.
 

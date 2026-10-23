@@ -197,6 +197,30 @@
    "ignore": []
   },
   {
+   "file": "taluka_profile.csv",
+   "sheet": null,
+   "role": "taluka_profile",
+   "read": {
+    "format": "csv",
+    "header_row": 2
+   },
+   "fields": {
+    "poverty_index": {
+     "source": {
+      "col": "Poverty Headcount Ratio (%)"
+     },
+     "normalizer": "share"
+    },
+    "taluka": {
+     "source": {
+      "col": "Taluka"
+     },
+     "normalizer": "text"
+    }
+   },
+   "ignore": []
+  },
+  {
    "file": "teacher_posts.xlsx",
    "sheet": "*",
    "role": "teacher_posts",

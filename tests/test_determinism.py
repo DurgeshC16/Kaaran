@@ -24,7 +24,7 @@ def test_same_seed_gives_identical_hashes(demo_dir, tmp_path):
         check=True, env=env, capture_output=True,
     )
     first, second = file_hashes(demo_dir), file_hashes(tmp_path)
-    assert len(first) == 13  # 6 clean tables, 6 raw files, ground truth
+    assert len(first) == 14  # 6 clean tables, 7 raw files, ground truth
     assert first == second
     assert (demo_dir / "manifest.json").read_bytes() == (tmp_path / "manifest.json").read_bytes()
 

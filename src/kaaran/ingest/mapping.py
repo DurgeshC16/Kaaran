@@ -36,15 +36,17 @@ ROLES = {
     "teacher_posts": ({"udise_code", "academic_year", "subject", "sanctioned", "working"}, {"vacant", "as_on", "school_name", "taluka"}),
     "election_duty": ({"taluka", "from_date", "deployed_pct"}, {"to_date", "duty", "sr_no"}),
     "attendance_pdf": ({"taluka", "month", "school_name", "short_code", "attendance_pct"}, {"sr_no", "enrolled", "present_avg"}),
+    "taluka_profile": ({"taluka", "poverty_index"}, set()),
 }
-NORMALIZERS = ("udise11", "code", "int", "float", "text", "yes_no", "academic_year", "subject", "date", "month")
+OPTIONAL_ROLES = {"taluka_profile"}
+NORMALIZERS = ("udise11", "code", "int", "float", "share", "text", "yes_no", "academic_year", "subject", "date", "month")
 DEFAULT_NORMALIZER = {
     "udise_code": "udise11", "short_code": "code", "school_name": "text", "taluka": "text", "cluster": "text",
     "cluster_code": "text", "village": "text", "management": "text", "enrol_total": "int", "toilets": "int",
     "library": "yes_no", "drinking_water": "yes_no", "classrooms": "int", "academic_year": "academic_year",
     "subject": "subject", "mean_score": "float", "std": "int", "students_appeared": "int", "sanctioned": "int",
     "working": "int", "vacant": "int", "as_on": "date", "from_date": "date", "to_date": "date", "deployed_pct": "float",
-    "duty": "text", "sr_no": "int", "month": "month", "enrolled": "int", "present_avg": "float", "attendance_pct": "float",
+    "duty": "text", "sr_no": "int", "poverty_index": "share", "month": "month", "enrolled": "int", "present_avg": "float", "attendance_pct": "float",
     **{f"enrol_std{i}": "int" for i in range(1, 6)},
 }
 SECTION_FIELDS = ("taluka", "month")
@@ -79,6 +81,7 @@ SYNONYMS = {
     "to_date": ["to", "to date"],
     "duty": ["duty", "duty type"],
     "sr_no": ["sr no", "sr", "serial no"],
+    "poverty_index": ["poverty index", "poverty headcount ratio", "poverty", "दारिद्र्य निर्देशांक"],
     "enrolled": ["enrolled"],
     "present_avg": ["present avg", "average present"],
     **{f"enrol_std{i}": [f"std {i}", f"class {i}"] for i in range(1, 6)},

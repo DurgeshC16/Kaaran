@@ -52,6 +52,7 @@ FILES = (
     "pat_scores.csv",
     "teacher_posts.xlsx",
     "election_duty.csv",
+    "taluka_profile.csv",
 )
 
 
@@ -365,6 +366,24 @@ def election_duty(clean, seed: int, log: MessLog, path: Path) -> int:
     return len(frame)
 
 
+# ---------- 7. taluka_profile.csv ----------
+
+
+def taluka_profile(clean, names: str, seed: int, log: MessLog, path: Path) -> int:
+    """Block-level poverty index (a district statistical handbook style table), stored as a percentage."""
+    rng = stream(seed, "messy:taluka_profile")
+    t = clean["talukas"]
+    labels = t["taluka"].tolist()
+    i = int(rng.integers(len(labels)))
+    variant = C.NAME_SETS[names][t["taluka_key"].iloc[i]][1][0]
+    labels[i] = variant
+    frame = pd.DataFrame({"Taluka": labels, "Poverty Headcount Ratio (%)": (t["poverty_index"] * 100).round(1)})
+    log.add(path.name, "poverty_as_percent", len(frame), "poverty index stored as a percentage (42.0) instead of a share (0.42)")
+    log.add(path.name, "taluka_spelling_variant", 1, "taluka spelled as a variant", keys=[variant])
+    write_csv(path, f"# {SYNTHETIC_MARKER} | Taluka profile: poverty headcount ratio | {C.DISTRICT_NAME}", frame)
+    return len(frame)
+
+
 def write_raw(clean, planted: Planted, out: Path, seed: int, names: str) -> tuple[list[dict], dict[str, int]]:
     out.mkdir(parents=True, exist_ok=True)
     log = MessLog()
@@ -375,5 +394,6 @@ def write_raw(clean, planted: Planted, out: Path, seed: int, names: str) -> tupl
         "pat_scores.csv": pat_scores(clean, seed, log, out / "pat_scores.csv"),
         "teacher_posts.xlsx": teacher_posts(clean, seed, log, out / "teacher_posts.xlsx"),
         "election_duty.csv": election_duty(clean, seed, log, out / "election_duty.csv"),
+        "taluka_profile.csv": taluka_profile(clean, names, seed, log, out / "taluka_profile.csv"),
     }
     return log.items, rows

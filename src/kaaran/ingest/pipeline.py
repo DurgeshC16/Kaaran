@@ -31,7 +31,7 @@ SECTION_PATTERNS = {
 }
 PDF_FIELD_PATTERNS = {"int": r"(\d+)", "float": r"(\d+(?:\.\d+)?)", "code": r"([A-Z]{1,4}\d{3,8})", "text": r"(.+?)"}
 CANONICAL_COLUMNS = {
-    "talukas": ["taluka_id", "block_code", "taluka", "taluka_mr", "n_schools"],
+    "talukas": ["taluka_id", "block_code", "taluka", "taluka_mr", "n_schools", "poverty_index"],
     "schools": ["udise_code", "short_code", "school_name", "village", "taluka_id", "cluster_code", "cluster",
                 "enrol_std1", "enrol_std2", "enrol_std3", "enrol_std4", "enrol_std5", "enrol_total",
                 "toilets", "library", "drinking_water", "classrooms"],
@@ -48,7 +48,8 @@ FIX_UNITS = {
     "yes_no_marathi": "cells", "exact_duplicates_removed": "rows", "conflicting_duplicates": "rows",
     "negative_vacancy_recomputed": "rows", "vacancy_mismatch": "rows", "date_format_parsed": "rows",
     "pdf_header_repeats_skipped": "pages", "pdf_continuation_pages": "pages", "link_crosswalk": "schools",
-    "link_name_match": "schools", "link_unresolved": "schools", "unparsed_values": "cells",
+    "link_name_match": "schools", "link_unresolved": "schools", "unparsed_values": "cells", "percent_to_share": "rows",
+    "taluka_name_unresolved": "rows",
 }
 
 
@@ -221,6 +222,8 @@ def _apply_fields(entry: dict, df: pd.DataFrame, log: FixLog) -> pd.DataFrame:
             if norm == "subject":
                 for label, n in stats["relabelled"].items():
                     log.add("subject_label_normalized", n, file, sheet, f"'{label}' -> canonical subject")
+            if norm == "share":
+                log.add("percent_to_share", stats["percent_to_share"], file, sheet, f"{f}: percentages converted to 0-1 shares")
             if norm == "yes_no":
                 for label, n in stats["marathi_values"].items():
                     log.add("yes_no_marathi", n, file, sheet, f"{f}: '{label}'")
@@ -259,6 +262,18 @@ def _talukas(parts: list[pd.DataFrame]) -> tuple[pd.DataFrame, dict[str, str]]:
         for s in counts:
             variants[s.lower()] = tid
     return pd.DataFrame(rows), variants
+
+
+def _resolve_logged(df: pd.DataFrame, variants: dict[str, str], canonical: dict[str, str], talukas: pd.DataFrame,
+                    file: str, log: FixLog) -> pd.Series:
+    """Resolve taluka names in tables without UDISE codes; log spelling variants and unresolved names."""
+    ids = _resolve_names(df["taluka"], variants, canonical)
+    name_of = talukas.set_index("taluka_id")["taluka"]
+    differs = ids.notna() & (df["taluka"] != ids.map(name_of))
+    log.add("taluka_variant_resolved", int(differs.sum()), file, None, "taluka spelling resolved by name", df.loc[differs, "taluka"].unique())
+    log.add("taluka_name_unresolved", int(ids.isna().sum()), file, None, "taluka names that matched no known taluka",
+            df.loc[ids.isna(), "taluka"].unique())
+    return ids
 
 
 def _resolve_names(names: pd.Series, variants: dict[str, str], canonical: dict[str, str]) -> pd.Series:
@@ -392,7 +407,7 @@ def ingest(raw_dir: str | Path, db_path: str | Path | None = None, mapping: dict
 
     _, cw = role("crosswalk")
     att_e, att = role("attendance_pdf")
-    att["taluka_id"] = _resolve_names(att["taluka"], variants, canonical_names)
+    att["taluka_id"] = _resolve_logged(att, variants, canonical_names, talukas, att_e["file"], log)
     links = _link_attendance(att, cw, schools, att_e["file"], log)
     att = att.merge(links, on="short_code", how="left")
     schools = schools.merge(links.drop_duplicates("udise_code")[["udise_code", "short_code"]], on="udise_code", how="left")
@@ -418,10 +433,17 @@ def ingest(raw_dir: str | Path, db_path: str | Path | None = None, mapping: dict
     posts = _dedupe(posts, ["udise_code", "academic_year", "subject"], tp_file, log)
 
     el_e, election = role("election_duty")
-    election["taluka_id"] = _resolve_names(election["taluka"], variants, canonical_names)
+    election["taluka_id"] = _resolve_logged(election, variants, canonical_names, talukas, el_e["file"], log)
     election["month"] = election["from_date"].map(lambda d: None if d is None else f"{d.year:04d}-{d.month:02d}")
     election["academic_year"] = election["month"].map(lambda m: None if m is None else N.academic_year_of_month(m))
     election = _dedupe(election, ["taluka_id", "month"], el_e["file"], log)
+
+    talukas["poverty_index"] = pd.Series([None] * len(talukas), dtype="Float64")
+    if "taluka_profile" in by_role:
+        pr_e, profile_t = role("taluka_profile")
+        profile_t = profile_t.assign(taluka_id=_resolve_logged(profile_t, variants, canonical_names, talukas, pr_e["file"], log))
+        poverty = profile_t.dropna(subset=["taluka_id"]).drop_duplicates("taluka_id").set_index("taluka_id")["poverty_index"]
+        talukas["poverty_index"] = talukas["taluka_id"].map(poverty).astype("Float64")
 
     tables = {
         "talukas": talukas.assign(src_id=sources[prof_e["file"]]["id"], src_sheet=prof_e["sheet"], src_page=None,

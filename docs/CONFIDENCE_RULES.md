@@ -75,8 +75,15 @@ The scores metric is the unweighted mean of school means. Changes run from the f
   - Without this rule, seed 42 showed a chance attendance correlation of t = -3.2; it is -2.5 without the 11 vacancy schools, which gives "inconclusive".
   - Infrastructure stays below abs(t) = 1.7 on 10 seeds either way.
 
+**Twins**
+
+| rule_id | Gives | Rule and constants | Rationale |
+|---|---|---|---|
+| TWIN-LEARN-FROM | TWIN LEARN_FROM (`twin.learn_from`) | Candidates: talukas with the same heavy election-duty years as the focus taluka, not INSUFFICIENT. Covariates: school count, mean enrolment, poverty index, each standardised across the district's talukas. Similar = RMS z-distance <= `TWIN_MAX_DISTANCE` = 1.0. The twin is the most similar candidate that improved by >= `TWIN_MIN_IMPROVEMENT` = 3 points over the window. The most similar candidate that did not improve is reported as the decoy | Within one SD on average means "comparable block". 3 points is above the between-taluka year-to-year noise. Reporting the decoy shows the choice was made on outcome, not on similarity alone (positive deviance) |
+| TWIN-NONE | TWIN INSUFFICIENT (`twin.none_found`) | No similar taluka improved | Nothing to learn from |
+
+Without a poverty source, the covariate is dropped and the finding carries `caveat.poverty_not_available`.
+
 | rule_id | Gives |
 |---|---|
-| TWIN-LEARN-FROM | TWIN LEARN_FROM (Stage 5) |
-| TWIN-NONE | TWIN INSUFFICIENT (no similar taluka did better) |
-| ACTION-CATALOG | ACTION (from a fixed catalog keyed by the supporting finding) |
+| ACTION-CATALOG | ACTION (from a fixed catalog keyed by the supporting finding; see Stage 6) |

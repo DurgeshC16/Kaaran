@@ -20,6 +20,7 @@ RAW_FILES = [
     "pat_scores.csv",
     "teacher_posts.xlsx",
     "election_duty.csv",
+    "taluka_profile.csv",
 ]
 PDF_MONTHS = ["2024-01", "2024-02", "2024-03", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12"]
 MONTH_NUM = {name: i for i, name in enumerate(
@@ -95,7 +96,7 @@ def test_every_file_carries_synthetic_marker(raw, demo_dir):
         assert "SYNTHETIC" in wb.properties.title
         for ws in wb.worksheets:
             assert "SYNTHETIC" in str(ws["A1"].value)
-    for name in ("pat_scores.csv", "election_duty.csv"):
+    for name in ("pat_scores.csv", "election_duty.csv", "taluka_profile.csv"):
         first = (raw / name).read_text(encoding="utf-8-sig").splitlines()[0]
         assert "SYNTHETIC" in first
     for name in ("ground_truth.json", "manifest.json"):
@@ -308,3 +309,11 @@ def test_election_duty_messiness(raw, gt):
     t2 = next(t for t in gt["truths"] if t["id"] == "T2")
     assert set(heavy["Taluka"]) == set(t2["entities"]["talukas"])
     assert heavy["Duty"].str.contains("Vidhan Sabha General Election 2024").all()
+
+
+def test_taluka_profile_messiness(raw, gt, clean):
+    df = pd.read_csv(raw / "taluka_profile.csv", skiprows=1)
+    assert len(df) == 11 and df["Poverty Headcount Ratio (%)"].between(1, 100).all()  # percent, not share
+    variants = set(df["Taluka"]) - set(clean["talukas"]["taluka"])
+    assert len(variants) == 1
+    assert log_items(gt, "taluka_profile.csv", "poverty_as_percent")
