@@ -20,6 +20,7 @@ Model names come from env vars (KAARAN_MODEL_MAIN, KAARAN_MODEL_LIGHT). Never ha
 The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is deterministic for a given seed.
 
 ## Commands (Windows)
+- Setup: `py -3.11 -m venv .venv` then `.venv\Scripts\python -m pip install -e .[dev]` (versions pinned in pyproject.toml)
 - Tests: `.venv\Scripts\python -m pytest -q`
 - Generate data: `.venv\Scripts\python -m kaaran.synth --seed 42 --out data/synthetic/demo`
 
