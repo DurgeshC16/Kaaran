@@ -1,18 +1,23 @@
-"""Orchestrates generation: clean truth tables -> self-check -> files."""
+"""Orchestrates generation: clean truth tables -> self-check -> raw files -> manifest."""
 
 from __future__ import annotations
 
+import dataclasses
+import hashlib
 import json
+import platform
 from pathlib import Path
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from . import SYNTHETIC_MARKER
+from . import GENERATOR_VERSION, SYNTHETIC_MARKER
 from . import config as C
 from . import ground_truth
 from .entities import build_schools, build_talukas
+from .messy import FILES as RAW_FILES
+from .messy import write_raw
 from .plant import Planted, draw_school_effects, select
 from .tables import (
     build_attendance,
@@ -78,13 +83,66 @@ def write_json(obj: dict, path: Path) -> None:
     path.write_bytes(text.encode("utf-8"))
 
 
-def generate(seed: int = 42, out: str | Path = "data/synthetic/demo", names: str = C.TALUKA_NAMES) -> dict:
+def config_hash() -> str:
+    values = {k: v for k, v in vars(C).items() if k.isupper()}
+    values["TALUKAS"] = [dataclasses.asdict(t) for t in C.TALUKAS]
+    values.pop("TALUKA_BY_KEY")
+    return hashlib.sha256(json.dumps(values, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+
+
+def library_versions() -> dict[str, str]:
+    import numpy, openpyxl, pdfplumber, reportlab  # noqa: E401
+
+    return {
+        "python": platform.python_version(),
+        "numpy": numpy.__version__,
+        "pandas": pd.__version__,
+        "pyarrow": pa.__version__,
+        "openpyxl": openpyxl.__version__,
+        "reportlab": reportlab.Version,
+        "pdfplumber": pdfplumber.__version__,
+    }
+
+
+def build_manifest(out: Path, seed: int, names: str, rows: dict[str, int], files: list[str]) -> dict:
+    entries = {}
+    for rel in files:
+        data = (out / rel).read_bytes()
+        entries[rel] = {"sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data), "rows": rows.get(rel)}
+    return {
+        "synthetic": True,
+        "marker": SYNTHETIC_MARKER,
+        "district": C.DISTRICT_NAME,
+        "generator": "kaaran.synth",
+        "generator_version": GENERATOR_VERSION,
+        "seed": seed,
+        "taluka_name_set": names,
+        "config_sha256": config_hash(),
+        "library_versions": library_versions(),
+        "files": entries,
+    }
+
+
+def generate(
+    seed: int = 42, out: str | Path = "data/synthetic/demo", names: str = C.TALUKA_NAMES, raw: bool = True
+) -> dict:
     out = Path(out)
     clean, planted = build_clean(seed, names)
     clean_dir = out / "clean"
     clean_dir.mkdir(parents=True, exist_ok=True)
+    rows, files = {}, []
     for key in CLEAN_TABLES:
-        write_parquet(clean[key], clean_dir / f"{key}.parquet")
+        rel = f"clean/{key}.parquet"
+        write_parquet(clean[key], out / rel)
+        rows[rel], files = len(clean[key]), files + [rel]
     truth = ground_truth.build(seed, names, clean, planted)
+    if raw:
+        truth["messiness"], raw_rows = write_raw(clean, planted, out / "raw", seed, names)
+        for name in RAW_FILES:
+            rows[f"raw/{name}"] = raw_rows[name]
+            files.append(f"raw/{name}")
     write_json(truth, out / "ground_truth.json")
-    return {"out": str(out), "rows": {k: len(v) for k, v in clean.items()}}
+    files.append("ground_truth.json")
+    manifest = build_manifest(out, seed, names, rows, files)
+    write_json(manifest, out / "manifest.json")
+    return {"out": str(out), "rows": rows, "manifest": manifest}

@@ -13,12 +13,12 @@ Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 - [x] Scaffold: pyproject, package layout, pytest runs
 - [x] Clean truth tables with planted truths T1-T8 + ground_truth.json
 - [x] Tests prove each planted truth from the clean tables
-- [ ] Messiness layer + raw file writers (xlsx, csv, pdf)
+- [x] Messiness layer + raw file writers (xlsx, csv, pdf), messiness log, manifest
 - [ ] Determinism test (same seed -> identical hashes)
 - [ ] PROGRESS.md updated, pushed
 
 ## Next task
-Messiness layer + raw file writers (xlsx, csv, pdf), messiness log, manifest.
+Determinism test (same seed -> identical hashes; different seed -> different hashes).
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.

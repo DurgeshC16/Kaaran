@@ -14,11 +14,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--out", default="data/synthetic/demo")
     p.add_argument("--names", choices=sorted(C.NAME_SETS), default=C.TALUKA_NAMES, help="taluka name set")
+    p.add_argument("--clean-only", action="store_true", help="skip the messy raw files")
     args = p.parse_args(argv)
-    result = generate(seed=args.seed, out=args.out, names=args.names)
+    result = generate(seed=args.seed, out=args.out, names=args.names, raw=not args.clean_only)
     print(f"SYNTHETIC data written to {result['out']} (seed {args.seed}, names {args.names})")
     for name, n in result["rows"].items():
-        print(f"  {name:14s} {n:>7,d} rows")
+        print(f"  {name:28s} {n:>7,d} rows")
     return 0
 
 
