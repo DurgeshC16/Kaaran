@@ -11,7 +11,7 @@ Phase 1 (Foundation): done 2026-10-23 (synthetic generator, 27 tests, see "Phase
 Phase 2 stages:
 - [x] Stage 0: housekeeping (schedule, slow marker, CLAUDE.md commands and git rule)
 - [x] Stage 1: evidence contract (docs/EVIDENCE_SCHEMA.md, sample evidence pack)
-- [ ] Stage 2: ingest (raw files -> DuckDB with provenance, mapping JSON, ingest report, round trip)
+- [x] Stage 2: ingest (raw files -> DuckDB with provenance, mapping JSON, ingest report, round trip)
 - [ ] Stage 3: trust checks (flat runs, jumps, missing data, duplicates; docs/CONFIDENCE_RULES.md)
 - [ ] Phase 2B: causes, twins, confidence rules, eval harness (Oct 24-25)
 

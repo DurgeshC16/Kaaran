@@ -65,3 +65,50 @@ def taluka_scores(scores) -> pd.DataFrame:
 @pytest.fixture(scope="session")
 def school_wide(scores) -> pd.DataFrame:
     return scores.pivot(index="udise_code", columns="academic_year", values="mean_score")
+
+
+# ---------- multi-seed datasets and ingest results (shared by ingest and trust tests) ----------
+# Seed 42 runs in the fast suite; the extra seeds (one with the fictional name set) are marked slow.
+EXTRA_SEEDS = [(7, "fictional"), (2026, "solapur")]
+
+
+@pytest.fixture(scope="session")
+def dataset(tmp_path_factory, demo_dir):
+    """Factory: (seed, names) -> generated data folder (raw/, clean/, ground_truth.json)."""
+    cache = {}
+
+    def get(seed: int = 42, names: str = "solapur"):
+        if (seed, names) == (int(os.environ.get("KAARAN_TEST_SEED", "42")), "solapur"):
+            return demo_dir
+        if (seed, names) not in cache:
+            out = tmp_path_factory.mktemp(f"data_{seed}_{names}")
+            generate(seed=seed, out=out, names=names)
+            cache[(seed, names)] = out
+        return cache[(seed, names)]
+
+    return get
+
+
+@pytest.fixture(scope="session")
+def ingested(dataset, tmp_path_factory):
+    """Factory: (seed, names) -> (data folder, IngestResult) with the DuckDB file written."""
+    from kaaran.ingest import ingest
+
+    cache = {}
+
+    def get(seed: int = 42, names: str = "solapur"):
+        if (seed, names) not in cache:
+            folder = dataset(seed, names)
+            db = tmp_path_factory.mktemp(f"db_{seed}_{names}") / "kaaran.duckdb"
+            cache[(seed, names)] = (folder, ingest(folder / "raw", db))
+        return cache[(seed, names)]
+
+    return get
+
+
+def load_clean(folder) -> dict[str, pd.DataFrame]:
+    return {k: pd.read_parquet(folder / "clean" / f"{k}.parquet") for k in CLEAN_TABLES}
+
+
+def load_truth(folder) -> dict:
+    return json.loads((folder / "ground_truth.json").read_text(encoding="utf-8"))

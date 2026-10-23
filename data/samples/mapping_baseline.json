@@ -1,0 +1,440 @@
+{
+ "mapping_version": 1,
+ "source": "rule_baseline",
+ "entries": [
+  {
+   "file": "attendance_jan-dec.pdf",
+   "sheet": null,
+   "role": "attendance_pdf",
+   "read": {
+    "format": "pdf",
+    "section_pattern": "month_year_taluka",
+    "columns": [
+     "Sr No",
+     "School Name",
+     "Short Code",
+     "Enrolled",
+     "Present Avg",
+     "%"
+    ]
+   },
+   "fields": {
+    "attendance_pct": {
+     "source": {
+      "col": "%"
+     },
+     "normalizer": "float"
+    },
+    "enrolled": {
+     "source": {
+      "col": "Enrolled"
+     },
+     "normalizer": "int"
+    },
+    "month": {
+     "source": {
+      "section": "month"
+     },
+     "normalizer": "month"
+    },
+    "present_avg": {
+     "source": {
+      "col": "Present Avg"
+     },
+     "normalizer": "float"
+    },
+    "school_name": {
+     "source": {
+      "col": "School Name"
+     },
+     "normalizer": "text"
+    },
+    "short_code": {
+     "source": {
+      "col": "Short Code"
+     },
+     "normalizer": "code"
+    },
+    "sr_no": {
+     "source": {
+      "col": "Sr No"
+     },
+     "normalizer": "int"
+    },
+    "taluka": {
+     "source": {
+      "section": "taluka"
+     },
+     "normalizer": "text"
+    }
+   },
+   "ignore": []
+  },
+  {
+   "file": "crosswalk.xlsx",
+   "sheet": "Crosswalk",
+   "role": "crosswalk",
+   "read": {
+    "format": "xlsx",
+    "header_row": 3
+   },
+   "fields": {
+    "short_code": {
+     "source": {
+      "col": "Short Code"
+     },
+     "normalizer": "code"
+    },
+    "taluka": {
+     "source": {
+      "col": "Taluka"
+     },
+     "normalizer": "text"
+    },
+    "udise_code": {
+     "source": {
+      "col": "UDISE Code"
+     },
+     "normalizer": "udise11"
+    }
+   },
+   "ignore": []
+  },
+  {
+   "file": "election_duty.csv",
+   "sheet": null,
+   "role": "election_duty",
+   "read": {
+    "format": "csv",
+    "header_row": 2
+   },
+   "fields": {
+    "deployed_pct": {
+     "source": {
+      "col": "Deployed Teachers (%)"
+     },
+     "normalizer": "float"
+    },
+    "duty": {
+     "source": {
+      "col": "Duty"
+     },
+     "normalizer": "text"
+    },
+    "from_date": {
+     "source": {
+      "col": "From"
+     },
+     "normalizer": "date"
+    },
+    "sr_no": {
+     "source": {
+      "col": "Sr.No."
+     },
+     "normalizer": "int"
+    },
+    "taluka": {
+     "source": {
+      "col": "Taluka"
+     },
+     "normalizer": "text"
+    },
+    "to_date": {
+     "source": {
+      "col": "To"
+     },
+     "normalizer": "date"
+    }
+   },
+   "ignore": []
+  },
+  {
+   "file": "pat_scores.csv",
+   "sheet": null,
+   "role": "scores",
+   "read": {
+    "format": "csv",
+    "header_row": 2
+   },
+   "fields": {
+    "academic_year": {
+     "source": {
+      "col": "Year"
+     },
+     "normalizer": "academic_year"
+    },
+    "mean_score": {
+     "source": {
+      "col": "Avg_Marks"
+     },
+     "normalizer": "float"
+    },
+    "std": {
+     "source": {
+      "col": "Std"
+     },
+     "normalizer": "int"
+    },
+    "students_appeared": {
+     "source": {
+      "col": "Students_Appeared"
+     },
+     "normalizer": "int"
+    },
+    "subject": {
+     "source": {
+      "col": "Subject"
+     },
+     "normalizer": "subject"
+    },
+    "udise_code": {
+     "source": {
+      "col": "SCHOOL_CD"
+     },
+     "normalizer": "udise11"
+    }
+   },
+   "ignore": []
+  },
+  {
+   "file": "teacher_posts.xlsx",
+   "sheet": "*",
+   "role": "teacher_posts",
+   "read": {
+    "format": "xlsx",
+    "header_row": 3
+   },
+   "fields": {
+    "academic_year": {
+     "source": {
+      "sheet_name": true
+     },
+     "normalizer": "academic_year"
+    },
+    "as_on": {
+     "source": {
+      "col": "As On"
+     },
+     "normalizer": "date"
+    },
+    "sanctioned": {
+     "source": {
+      "col": "Sanctioned"
+     },
+     "normalizer": "int"
+    },
+    "school_name": {
+     "source": {
+      "col": "School Name"
+     },
+     "normalizer": "text"
+    },
+    "subject": {
+     "source": {
+      "col": "Subject"
+     },
+     "normalizer": "subject"
+    },
+    "taluka": {
+     "source": {
+      "col": "Taluka"
+     },
+     "normalizer": "text"
+    },
+    "udise_code": {
+     "source": {
+      "col": "UDISE Code"
+     },
+     "normalizer": "udise11"
+    },
+    "vacant": {
+     "source": {
+      "col": "Vacant"
+     },
+     "normalizer": "int"
+    },
+    "working": {
+     "source": {
+      "col": "Working"
+     },
+     "normalizer": "int"
+    }
+   },
+   "ignore": []
+  },
+  {
+   "file": "udise_2023.xlsx",
+   "sheet": "School Profile",
+   "role": "school_profile",
+   "read": {
+    "format": "xlsx",
+    "header_row": 4
+   },
+   "fields": {
+    "cluster": {
+     "source": {
+      "col": "Cluster"
+     },
+     "normalizer": "text"
+    },
+    "cluster_code": {
+     "source": {
+      "col": "cluster code"
+     },
+     "normalizer": "text"
+    },
+    "management": {
+     "source": {
+      "col": "Management"
+     },
+     "normalizer": "text"
+    },
+    "school_name": {
+     "source": {
+      "col": "school NAME"
+     },
+     "normalizer": "text"
+    },
+    "taluka": {
+     "source": {
+      "col": "TALUKA"
+     },
+     "normalizer": "text"
+    },
+    "udise_code": {
+     "source": {
+      "col": "UDISE Code"
+     },
+     "normalizer": "udise11"
+    },
+    "village": {
+     "source": {
+      "col": "Village Name"
+     },
+     "normalizer": "text"
+    }
+   },
+   "ignore": []
+  },
+  {
+   "file": "udise_2023.xlsx",
+   "sheet": "Enrolment",
+   "role": "enrolment",
+   "read": {
+    "format": "xlsx",
+    "header_row": 5
+   },
+   "fields": {
+    "enrol_std1": {
+     "source": {
+      "col": "Std 1"
+     },
+     "normalizer": "int"
+    },
+    "enrol_std2": {
+     "source": {
+      "col": "Std 2"
+     },
+     "normalizer": "int"
+    },
+    "enrol_std3": {
+     "source": {
+      "col": "Std 3"
+     },
+     "normalizer": "int"
+    },
+    "enrol_std4": {
+     "source": {
+      "col": "Std 4"
+     },
+     "normalizer": "int"
+    },
+    "enrol_std5": {
+     "source": {
+      "col": "Std 5"
+     },
+     "normalizer": "int"
+    },
+    "enrol_total": {
+     "source": {
+      "col": "Total"
+     },
+     "normalizer": "int"
+    },
+    "school_name": {
+     "source": {
+      "col": "School Name"
+     },
+     "normalizer": "text"
+    },
+    "taluka": {
+     "source": {
+      "col": "Taluka"
+     },
+     "normalizer": "text"
+    },
+    "udise_code": {
+     "source": {
+      "col": "UDISE Code"
+     },
+     "normalizer": "udise11"
+    }
+   },
+   "ignore": []
+  },
+  {
+   "file": "udise_2023.xlsx",
+   "sheet": "Infrastructure",
+   "role": "infrastructure",
+   "read": {
+    "format": "xlsx",
+    "header_row": 4
+   },
+   "fields": {
+    "classrooms": {
+     "source": {
+      "col": "वर्गखोल्या"
+     },
+     "normalizer": "int"
+    },
+    "drinking_water": {
+     "source": {
+      "col": "पिण्याचे पाणी"
+     },
+     "normalizer": "yes_no"
+    },
+    "library": {
+     "source": {
+      "col": "ग्रंथालय"
+     },
+     "normalizer": "yes_no"
+    },
+    "school_name": {
+     "source": {
+      "col": "शाळेचे नाव"
+     },
+     "normalizer": "text"
+    },
+    "taluka": {
+     "source": {
+      "col": "तालुका"
+     },
+     "normalizer": "text"
+    },
+    "toilets": {
+     "source": {
+      "col": "शौचालये"
+     },
+     "normalizer": "int"
+    },
+    "udise_code": {
+     "source": {
+      "col": "यूडायस कोड"
+     },
+     "normalizer": "udise11"
+    }
+   },
+   "ignore": []
+  }
+ ]
+}

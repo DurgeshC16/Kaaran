@@ -24,6 +24,7 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Fast tests (everyday default): `.venv\Scripts\python -m pytest -q -m "not slow"`
 - Full tests (run before every commit): `.venv\Scripts\python -m pytest -q` (adds `slow`: pdfplumber PDF reading, extra seeds)
 - Generate data: `.venv\Scripts\python -m kaaran.synth --seed 42 --out data/synthetic/demo`
+- Ingest raw files into DuckDB: `.venv\Scripts\python -m kaaran.ingest data/synthetic/demo/raw --db data/synthetic/demo/kaaran.duckdb` (writes ingest_report.json next to the db; `--write-mapping` dumps the rule-based mapping JSON)
 
 ## Layout
 - src/kaaran/synth: synthetic data generator and answer key
