@@ -67,10 +67,13 @@ Phase 2B (Oct 24-25): causes/ (vacancy, election, infrastructure), twins/ (size,
 - 2026-10-23 Persisting score jumps are trust annotations for the cause tester, not flags; only reverting spikes are flagged.
 - 2026-10-23 Name matching for crosswalk gaps is a one-to-one assignment within the taluka (a unique-best rule left two near-identical names unresolved on seeds 1-2).
 - 2026-10-23 Trust inputs are ingested raw data; "expected months" = months present in the file for the taluka.
+- 2026-10-23 Phase 3 Brief Writer: Claude writes `{{n:<id>}}` placeholders; code fills in the Marathi figures (display.mr) from the evidence pack.
+- 2026-10-23 Phase 3 mapping proposals: Claude sees only headers plus columns with few distinct values (e.g. taluka spellings, होय/नाही); never school names, codes or numbers.
 
 ## Spend ledger
 | Date | What | Spend ($) | Cumulative ($) |
 |------|------|-----------|----------------|
+| 2026-10-23 13:55 | Phase 1 + Phase 2 stages 0-3 (incl. three Opus plan reviews) | 35 | 35 |
 
 ## Schedule (re-planned 2026-10-23)
 - Phase 2, deterministic core engines: Oct 23-25
