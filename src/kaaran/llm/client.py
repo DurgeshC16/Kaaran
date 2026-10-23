@@ -120,6 +120,10 @@ class LLMClient:
         self.usage_log.parent.mkdir(parents=True, exist_ok=True)
         with self.usage_log.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        keys_log = setting("KAARAN_LLM_KEYS_LOG")  # optional: every cache key touched, for pruning stale recordings
+        if keys_log and rec.get("key"):
+            with open(keys_log, "a", encoding="utf-8") as fh:
+                fh.write(rec["key"] + "\n")
 
     # ---- the one entry point
     def call(self, *, role: str, tier: str, system: str, user: str, schema: dict | None = None,

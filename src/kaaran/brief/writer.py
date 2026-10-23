@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from .. import evidence as E
 from ..llm.client import LLMUnavailable, get_client
 from . import texts as X
-from .render import FillError, expand_template, fill, render_markdown, template_text
+from .render import FillError, allowed_refs, expand_template, fill, render_markdown, template_text
 
 SYSTEM = """You write the wording of a one-page Evidence Brief for a block or district education officer in Maharashtra. \
 Code has already computed every number and label; you only write clear sentences around them.
@@ -48,28 +48,6 @@ class Brief:
 
 def template_prose(pack: dict) -> dict[str, dict]:
     return {f["id"]: {"mr": template_text(f, "mr"), "en": template_text(f, "en")} for f in pack["findings"]}
-
-
-def allowed_refs(finding: dict, pack: dict) -> dict[str, set]:
-    """Placeholders a finding may use: its params, caveat params, criteria numbers (+ derivation inputs) and scope."""
-    refs = {"n": set(), "e": set(), "s": set(), "p": set(), "t": set()}
-
-    def add(params):
-        for ref in params.values():
-            kind, value = next(iter(ref.items()))
-            refs[{"number": "n", "entity": "e", "set": "s", "period": "p", "text_key": "t"}[kind]].add(value)
-    add(finding.get("params", {}))
-    for c in finding.get("caveats", []):
-        add(c.get("params", {}))
-    for c in finding.get("criteria", []):
-        if c.get("number"):
-            refs["n"].add(c["number"])
-    for nid in list(refs["n"]):
-        refs["n"] |= set(pack["numbers"].get(nid, {}).get("derivation", {}).get("inputs", []))
-    refs["e"].add(pack["scope"]["focus"])
-    if pack["scope"].get("period"):
-        refs["p"].add(pack["scope"]["period"])
-    return refs
 
 
 def llm_input(pack: dict) -> dict:
@@ -132,15 +110,20 @@ def call_writer(pack: dict, client, feedback: dict | None = None):
                        schema=output_schema(ids), max_tokens=16000, effort="medium")
 
 
-def basic_problems(text: str, finding: dict, pack: dict, lang: str) -> list[str]:
-    try:
-        fill(text, pack, lang)
-    except FillError as e:
-        return [str(e)]
-    return []
+def check_text(text: str, finding: dict, pack: dict, lang: str) -> list[str]:
+    """The deterministic verifier, plus a fill check (every placeholder must render)."""
+    from .verify import verify_text
+
+    problems = verify_text(text, finding, pack, lang)
+    if not problems:
+        try:
+            fill(text, pack, lang)
+        except FillError as e:
+            problems.append(f"FILL {e}")
+    return problems
 
 
-def write_brief(pack: dict, use_llm: bool = True, client=None, checker=basic_problems) -> Brief:
+def write_brief(pack: dict, use_llm: bool = True, client=None, checker=check_text) -> Brief:
     """LLM prose where it passes the checker (one retry for failing findings), templates elsewhere."""
     templates = template_prose(pack)
     prose, sources = dict(templates), {fid: "template" for fid in templates}
@@ -178,7 +161,10 @@ def write_brief(pack: dict, use_llm: bool = True, client=None, checker=basic_pro
             if not feedback:
                 break
     markdown = {lang: render_markdown(pack, prose, lang, sources) for lang in ("mr", "en")}
+    from .verify import verify_brief
+
+    info["verification"] = verify_brief(prose, markdown, pack)
     return Brief(prose=prose, sources=sources, markdown=markdown, info=info)
 
 
-__all__ = ["Brief", "write_brief", "template_prose", "llm_input", "allowed_refs", "expand_template"]
+__all__ = ["Brief", "write_brief", "template_prose", "llm_input", "check_text"]

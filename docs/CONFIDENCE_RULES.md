@@ -110,3 +110,19 @@ Only the focus taluka's CLEARED list is kept in a pack.
 - provenance mismatches: each query provenance is re-run on the canonical tables; its row count, and for means, counts and ranks also its value, must match
 
 Result on 2026-10-24 for seeds 42, 7 (fictional names), 2026, 1 and 99: 8/8 on every seed, with 0 false flags, 0 invented numbers and 0 provenance mismatches.
+
+## Brief wording rules (Phase 3, src/kaaran/brief/verify.py)
+Every brief sentence goes through a deterministic verifier before it ships, whether the LLM or a template wrote it. A sentence that fails gets one retry with the problem codes; if it fails again, the template sentence is used.
+
+| Code | Rule |
+|---|---|
+| PLACEHOLDER_UNKNOWN / PLACEHOLDER_NOT_ALLOWED | Every `{{n:}}` `{{e:}}` `{{s:}}` `{{p:}}` placeholder exists in the evidence pack and belongs to that finding (its params, caveats, criteria) |
+| DIGIT | No digits, Latin or Devanagari, outside placeholders: every figure is filled in by code |
+| SPELLED_NUMBER | No figures written as words (English two-ninety, hundred, thousand, lakh, crore; Marathi दोन-वीस, शंभर, हजार, लाख, कोटी) |
+| CAUSAL_WORDING | Causal words ("because of", "due to", "caused", "led to", "-मुळे", "कारणीभूत", "परिणामी", "कारण आहे") appear only in a CAUSE finding labelled STRONG. Negated sentences ("does not show it caused", "सिद्ध होत नाही") and the connective "त्यामुळे" ("therefore") are allowed |
+| SCHOOL_NAME | No school names: the LLM never sees them, so any would be invented |
+| NOT_MARATHI | Marathi text is at least 70% Devanagari letters |
+| EMPTY / TOO_LONG / PLACEHOLDER_MALFORMED | Basic hygiene |
+| MISSING_SECTION | All six brief sections appear (code renders "no finding" when a section is empty) |
+
+Headings, label badges, action owners and horizons, the SYNTHETIC banner and every figure are rendered by code, never by the LLM.

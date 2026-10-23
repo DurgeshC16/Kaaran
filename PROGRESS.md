@@ -11,7 +11,7 @@ Phase 3 stages:
 - [x] Stage 1: mapping proposer (Messy-File Reader) + variant_b hold-out layout
 - [x] Stage 2: intent parser
 - [x] Stage 3: Brief Writer (Marathi + English, placeholders)
-- [ ] Stage 4: verifier
+- [x] Stage 4: verifier
 - [ ] Stage 5: guardrail tests + brief eval + sample briefs
 
 Phase 2 (deterministic engines): done 2026-10-23.

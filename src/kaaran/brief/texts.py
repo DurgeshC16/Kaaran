@@ -17,6 +17,7 @@ SECTION_HEADINGS = {
     "appendix": ("इतर तपासण्या", "Other checks"),
 }
 REQUIRED_SECTIONS = ("trend", "election_check", "main_cause", "twin", "data_warning", "action")
+NOT_APPLICABLE = ("या प्रश्नासाठी या विभागात कोणताही निष्कर्ष नाही.", "No finding in this section for this question.")
 
 BADGES = {  # (type, label) -> (mr, en); label.<TYPE>.<LABEL>
     ("TREND", "STRONG"): ("ठाम पुरावा", "Strong evidence"),
@@ -123,8 +124,8 @@ TEMPLATES = {  # template_key -> (mr, en)
         "[[focus]] तालुक्यासारखा आणि प्रगती केलेला तालुका आढळला नाही.",
         "No taluka similar to [[focus]] that improved was found."),
     "data.flat_attendance": (
-        "[[taluka]] तालुक्यातील [[schools]] शाळांनी [[months]] या काळात सलग [[n_months]] महिने पूर्ण शंभर टक्के हजेरी नोंदवली. ही नोंद अविश्वसनीय दिसते. तालुक्यातील [[share]] शाळा अशा आहेत, तर जिल्ह्यात इतरत्र फक्त [[rest_share]].",
-        "[[schools]] schools in [[taluka]] reported full one-hundred-percent attendance for [[n_months]] months in a row ([[months]]). This looks unreliable: [[share]] of the taluka's schools, against [[rest_share]] elsewhere in the district."),
+        "[[taluka]] तालुक्यातील [[schools]] शाळांनी [[months]] या काळात सलग [[n_months]] महिने पूर्ण हजेरी नोंदवली. ही नोंद अविश्वसनीय दिसते. तालुक्यातील [[share]] शाळा अशा आहेत, तर जिल्ह्यात इतरत्र फक्त [[rest_share]].",
+        "[[schools]] schools in [[taluka]] reported full attendance for [[n_months]] months in a row ([[months]]). This looks unreliable: [[share]] of the taluka's schools, against [[rest_share]] elsewhere in the district."),
     "data.insufficient": (
         "[[taluka]] तालुक्यातील [[schools]] शाळांची हजेरी किंवा गुणांची माहिती अपुरी आहे ([[share]] शाळा). या तालुक्याबद्दल निष्कर्ष काढण्यापूर्वी माहिती पूर्ण करणे गरजेचे आहे.",
         "Attendance or score data is incomplete for [[schools]] schools in [[taluka]] ([[share]] of its schools). The data should be completed before drawing conclusions about this taluka."),

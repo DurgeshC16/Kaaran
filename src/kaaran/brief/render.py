@@ -99,6 +99,29 @@ def fill(text: str, pack: dict, lang: str) -> str:
     return PLACEHOLDER.sub(sub, text)
 
 
+def allowed_refs(finding: dict, pack: dict) -> dict[str, set]:
+    """Placeholders a finding may use: its params, caveat params, criteria numbers (+ derivation inputs) and scope."""
+    refs = {"n": set(), "e": set(), "s": set(), "p": set(), "t": set()}
+
+    def add(params):
+        for ref in params.values():
+            kind, value = next(iter(ref.items()))
+            refs[{"number": "n", "entity": "e", "set": "s", "period": "p", "text_key": "t"}[kind]].add(value)
+    add(finding.get("params", {}))
+    for c in finding.get("caveats", []):
+        add(c.get("params", {}))
+    for c in finding.get("criteria", []):
+        if c.get("number"):
+            refs["n"].add(c["number"])
+    for nid in list(refs["n"]):
+        refs["n"] |= set(pack["numbers"].get(nid, {}).get("derivation", {}).get("inputs", []))
+    refs["e"].add(pack["scope"]["focus"])
+    if pack["scope"].get("period"):
+        refs["p"].add(pack["scope"]["period"])
+    return refs
+
+
+
 def caveat_lines(finding: dict, pack: dict, lang: str) -> list[str]:
     out = []
     for c in finding.get("caveats", []):
@@ -121,7 +144,13 @@ def render_markdown(pack: dict, prose: dict[str, dict], lang: str, sources: dict
     q = X.QUESTION.get(pack["scope"].get("question"))
     if q:
         lines += [f"**{'प्रश्न' if lang == 'mr' else 'Question'}:** {q[i].format(taluka=focus_name)}", ""]
-    for section in pack["outline"]:
+    outline = {o["section"]: o["finding_ids"] for o in pack["outline"]}
+    for name in list(X.REQUIRED_SECTIONS) + ["appendix"]:
+        if name not in outline:
+            if name in X.REQUIRED_SECTIONS:  # every required section appears, even without a finding
+                lines += [f"## {X.SECTION_HEADINGS[name][i]}", "", X.NOT_APPLICABLE[i], ""]
+            continue
+        section = {"section": name, "finding_ids": outline[name]}
         lines += [f"## {X.SECTION_HEADINGS[section['section']][i]}", ""]
         for fid in section["finding_ids"]:
             f = findings[fid]
