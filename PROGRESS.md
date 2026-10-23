@@ -4,7 +4,7 @@ Deadline: 2026-11-01 (submit by afternoon).
 Budget: development <= $180, runtime/evals <= $60, demo/judging <= $40. Reserve untouched.
 Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 
-## Current phase: 1 (Foundation, Oct 18-19; running late, now Oct 23)
+## Current phase: 1 done (Foundation; planned Oct 18-19, finished Oct 23). Next: phase 2
 
 - [ ] Auth works (`/status` shows the API key), model set (`/model opusplan`)
 - [x] Repo initialised, GitHub remote (origin DurgeshC16/Kaaran, branch main), first commit pushed
@@ -14,11 +14,17 @@ Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 - [x] Clean truth tables with planted truths T1-T8 + ground_truth.json
 - [x] Tests prove each planted truth from the clean tables
 - [x] Messiness layer + raw file writers (xlsx, csv, pdf), messiness log, manifest
-- [ ] Determinism test (same seed -> identical hashes)
-- [ ] PROGRESS.md updated, pushed
+- [x] Determinism test (same seed -> identical hashes, checked in a fresh process)
+- [x] PROGRESS.md updated, pushed
+
+## Phase 1 result
+- Generator: `python -m kaaran.synth --seed 42 --out data/synthetic/demo [--names fictional] [--clean-only]`, about 5 s.
+- Output: 6 clean parquet tables, 6 messy raw files, ground_truth.json (T1-T8 + messiness log), manifest.json.
+- Tests: 27 passing (about 40 s, mostly PDF parsing). `KAARAN_TEST_SEED=<n>` reruns the suite on another seed; truth tests passed on 20+ seeds, raw tests on 4.
+- Code: src/kaaran/synth/{config,rng,entities,plant,tables,ground_truth,messy,writers,generate,__main__}.py; tests/{conftest,test_smoke,test_truths_clean,test_raw_files,test_cli,test_determinism}.py.
 
 ## Next task
-Determinism test (same seed -> identical hashes; different seed -> different hashes).
+Re-plan phase 2 dates (phase 1 finished 4 days late), then phase 2: DuckDB store + messy-file ingest of the raw files, trust checks, cause tester, twin finder. Score them against ground_truth.json.
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
@@ -33,6 +39,9 @@ Determinism test (same seed -> identical hashes; different seed -> different has
 - 2026-10-23 Conventions: bare year in PAT CSV = end year (2024 = 2023-24); duplicates are exact; CSV SYNTHETIC marker is a title line (skiprows=1); PDF English only.
 - 2026-10-23 Messiness log: every injected messiness item is recorded in ground_truth.json.
 - 2026-10-23 Taluka names: real Solapur names stay the default; a fictional set ships alongside; switch with one config line (or --names fictional). SYNTHETIC marker in every file and report title.
+- 2026-10-23 T5 scattered schools are spread 3-4 per taluka (random picking concentrated 8 in one taluka).
+- 2026-10-23 Raw-layer PDF omissions never touch planted T5/T6/T8 schools, so raw gaps cannot push a school over the T6 rule.
+- 2026-10-23 Library versions pinned exactly in pyproject.toml (hash identity depends on them).
 - 2026-10-23 Dependencies approved: numpy, pandas, pyarrow, openpyxl, reportlab, pdfplumber, pytest. Fuzzy matching uses stdlib difflib; config is Python/JSON (no PyYAML).
 
 ## Spend ledger
