@@ -4,7 +4,7 @@ The Evidence pack is the engines' only output. The Brief Writer (Phase 3) and th
 It holds structured numbers with provenance, entities, sets, periods, labels and wording **template keys**. It never holds prose.
 
 - Code: `src/kaaran/evidence.py`: `validate(pack)`, `finalize(pack)`, `llm_view(pack)`, plus the registries named below.
-- Sample: `data/samples/evidence_pandharpur.json`. It is hand-built from seed-42 data (`"illustrative": true`) so UI work can start now. The Phase 2B pipeline replaces it with real output.
+- Sample: `data/samples/evidence_pandharpur.json` is the engines' real output for the seed-42 Pandharpur question (`python -m kaaran.analyze data/synthetic/demo/raw --focus Pandharpur`). A test checks it equals a fresh run. Since 2026-10-24 it is no longer illustrative.
 - Labels come from deterministic rules (`rule_id`) described in `docs/CONFIDENCE_RULES.md`. Labels are never LLM judgment.
 
 ## Top level

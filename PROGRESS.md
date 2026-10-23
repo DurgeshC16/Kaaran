@@ -4,7 +4,7 @@ Deadline: 2026-11-01 (submit by afternoon).
 Budget: development <= $180, runtime/evals <= $60, demo/judging <= $40. Reserve untouched.
 Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 
-## Current phase: 2 (Deterministic core engines, no LLM; Oct 23-25)
+## Current phase: 3 next (AI layers, Oct 25-27). Phase 2 done 2026-10-23 (planned Oct 23-25).
 
 Phase 1 (Foundation): done 2026-10-23 (synthetic generator, 27 tests, see "Phase 1 result").
 
@@ -13,11 +13,18 @@ Phase 2 stages:
 - [x] Stage 1: evidence contract (docs/EVIDENCE_SCHEMA.md, sample evidence pack)
 - [x] Stage 2: ingest (raw files -> DuckDB with provenance, mapping JSON, ingest report, round trip)
 - [x] Stage 3: trust checks (flat runs, jumps, missing data, duplicates; docs/CONFIDENCE_RULES.md)
-- [ ] Phase 2B: causes, twins, confidence rules, eval harness (Oct 24-25)
+- [x] Phase 2B: Stage 4 causes, Stage 5 twins (+ taluka profile file), Stage 6 analyze + eval harness, Stage 7 real sample pack
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
 
-## Phase 2 result so far (Stages 0-3, 2026-10-23)
+## Phase 2B result (2026-10-23)
+- Causes: `src/kaaran/causes` covers the trend (paired t, ranks, persistence) and 4 hypotheses: election duty, maths vacancy, infrastructure, attendance. Labels come from `src/kaaran/confidence.py`; thresholds are in docs/CONFIDENCE_RULES.md.
+- Twins: `src/kaaran/twins` uses standardised school count, enrolment and poverty, with the same heavy election-duty years; it picks the most similar improver and reports the decoy. Poverty arrives in a 7th raw file, `taluka_profile.csv`.
+- Pipeline: `python -m kaaran.analyze <raw> --focus Pandharpur --out pack.json` builds a validated, pruned evidence pack with an outline and actions. `data/samples/evidence_pandharpur.json` is now real engine output, and a test checks it equals a fresh run.
+- **Scorecard** (`python -m kaaran.eval --seed N`, raw files only): seeds 42, 7 (fictional names), 2026, 1 and 99 each score **8/8**, with 0 wrong verdicts, 0 false flags (T8: 0), 0 invented numbers (of 38) and 0 provenance mismatches (35 queries re-run).
+- Tests: 109 passing (full, about 2 min).
+
+## Phase 2 result, Stages 0-3 (2026-10-23)
 - Contract: docs/EVIDENCE_SCHEMA.md v1.0, src/kaaran/evidence.py (validate / finalize / llm_view), sample data/samples/evidence_pandharpur.json (illustrative until 2B regenerates it).
 - Ingest: `python -m kaaran.ingest <raw> --db <db>`, about 2.5 s. Rule-based mapping JSON (committed as data/samples/mapping_baseline.json), validated against a closed vocabulary; 6 canonical tables + links/fixes/unresolved/sources in DuckDB, every row with src_* provenance. Round trip vs clean tables 100% on seeds 42, 7 (fictional names), 2026.
 - Trust: `python -m kaaran.trust --db <db>`, about 1 s. From the RAW files: all 53 T5 schools flagged, Pandharpur the only RED_FLAG taluka, Mangalvedha the only INSUFFICIENT taluka (set = T6 exactly), no T8 school flagged and all 15 CLEARED. Same result on 20 more seeds (table in docs/CONFIDENCE_RULES.md).
@@ -30,7 +37,13 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - Code: src/kaaran/synth/{config,rng,entities,plant,tables,ground_truth,messy,writers,generate,__main__}.py; tests/{conftest,test_smoke,test_truths_clean,test_raw_files,test_cli,test_determinism}.py.
 
 ## Next task
-Phase 2B (Oct 24-25): causes/ (vacancy, election, infrastructure), twins/ (size, enrolment, election duty; poverty caveat), confidence.py with TREND/CAUSE/TWIN/ACTION thresholds in docs/CONFIDENCE_RULES.md, pipeline.py building the full evidence pack (replace the illustrative sample), eval/ scorecard vs ground_truth.json on 3 seeds.
+Phase 3 (Oct 25-27), AI layers:
+- Prerequisite: auth and model set.
+- Mapping proposer: Claude proposes the mapping JSON from headers plus low-variety column values. It is validated by `kaaran.ingest.mapping.validate`, and the fixture `data/samples/mapping_baseline.json` is the target.
+- Intent parser: a Marathi question -> focus taluka + question key.
+- Brief Writer: reads `llm_view(pack)` and writes `{{n:<id>}}` placeholders; code fills in `display.mr`.
+- Verifier: checks every number in the text against the pack.
+- Eval: extend the eval with brief checks.
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
@@ -69,6 +82,12 @@ Phase 2B (Oct 24-25): causes/ (vacancy, election, infrastructure), twins/ (size,
 - 2026-10-23 Trust inputs are ingested raw data; "expected months" = months present in the file for the taluka.
 - 2026-10-23 Phase 3 Brief Writer: Claude writes `{{n:<id>}}` placeholders; code fills in the Marathi figures (display.mr) from the evidence pack.
 - 2026-10-23 Phase 3 mapping proposals: Claude sees only headers plus columns with few distinct values (e.g. taluka spellings, होय/नाही); never school names, codes or numbers.
+- 2026-10-23 Phase 2B: correlational hypotheses (infrastructure, attendance) are tested on schools not exposed to a STRONG school-level cause. Without that, seed 42 showed a chance attendance correlation (t -3.2) driven by the vacancy schools; it now reads "inconclusive".
+- 2026-10-23 Phase 2B: template registry v2. WEAK uses "associated with" keys, RULED_OUT uses "no link" keys, INSUFFICIENT uses `cause.inconclusive`. The validator rejects the causal key `cause.vacancy.concentrated` unless the label is STRONG.
+- 2026-10-23 Phase 2B: election duty is never STRONG (taluka-level exposure, about 7 units); twins must have exactly the same heavy election-duty years.
+- 2026-10-23 Phase 2B: poverty arrives as a 7th raw file (taluka_profile.csv, percentages); without it, twins drop the covariate and add caveat.poverty_not_available.
+- 2026-10-23 Phase 2B: packs keep district-wide RED_FLAG/INSUFFICIENT findings as appendix context, but only the focus taluka's CLEARED list.
+- 2026-10-23 Phase 2B: the eval re-runs every query provenance. It found 3 real provenance errors (the correlations cited more rows than they used), now fixed.
 
 ## Spend ledger
 | Date | What | Spend ($) | Cumulative ($) |

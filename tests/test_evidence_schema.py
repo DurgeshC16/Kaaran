@@ -18,11 +18,18 @@ def sample() -> dict:
     return E.load(SAMPLE)
 
 
-def test_sample_is_valid_synthetic_and_illustrative(sample):
+def test_sample_is_valid_synthetic_engine_output(sample):
     assert E.validate(sample) == []
     assert sample["synthetic"] is True and "SYNTHETIC" in sample["marker"]
-    assert sample["illustrative"] is True
+    assert sample["illustrative"] is False  # real engine output since Phase 2B
     assert all(s["synthetic"] for s in sample["sources"])
+
+
+def test_sample_equals_current_engine_output(demo_dir):
+    """The committed sample is exactly what the engines produce for seed 42 (regenerated from scratch)."""
+    from kaaran.analyze import analyze
+
+    assert analyze(demo_dir / "raw", "Pandharpur").pack == E.load(SAMPLE)
 
 
 def test_sample_covers_the_six_brief_sections(sample):
@@ -31,7 +38,8 @@ def test_sample_covers_the_six_brief_sections(sample):
         assert sections.get(s), s
     findings = {f["id"]: f for f in sample["findings"]}
     assert findings[sections["main_cause"][0]]["hypothesis"] == "vacancy"
-    assert {f["label"] for f in sample["findings"]} >= {"STRONG", "WEAK", "LEARN_FROM", "RED_FLAG", "ACTION", "RULED_OUT", "CLEARED"}
+    assert {f["label"] for f in sample["findings"]} >= {"STRONG", "WEAK", "LEARN_FROM", "RED_FLAG", "ACTION", "RULED_OUT", "CLEARED",
+                                                       "INSUFFICIENT"}
 
 
 def test_display_strings_come_from_the_one_formatter(sample):
@@ -64,13 +72,17 @@ def test_format_number_rules():
     assert E.format_number(-3.7, "t_stat", 2)["en"] == "-3.70"
 
 
+def _first(p, ftype):
+    return next(f for f in p["findings"] if f["type"] == ftype)
+
+
 @pytest.mark.parametrize(
     "mutate, expected",
     [
-        (lambda p: p["findings"][0].update(label="LEARN_FROM"), "not allowed for TREND"),
-        (lambda p: p["findings"][0].update(template_key="trend.made_up"), "unknown template_key"),
-        (lambda p: p["findings"][0]["params"].pop("rank_to"), "params missing"),
-        (lambda p: p["findings"][1].pop("hypothesis"), "CAUSE needs hypothesis"),
+        (lambda p: _first(p, "TREND").update(label="LEARN_FROM"), "not allowed for TREND"),
+        (lambda p: _first(p, "TREND").update(template_key="trend.made_up"), "unknown template_key"),
+        (lambda p: _first(p, "TREND")["params"].pop("rank_to"), "params missing"),
+        (lambda p: _first(p, "CAUSE").pop("hypothesis"), "CAUSE needs hypothesis"),
         (lambda p: p["numbers"]["n.count.schools.T08"].update(provenance=[], derivation={}), "needs provenance"),
         (lambda p: p["numbers"]["n.count.schools.T08"].update(value=141), "display missing or stale"),
         (lambda p: p["numbers"]["n.count.schools.T08"]["provenance"][0]["where"].update(block="08"), "not in view"),
