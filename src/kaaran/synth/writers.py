@@ -50,7 +50,13 @@ def normalize_xlsx(path: Path) -> None:
     path.write_bytes(buf.getvalue())
 
 
+# Active raw layout (None = default). Set only by messy.write_raw for the duration of one write.
+LAYOUT = None
+
+
 def write_xlsx(path: Path, sheets: list[Sheet]) -> None:
+    if LAYOUT is not None:
+        sheets = [LAYOUT.sheet(path.name, s) for s in sheets]
     wb = Workbook()
     wb.remove(wb.active)
     wb.properties.title = SYNTHETIC_MARKER
@@ -90,6 +96,8 @@ def write_xlsx(path: Path, sheets: list[Sheet]) -> None:
 
 
 def write_csv(path: Path, title: str, frame: pd.DataFrame, encoding: str = "utf-8") -> None:
+    if LAYOUT is not None:
+        frame = LAYOUT.csv(path.name, frame)
     text = title + "\n" + frame.to_csv(index=False, lineterminator="\n")
     path.write_bytes(text.encode(encoding))
 

@@ -124,7 +124,8 @@ def build_manifest(out: Path, seed: int, names: str, rows: dict[str, int], files
 
 
 def generate(
-    seed: int = 42, out: str | Path = "data/synthetic/demo", names: str = C.TALUKA_NAMES, raw: bool = True
+    seed: int = 42, out: str | Path = "data/synthetic/demo", names: str = C.TALUKA_NAMES, raw: bool = True,
+    layout: str = "default",
 ) -> dict:
     out = Path(out)
     clean, planted = build_clean(seed, names)
@@ -137,12 +138,13 @@ def generate(
         rows[rel], files = len(clean[key]), files + [rel]
     truth = ground_truth.build(seed, names, clean, planted)
     if raw:
-        truth["messiness"], raw_rows = write_raw(clean, planted, out / "raw", seed, names)
+        truth["messiness"], raw_rows, truth["layout"] = write_raw(clean, planted, out / "raw", seed, names, layout)
         for name in RAW_FILES:
             rows[f"raw/{name}"] = raw_rows[name]
             files.append(f"raw/{name}")
     write_json(truth, out / "ground_truth.json")
     files.append("ground_truth.json")
     manifest = build_manifest(out, seed, names, rows, files)
+    manifest["layout"] = layout
     write_json(manifest, out / "manifest.json")
     return {"out": str(out), "rows": rows, "manifest": manifest}

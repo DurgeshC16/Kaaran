@@ -127,28 +127,31 @@ def score(pack: dict, analysis, truth: dict) -> dict:
     }
 
 
-def evaluate_folder(folder: str | Path) -> tuple[dict, object]:
+def evaluate_folder(folder: str | Path, proposer: str = "rule") -> tuple[dict, object]:
     folder = Path(folder)
     truth = json.loads((folder / "ground_truth.json").read_text(encoding="utf-8"))
     focus = next(t for t in truth["truths"] if t["id"] == "T1")["entities"]["talukas"][0]
-    analysis = analyze(folder / "raw", focus)
+    analysis = analyze(folder / "raw", focus, proposer=proposer)
     card = score(analysis.pack, analysis, truth)
     card["seed"] = truth["seed"]
     card["names"] = truth["taluka_name_set"]
+    card["layout"] = truth.get("layout", {}).get("name", "default")
+    card["mapping_proposer"] = analysis.ingest.report.get("mapping_proposer", {}).get("source")
     return card, analysis
 
 
-def evaluate_seed(seed: int, names: str = "solapur") -> dict:
+def evaluate_seed(seed: int, names: str = "solapur", layout: str = "default", proposer: str = "rule") -> dict:
     from ..synth.generate import generate
 
     with tempfile.TemporaryDirectory() as d:
-        generate(seed=seed, out=d, names=names)
-        card, _ = evaluate_folder(d)
+        generate(seed=seed, out=d, names=names, layout=layout)
+        card, _ = evaluate_folder(d, proposer)
     return card
 
 
 def format_scorecard(card: dict) -> str:
-    lines = [f"Kaaran eval (SYNTHETIC data, seed {card['seed']}, names {card['names']})",
+    lines = [f"Kaaran eval (SYNTHETIC data, seed {card['seed']}, names {card['names']}, layout {card.get('layout', 'default')}, "
+             f"mapping {card.get('mapping_proposer') or 'rule'})",
              f"  truths recovered: {card['recovered']}/{card['total']}"]
     for r in card["truths"]:
         lines.append(f"    {r['truth']}: expected {r['expected']:<12} got {r['got']:<12} {'OK' if r['recovered'] else 'FAIL'}")

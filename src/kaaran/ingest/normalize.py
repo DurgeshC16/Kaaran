@@ -135,8 +135,21 @@ def _year_label(s: str, kind: str, convention: str) -> str | None:
 def academic_year(values: pd.Series, keys: pd.Series | None = None) -> tuple[pd.Series, dict]:
     """'2023-24' / '23-24' / bare year -> '2023-24'. The bare-year convention is detected from the data:
     the reading that yields no duplicate (key, year) pairs wins (keys = e.g. school code)."""
-    raw = values.map(lambda v: None if _blank(v) else str(v).strip().replace(".0", ""))
-    kinds = raw.map(lambda s: None if s is None else _year_kind(s))
+    raw = [None if _blank(v) else str(v).strip().replace(".0", "") for v in values]
+    embedded = 0
+
+    def pick(s):  # a year inside longer text, e.g. a sheet named "Posts 2021-22"
+        nonlocal embedded
+        if s is None or _year_kind(s):
+            return s
+        m = re.search(r"(?<!\d)(\d{4}-\d{2}|\d{2}-\d{2})(?!\d)", s)
+        if m:
+            embedded += 1
+            return m.group(1)
+        return s
+
+    raw = [pick(s) for s in raw]
+    kinds = [None if s is None else _year_kind(s) for s in raw]
     counts = Counter(k for k in kinds if k)
     collisions = {}
     convention = DEFAULT_BARE_YEAR
@@ -148,7 +161,8 @@ def academic_year(values: pd.Series, keys: pd.Series | None = None) -> tuple[pd.
             convention = "start"
     out = [None if k is None else _year_label(s, k, convention) for s, k in zip(raw, kinds)]
     stats = {"formats": dict(counts), "bare_year_convention": convention if counts.get("bare") else None,
-             "convention_collisions": collisions, "unparsed": int(sum(1 for s, k in zip(raw, kinds) if s and not k))}
+             "convention_collisions": collisions, "unparsed": int(sum(1 for s, k in zip(raw, kinds) if s and not k)),
+             "embedded": embedded}
     return pd.Series(out, index=values.index, dtype=object), stats
 
 

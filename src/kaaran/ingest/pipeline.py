@@ -372,9 +372,16 @@ def _sources(raw: Path) -> dict[str, dict]:
     return out
 
 
-def ingest(raw_dir: str | Path, db_path: str | Path | None = None, mapping: dict | None = None) -> IngestResult:
+def ingest(raw_dir: str | Path, db_path: str | Path | None = None, mapping: dict | None = None,
+           proposer: str = "rule") -> IngestResult:
+    """proposer: "rule" (deterministic baseline) or "llm" (Claude proposes, code validates; falls back to "rule")."""
     raw = Path(raw_dir)
     log = FixLog()
+    proposer_info = {"source": "provided" if mapping else "rule"}
+    if mapping is None and proposer == "llm":
+        from ..llm.mapper import propose_with_llm
+
+        mapping, proposer_info = propose_with_llm(raw)
     mapping = mapping or M.propose(raw)
     errors = M.validate(mapping, raw)
     if errors:
@@ -468,6 +475,7 @@ def ingest(raw_dir: str | Path, db_path: str | Path | None = None, mapping: dict
     report = {
         "synthetic": any(s["synthetic"] for s in sources.values()),
         "mapping_source": mapping.get("source", "provided"),
+        "mapping_proposer": proposer_info,
         "mapping_sha256": mapping_sha,
         "sources": list(sources.values()),
         "tables": {k: int(len(v)) for k, v in tables.items() if k in CANONICAL_COLUMNS},

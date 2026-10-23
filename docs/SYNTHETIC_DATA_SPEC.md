@@ -70,6 +70,15 @@ Written to `data/synthetic/<name>/raw/`. Every injected messiness item is record
 6. `election_duty.csv`: taluka, period from/to, deployed teacher percentage, in an Election Commission schedule style with two date formats. SYNTHETIC title line first.
 7. `taluka_profile.csv` (added 2026-10-24, Phase 2B): taluka and poverty headcount ratio, in a district-handbook style. Poverty is stored as a percentage (42.0) rather than a share (0.42), and one taluka name is a spelling variant. SYNTHETIC title line first. The twin finder needs this file.
 
+**Hold-out layout `variant_b`** (`--layout variant_b`, added 2026-10-23) tests the mapping proposer.
+- Same values as the default layout, but the xlsx and csv files change shape:
+  - headers reworded in English, Marathi and transliterated Marathi;
+  - columns shuffled; junk columns added (Remarks, Checked By, Unnamed, Entry Date, Source);
+  - sheets renamed (e.g. शाळा माहिती, Patsankhya, "Posts 2021-22" / "शिक्षक पदे 2022-23");
+  - the Enrolment group header row dropped.
+- The PDF is unchanged.
+- ground_truth.json["layout"] records every rename, so a proposed mapping can be scored. The rule-based baseline fails on this layout by design.
+
 Optional, later: Devanagari school names (Noto Sans Devanagari, OFL licence), Devanagari in the PDF, and a scanned-image attendance sheet.
 
 ## Outputs

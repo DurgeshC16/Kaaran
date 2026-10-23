@@ -79,8 +79,9 @@ def _outline(findings: list[dict], focus: str) -> list[dict]:
     return [{"section": s, "finding_ids": ids} for s, ids in sections if ids]
 
 
-def analyze(raw_dir: str | Path, focus_name: str, db_path: str | Path | None = None, mapping: dict | None = None) -> Analysis:
-    ing = ingest(raw_dir, db_path, mapping)
+def analyze(raw_dir: str | Path, focus_name: str, db_path: str | Path | None = None, mapping: dict | None = None,
+            proposer: str = "rule") -> Analysis:
+    ing = ingest(raw_dir, db_path, mapping, proposer)
     trust = run_trust(ing.tables, ing.report)
     focus = resolve_taluka(ing.tables, focus_name)
     b, results = run_causes(ing.tables, trust, focus)
@@ -129,8 +130,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--focus", required=True, help="taluka name (English or Marathi) or id")
     p.add_argument("--out", required=True)
     p.add_argument("--db", help="also write the DuckDB store here")
+    p.add_argument("--proposer", choices=["rule", "llm"], default="rule", help="column-mapping proposer (llm falls back to rule)")
     args = p.parse_args(argv)
-    result = analyze(args.raw_dir, args.focus, args.db)
+    result = analyze(args.raw_dir, args.focus, args.db, proposer=args.proposer)
     E.dump(result.pack, args.out)
     names = {k: v["name_en"] for k, v in result.pack["entities"].items()}
     findings = {f["id"]: f for f in result.pack["findings"]}

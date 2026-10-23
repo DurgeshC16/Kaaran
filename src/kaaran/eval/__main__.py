@@ -13,9 +13,11 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m kaaran.eval", description="Score the engines against the answer key (no LLM).")
     p.add_argument("--seed", type=int, action="append", required=True, help="repeatable")
     p.add_argument("--names", default="solapur", choices=["solapur", "fictional"])
+    p.add_argument("--layout", default="default", choices=["default", "variant_b"])
+    p.add_argument("--proposer", default="rule", choices=["rule", "llm"])
     p.add_argument("--json", help="write the scorecards as JSON")
     args = p.parse_args(argv)
-    cards = [evaluate_seed(s, args.names) for s in args.seed]
+    cards = [evaluate_seed(s, args.names, args.layout, args.proposer) for s in args.seed]
     print("\n\n".join(format_scorecard(c) for c in cards))
     if args.json:
         with open(args.json, "w", encoding="utf-8") as fh:

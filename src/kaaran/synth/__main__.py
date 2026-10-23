@@ -15,8 +15,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--out", default="data/synthetic/demo")
     p.add_argument("--names", choices=sorted(C.NAME_SETS), default=C.TALUKA_NAMES, help="taluka name set")
     p.add_argument("--clean-only", action="store_true", help="skip the messy raw files")
+    p.add_argument("--layout", choices=["default", "variant_b"], default="default",
+                   help="raw-file layout; variant_b rewords headers, shuffles columns, adds junk columns, renames sheets")
     args = p.parse_args(argv)
-    result = generate(seed=args.seed, out=args.out, names=args.names, raw=not args.clean_only)
+    result = generate(seed=args.seed, out=args.out, names=args.names, raw=not args.clean_only, layout=args.layout)
     print(f"SYNTHETIC data written to {result['out']} (seed {args.seed}, names {args.names})")
     for name, n in result["rows"].items():
         print(f"  {name:28s} {n:>7,d} rows")

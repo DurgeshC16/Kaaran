@@ -384,16 +384,32 @@ def taluka_profile(clean, names: str, seed: int, log: MessLog, path: Path) -> in
     return len(frame)
 
 
-def write_raw(clean, planted: Planted, out: Path, seed: int, names: str) -> tuple[list[dict], dict[str, int]]:
+def write_raw(clean, planted: Planted, out: Path, seed: int, names: str, layout: str = "default") -> tuple[list[dict], dict[str, int], dict]:
+    """Write the raw files; returns (messiness log, row counts, layout key)."""
+    from . import writers
+    from .layout import LAYOUTS, VariantB
+
+    if layout not in LAYOUTS:
+        raise ValueError(f"layout must be one of {LAYOUTS}")
     out.mkdir(parents=True, exist_ok=True)
     log = MessLog()
-    rows = {
-        "udise_2023.xlsx": udise_workbook(clean, names, seed, log, out / "udise_2023.xlsx"),
-        "attendance_jan-dec.pdf": attendance_pdf(clean, planted, names, seed, log, out / "attendance_jan-dec.pdf"),
-        "crosswalk.xlsx": crosswalk(clean, seed, log, out / "crosswalk.xlsx"),
-        "pat_scores.csv": pat_scores(clean, seed, log, out / "pat_scores.csv"),
-        "teacher_posts.xlsx": teacher_posts(clean, seed, log, out / "teacher_posts.xlsx"),
-        "election_duty.csv": election_duty(clean, seed, log, out / "election_duty.csv"),
-        "taluka_profile.csv": taluka_profile(clean, names, seed, log, out / "taluka_profile.csv"),
-    }
-    return log.items, rows
+    transform = VariantB(seed) if layout == "variant_b" else None
+    writers.LAYOUT = transform
+    try:
+        rows = {
+            "udise_2023.xlsx": udise_workbook(clean, names, seed, log, out / "udise_2023.xlsx"),
+            "attendance_jan-dec.pdf": attendance_pdf(clean, planted, names, seed, log, out / "attendance_jan-dec.pdf"),
+            "crosswalk.xlsx": crosswalk(clean, seed, log, out / "crosswalk.xlsx"),
+            "pat_scores.csv": pat_scores(clean, seed, log, out / "pat_scores.csv"),
+            "teacher_posts.xlsx": teacher_posts(clean, seed, log, out / "teacher_posts.xlsx"),
+            "election_duty.csv": election_duty(clean, seed, log, out / "election_duty.csv"),
+            "taluka_profile.csv": taluka_profile(clean, names, seed, log, out / "taluka_profile.csv"),
+        }
+    finally:
+        writers.LAYOUT = None
+    if transform is None:
+        return log.items, rows, {"name": "default"}
+    for item in log.items:  # messiness entries name the sheets as written
+        if item["sheet"] is not None:
+            item["sheet"] = transform.sheet_map.get((item["file"], item["sheet"]), item["sheet"])
+    return log.items, rows, transform.key()
