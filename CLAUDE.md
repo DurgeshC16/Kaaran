@@ -25,6 +25,7 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Full tests (run before every commit): `.venv\Scripts\python -m pytest -q` (adds `slow`: pdfplumber PDF reading, extra seeds)
 - Live LLM tests (cost money, opt-in): `.venv\Scripts\python -m pytest -q --live -m live`. Normal runs replay recorded responses from `llm_cache/` (KAARAN_LLM_MODE=replay); `live` records new ones, `off` disables the LLM
 - Generate data: `.venv\Scripts\python -m kaaran.synth --seed 42 --out data/synthetic/demo`
+- Generate v3 block-lens data (real formats): `.venv\Scripts\python -m kaaran.synth3 --seed 42 --out data/synthetic/block_demo`
 - Ingest raw files into DuckDB: `.venv\Scripts\python -m kaaran.ingest data/synthetic/demo/raw --db data/synthetic/demo/kaaran.duckdb` (writes ingest_report.json next to the db; `--write-mapping` dumps the rule-based mapping JSON)
 - Trust checks: `.venv\Scripts\python -m kaaran.trust --db data/synthetic/demo/kaaran.duckdb` (writes trust_flags / trust_missing / trust_annotations tables, trust_report.json, trust_evidence.json)
 - Evidence pack: `.venv\Scripts\python -m kaaran.analyze data/synthetic/demo/raw --focus Pandharpur --out evidence.json`
@@ -37,7 +38,8 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Mapping eval (baseline vs LLM, both layouts): `.venv\Scripts\python -m kaaran.eval.mapping --seed 42` (`KAARAN_LLM_MODE=live` to record new responses)
 
 ## Layout
-- src/kaaran/synth: synthetic data generator and answer key
+- src/kaaran/synth: synthetic data generator and answer key (v2, taluka lens)
+- src/kaaran/synth3: v3 generator (block -> cluster -> school, UDISE+ microdata columns, competency assessment; truth3.json)
 - src/kaaran/evidence.py: Evidence pack contract (docs/EVIDENCE_SCHEMA.md)
 - src/kaaran/ingest, trust: raw files -> DuckDB with provenance; trust checks (docs/CONFIDENCE_RULES.md)
 - src/kaaran/causes, twins, confidence.py, analyze.py: cause tester, twin finder, label rules, end-to-end pack

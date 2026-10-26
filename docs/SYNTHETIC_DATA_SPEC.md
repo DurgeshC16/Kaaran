@@ -94,3 +94,38 @@ Optional, later: Devanagari school names (Noto Sans Devanagari, OFL licence), De
 - Every raw file opens with pandas, openpyxl or pdfplumber, and contains the planted messiness in the counts recorded in the messiness log.
 - At least 95% of attendance rows join to UDISE codes through the crosswalk. The rest can be matched by fuzzy name matching (difflib).
 - Every file carries a SYNTHETIC marker. No real personal data anywhere.
+
+---
+
+## v3 generator (block lens): `python -m kaaran.synth3 --seed 42 --out data/synthetic/block_demo`
+
+Added 2026-10-27 (docs/02 §6, docs/06). v2 above stays as is for the current pipeline and its tests.
+
+**World:** the same 11 blocks (taluka names, poverty, school counts) → clusters of ~12 schools (Pandharpur: 12
+clusters, 140 schools) → 1,292 schools. Years 2023-24 to 2025-26; school months Jun-Mar; grade 3 assessment in
+three rounds (BL Jul, ML Dec, EL Mar) with 9 competencies (maths M1-M5, Marathi L1-L4).
+
+**Raw files (18, SYNTHETIC marker in the first cell or line of each):**
+UDISE+ `prof1, prof2, tch, enr1` for 2024-25 and 2025-26 (real microdata column names, official-export variant
+keyed by `udise_sch_code`); `kendra_list.xlsx`; `teacher_posts.xlsx` (monthly, with non-teaching duty days);
+`student_attendance_<year>.xlsx` (one sheet per month); `fln_assessment_<year>.xlsx` (one sheet per round,
+competency columns); `visit_log.csv` (Kendra Pramukh / BRC / BEO visits); `teacher_training.xlsx`.
+
+**Planted scenarios (answer key `truth3.json`, focus block Pandharpur):**
+
+| Id | Cluster | Scenario | Expected |
+|---|---|---|---|
+| S1 | K03 | Kendra Pramukh post vacant from Jun 2025: visits 1.3 → 0.12 per school-month, last training Aug 2023; maths falls (ML −4, EL −8.5) with place value (M2) and subtraction (M4) falling most; replication cluster in Madha | at risk; D2 + D7; A4, A5, A6 |
+| S2 | K07 | 6 schools lose their second teacher in the Jun 2025 transfers (EL −18, ramping BL 40% / ML 80%); 2 vacancy schools per other block (replication) | at risk; D1; A1 (surplus schools exist), A3, A12 |
+| S3 | K07 | one school with the same teacher loss improves (+6) | positive deviant → A12 peer visit |
+| S4 | K09 | 7 schools report 100% attendance Aug-Nov 2025 while learning is 10 points lower | data alert; D6; A10 |
+| S5 | K11 | 5 schools near sugar factories: attendance −8 to −16 points Nov-Mar every year; endline −7 | at risk; D4; A8 |
+| S6 | K12 | 4 schools miss Aug-Nov 2025 attendance and the 2025-26 endline | "cannot tell"; A11 |
+| S7 | K05 | 4 schools with honest low attendance (77-81%) | never flagged |
+| S8 | all | local body poll duty Nov-Dec 2025 (8-12 days per teacher); ML 2025-26 −2.5 everywhere | D5 ruled out |
+| S9-S11 | K08, K10, block | improving cluster; 2 surplus schools (PTR < 18); twin block Malshiras, decoy Sangola | not at risk; twin found |
+
+**Known noise:** only ~10-25 pupils are tested per school, so school results are noisy (sd ~6-7 points per
+year-on-year change). A calibration probe over 60 seeds found the planted at-risk clusters on ~98% of seeds and
+an unplanted cluster flagged on ~3%. The risk rules (docs/06) use school-level paired comparisons, both subjects
+and a "pocket" rule to stay robust.
