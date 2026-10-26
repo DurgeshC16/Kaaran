@@ -125,15 +125,18 @@ def assign_roles(schools: pd.DataFrame, seed: int) -> pd.DataFrame:
     return s
 
 
-def build_enrolment(schools: pd.DataFrame, seed: int) -> pd.DataFrame:
+def build_enrolment(schools: pd.DataFrame, seed: int, blocks: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Class sizes shrink with block poverty (out-migration), so similar blocks have similar school profiles."""
     rng = stream(seed, "v3.enrolment")
+    poverty = {} if blocks is None else dict(zip(blocks["block_key"], blocks["poverty"]))
     rows = []
     for s in schools.itertuples(index=False):
+        size = 1 + C.CLASS_SIZE_POVERTY_SLOPE * (C.CLASS_SIZE_POVERTY_REF - poverty.get(s.block_key, C.CLASS_SIZE_POVERTY_REF))
         if s.role == "surplus":
             total0 = rng.integers(*C.SURPLUS_ENROLMENT)
             per_class = np.full(s.highclass, total0 / s.highclass)
         else:
-            mean = 26 if s.kendra_school else 17
+            mean = (26 if s.kendra_school else 17) * size
             per_class = rng.lognormal(math.log(mean), 0.35, size=s.highclass)
         for yi, year in enumerate(C.YEARS):
             drift = (1 - 0.04 * yi) if s.role == "surplus" else (1 + rng.normal(0, 0.03))
@@ -307,7 +310,7 @@ def build_training(schools: pd.DataFrame, posts: pd.DataFrame, seed: int) -> pd.
 def build_world(seed: int = 42, names: str = V2.TALUKA_NAMES) -> World:
     blocks, clusters, schools = build_entities(seed, names)
     schools = assign_roles(schools, seed)
-    enrolment = build_enrolment(schools, seed)
+    enrolment = build_enrolment(schools, seed, blocks)
     posts = build_posts(schools, enrolment, seed)
     return World(seed=seed, names=names, blocks=blocks, clusters=clusters, schools=schools, enrolment=enrolment,
                  posts=posts, attendance=build_attendance(schools, enrolment, seed),

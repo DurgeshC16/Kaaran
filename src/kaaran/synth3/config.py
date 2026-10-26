@@ -73,7 +73,7 @@ SUPPORT_GAP_LANGUAGE_FACTOR = 0.4
 STAFFING_GAP_SCHOOLS = 6
 STAFFING_GAP_START = "2025-06"  # teacher transfers happen in May-June
 STAFFING_GAP_EFFECT = {"2025-26": -18.0}  # ramps over the year: BL 40%, ML 80%, EL 100%
-POSITIVE_DEVIANT_GAIN = {"2025-26": 6.0}
+POSITIVE_DEVIANT_GAIN = {"2025-26": 12.0}
 STAFFING_ELSEWHERE_PER_BLOCK = 2  # vacancy-exposed schools in other blocks (replication)
 
 # Surplus schools.
@@ -89,7 +89,7 @@ FLAT_ELSEWHERE = 6  # scattered single flat schools district-wide (noise the rul
 
 # Seasonal migration.
 MIGRATION_SCHOOLS = 5
-MIGRATION_DROP = {11: -8.0, 12: -15.0, 1: -16.0, 2: -15.0, 3: -10.0}
+MIGRATION_DROP = {11: -10.0, 12: -18.0, 1: -20.0, 2: -19.0, 3: -15.0}  # children away at sugarcane cutting
 MIGRATION_EL_EFFECT = -7.0  # endline of every year (children away during Nov-Mar)
 MIGRATION_CLUSTER_SHIFT = -2.0
 
@@ -122,4 +122,6 @@ CONTRACT_SHARE = 0.12
 TRAINING_MONTH = 8
 TRAINING_DAYS = 3
 
+CLASS_SIZE_POVERTY_SLOPE = 2.0  # class size factor = 1 + slope * (ref - block poverty)
+CLASS_SIZE_POVERTY_REF = 0.45
 ASSESSED_SHARE = (0.85, 0.97)  # share of grade-3 enrolment assessed in a round
