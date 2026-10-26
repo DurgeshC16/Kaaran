@@ -2,7 +2,7 @@
 
 > The mentor's core point: *actions are where every product is weak; an LLM gives generic advice; build a
 > decision matrix that checks constraints before recommending an action.* This file is that matrix.
-> It will live in code as versioned data (`config/rubric_v1.json`). Thresholds marked † are starting
+> It will live in code as versioned data (`src/kaaran/block/rubric_v1.json`). Thresholds marked † are starting
 > values to be validated in user interviews (section 7) and are published so reviewers can challenge them.
 
 ---

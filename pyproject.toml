@@ -31,7 +31,7 @@ dev = ["pytest==9.1.1"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-kaaran = ["api/static/*.html"]
+kaaran = ["api/static/*.html", "block/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

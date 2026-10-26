@@ -198,7 +198,7 @@ Why this scales:
 | `ingest/` | rule mapping + LLM proposer | UDISE+ microdata connector, kendra list, new canonical tables |
 | `trust/` | 7 rules | + impossible combinations, PTR sanity, assessment spikes, freshness |
 | `causes/`, `twins/` | taluka-level hypotheses, twin taluka | → `insights/`: risk scanner, cluster diagnosis, competency focus, positive deviance (reuses the tests) |
-| `confidence.py` | label rules | + rubric engine `rubric/` reading `config/rubric_v1.json` |
+| `confidence.py` | label rules | + rubric engine `rubric/` reading `src/kaaran/block/rubric_v1.json` |
 | `analyze.py` | pack per taluka | pack per block (clusters) and per district (blocks); outline A/B/C |
 | `brief/` | 6 sections | A/B/C texts, templates, verifier sections; voice summary text |
 | `service.py`, `api/`, `whatsapp.py` | question flow | + scan, alerts inbox, baithak pack, action tracker, voice notes |

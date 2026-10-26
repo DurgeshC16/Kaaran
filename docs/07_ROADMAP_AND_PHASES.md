@@ -27,7 +27,7 @@ Priority: **M** must (needed to win), **S** should, **C** could (only if ahead o
 | 5.2 | **Ingest v2**: UDISE+ microdata connector, kendra list, new canonical tables, mapping vocabulary extended; old files still ingest | M | round trip 100% vs clean tables |
 | 5.3 | **Trust v2**: impossible combinations (high attendance + low learning), PTR sanity, assessment spikes, freshness | M | planted data problems found, honest schools cleared |
 | 5.4 | **Insight engine**: risk scanner, cluster diagnosis D1-D8, competency focus, positive deviance (reuses causes/twins tests) | M | answer-key clusters found, diagnoses correct, 0 false at-risk |
-| 5.5 | **Rubric engine** reading `config/rubric_v1.json` (A1-A13 with constraint checks) | M | expected action per scenario chosen; constraint failures logged |
+| 5.5 | **Rubric engine** reading `src/kaaran/block/rubric_v1.json` (A1-A13 with constraint checks) | M | expected action per scenario chosen; constraint failures logged |
 | 5.6 | **Evidence pack v1.1 + three-part brief** (A/B/C + appendix), texts, templates, verifier sections; LLM prose re-recorded | M | one page; verifier passes; 0 invented numbers on 5 seeds |
 | 5.7 | **Eval v3**: risk recall/precision, diagnosis accuracy, action accuracy, invented numbers | M | scorecard all green on 5 seeds |
 

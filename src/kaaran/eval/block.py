@@ -77,7 +77,7 @@ def score_seed(seed: int, names: str = "solapur", with_actions: bool = True) -> 
             from ..block.pack import build_block_pack
 
             pack = build_block_pack(Path(d) / "raw", "Pandharpur" if names == "solapur" else None)
-            acts = pack["_actions_by_cluster"]
+            acts = pack["actions_by_cluster"]
         return score(d, acts)
 
 

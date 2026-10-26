@@ -35,6 +35,27 @@ Phase 2 stages:
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
 
+## Phase 5 result (2026-10-27): block lens + decision rubric
+- 5.1 `kaaran.synth3`: v3 district (block -> cluster -> school, 1,292 schools).
+  - 18 real-format raw files (UDISE+ microdata columns, kendra list, monthly posts with duty days, monthly attendance, competency-wise assessment in 3 rounds, visit log, training register).
+  - 11 planted scenarios with expected diagnoses and actions (truth3.json).
+- 5.2 `block/ingest.py`: bilingual header recognition, provenance on every row, fixes reported; round trip 100%.
+- 5.3 `block/trust.py`: flat runs, missing data, implausible combination, honest-low cleared, cluster data / insufficient alerts.
+- 5.4 `block/insights.py`:
+  - Risk scanner, with broad-drop and pocket routes, chronic absence and low level.
+  - Diagnosis D1 staffing, D2 support (cluster visit drop), D3 absence, D4 migration, D5 duty (ruled out), D6 data, D7 competency (level-based), D8 none.
+  - STRONG needs effect + share + replication + no pre-trend.
+  - Positive deviants are analysed separately; surplus schools; twin/decoy block.
+- 5.5 `block/rubric.py` + `rubric_v1.json`: A1-A13 with constraint checks; skipped rows are logged with the failed constraint.
+- 5.6 `block/pack.py` (schema block-1.0, reuses filler/writer/verifier) + `block/brief.py`: three-part brief (A attention / B why / C what to do), Markdown, interactive HTML, print HTML.
+- 5.7 `eval/block.py`: **19/19 on seeds 42, 7, 99, 2026, 11, 77** (risk recall, never-at-risk, 4 diagnoses, competency subset, duty, insufficient, honest, flat, positive deviant, surplus, twin/decoy, 5 rubric actions).
+  - Calibration over 60 seeds: ~98% recall, ~3% extra flags (documented noise from small schools).
+- LLM writer for block briefs:
+  - Sonnet: 22/23 findings first attempt, 1 after retry, verified, about $0.08 per brief.
+  - Haiku ran past its 16k output limit on this JSON, so it stays on intent only.
+- Live spend this phase: ~$0.17.
+- Tests: 227 passed, 3 skipped.
+
 ## Phase 4 result, part 1: web + WhatsApp demo (2026-10-24)
 - Run: `python -m kaaran.api` -> http://127.0.0.1:8000 (web), /whatsapp (simulator), /whatsapp/webhook (Meta). Setup and demo script: docs/DEMO.md.
 - `src/kaaran/service.py`:
@@ -88,10 +109,11 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - Code: src/kaaran/synth/{config,rng,entities,plant,tables,ground_truth,messy,writers,generate,__main__}.py; tests/{conftest,test_smoke,test_truths_clean,test_raw_files,test_cli,test_determinism}.py.
 
 ## Next task
-Phase 5 (docs/07), after team approval of decisions D1-D7:
-- 5.1 synthetic v3 generator (clusters, UDISE+ microdata columns, competency assessment, visits, training, monthly posts, new truths + expected actions)
-- 5.2 ingest v2, 5.3 trust v2, 5.4 insight engine, 5.5 rubric engine (config/rubric_v1.json), 5.6 pack v1.1 + A/B/C brief, 5.7 eval v3
-User: download real files per docs/08 (UDISE+ 2024-25 Maharashtra microdata, PRS state report, PAB minutes).
+Phase 6 (docs/07):
+- 6.1 Block lens in the service, web and WhatsApp: question -> block brief; proactive district scan -> alerts inbox + WhatsApp alert.
+- 6.2 Baithak pack (all rubric actions with owners) + action tracker.
+- 6.3 Voice through a hosted API (team approved hosted for the demo; needs an API key: Bodhan AI / Sarvam / Bhashini).
+Then Phase 7: real data run (user downloads per docs/08), user tests, deploy.
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
@@ -161,3 +183,9 @@ User: download real files per docs/08 (UDISE+ 2024-25 Maharashtra microdata, PRS
 - 2026-10-24 The brief and PDF never name schools (verifier). School lists appear only in the local web drill-down.
 - 2026-10-24 Mentor review (Rupala, CSF): proactive nudges instead of waiting for questions; data availability matrix; 4 core domains; three-part brief; decision rubric for actions (main weakness); baithak loop; OCR out of scope; check Bodhan AI for voice.
 - 2026-10-27 v2 rethink documented (docs/01-08, README). Real UDISE+ 2024-25 school-level microdata format verified (public Delhi release; pseudocode IDs; no cluster column). PRS 2024 Solapur: grade 3 maths 75 / MH 64 / India 60, language 79 / 69 / 64 (checked on the rendered page; PDF text order is misleading). Real PRS PDF moved to data/real/prs2024/.
+- 2026-10-27 (team) Phase 5 approved as planned; voice via a hosted API for the demo; LLM budget "most feasible for end users".
+- 2026-10-27 Block brief writer uses Sonnet (Haiku hit its output limit on the ~25-finding JSON). Cost is about $0.08 per block per data refresh (briefs are cached), about ₹4 per block per month.
+- 2026-10-27 Risk = school-level paired change relative to the block median (removes district-wide events), ML + EL rounds. Pocket rule only on both subjects together; chronic absence (Dec-Mar) is an attention item on its own.
+- 2026-10-27 Support gap is judged at cluster level (Kendra Pramukh post), since per-school visit counts are too noisy (Poisson). Positive deviants are excluded from exposure tests and shown separately. Timing = no pre-trend vs unexposed schools.
+- 2026-10-27 Competency focus uses current levels vs the block's profile (not changes), which halves small-school noise. The answer key checks that every reported competency is a planted one.
+- 2026-10-27 Exclusive data actions: a cluster with unreliable records gets only "verify registers"; its results are not acted on until verified.

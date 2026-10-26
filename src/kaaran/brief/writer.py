@@ -97,7 +97,7 @@ def output_schema(ids: list[str]) -> dict:
     }
 
 
-def call_writer(pack: dict, client, feedback: dict | None = None):
+def call_writer(pack: dict, client, feedback: dict | None = None, system: str | None = None, tier: str = "main"):
     payload = llm_input(pack)
     if feedback:
         payload = {**payload, "findings": [f for f in payload["findings"] if f["id"] in feedback]}
@@ -106,7 +106,7 @@ def call_writer(pack: dict, client, feedback: dict | None = None):
         user += ("\n\nYour previous text for these findings failed automatic checks. Rewrite them, fixing every problem:\n"
                  "<problems>\n" + json.dumps(feedback, ensure_ascii=False, indent=1) + "\n</problems>")
     ids = [f["id"] for f in payload["findings"]]
-    return client.call(role="brief_writer" + ("_retry" if feedback else ""), tier="main", system=SYSTEM, user=user,
+    return client.call(role="brief_writer" + ("_retry" if feedback else ""), tier=tier, system=system or SYSTEM, user=user,
                        schema=output_schema(ids), max_tokens=16000, effort="medium")
 
 
@@ -123,7 +123,8 @@ def check_text(text: str, finding: dict, pack: dict, lang: str) -> list[str]:
     return problems
 
 
-def write_brief(pack: dict, use_llm: bool = True, client=None, checker=check_text) -> Brief:
+def write_brief(pack: dict, use_llm: bool = True, client=None, checker=check_text, system: str | None = None, tier: str = "main",
+                render=None, sections=None) -> Brief:
     """LLM prose where it passes the checker (one retry for failing findings), templates elsewhere."""
     templates = template_prose(pack)
     prose, sources = dict(templates), {fid: "template" for fid in templates}
@@ -134,7 +135,7 @@ def write_brief(pack: dict, use_llm: bool = True, client=None, checker=check_tex
         feedback = None
         for attempt in ("llm", "llm_retry"):
             try:
-                res = call_writer(pack, client, feedback)
+                res = call_writer(pack, client, feedback, system, tier)
             except LLMUnavailable as e:
                 info["llm_available"] = False
                 info["unavailable_reason"] = str(e)
@@ -160,10 +161,11 @@ def write_brief(pack: dict, use_llm: bool = True, client=None, checker=check_tex
                 feedback[fid] = {"en": ["missing from your answer"]}
             if not feedback:
                 break
-    markdown = {lang: render_markdown(pack, prose, lang, sources) for lang in ("mr", "en")}
+    render = render or render_markdown
+    markdown = {lang: render(pack, prose, lang, sources) for lang in ("mr", "en")}
     from .verify import verify_brief
 
-    info["verification"] = verify_brief(prose, markdown, pack)
+    info["verification"] = verify_brief(prose, markdown, pack, sections)
     return Brief(prose=prose, sources=sources, markdown=markdown, info=info)
 
 

@@ -81,12 +81,14 @@ def verify_text(text: str, finding: dict, pack: dict, lang: str) -> list[str]:
     return problems
 
 
-def verify_markdown(markdown: str, lang: str) -> list[str]:
+def verify_markdown(markdown: str, lang: str, sections: dict | None = None) -> list[str]:
+    """`sections`: {section: (mr heading, en heading)} that must appear; default = the v1 required sections."""
     i = 0 if lang == "mr" else 1
-    return [f"MISSING_SECTION {s}" for s in X.REQUIRED_SECTIONS if f"## {X.SECTION_HEADINGS[s][i]}" not in markdown]
+    sections = sections or {s: X.SECTION_HEADINGS[s] for s in X.REQUIRED_SECTIONS}
+    return [f"MISSING_SECTION {s}" for s, h in sections.items() if f"## {h[i]}" not in markdown]
 
 
-def verify_brief(prose: dict[str, dict], markdown: dict[str, str], pack: dict) -> dict:
+def verify_brief(prose: dict[str, dict], markdown: dict[str, str], pack: dict, sections: dict | None = None) -> dict:
     findings = {f["id"]: f for f in pack["findings"]}
     out = {"findings": {}, "brief": {}}
     for fid, f in findings.items():
@@ -98,7 +100,7 @@ def verify_brief(prose: dict[str, dict], markdown: dict[str, str], pack: dict) -
         if probs:
             out["findings"][fid] = probs
     for lang, md in markdown.items():
-        p = verify_markdown(md, lang)
+        p = verify_markdown(md, lang, sections)
         if p:
             out["brief"][lang] = p
     out["passed"] = not out["findings"] and not out["brief"]

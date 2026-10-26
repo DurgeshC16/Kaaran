@@ -145,3 +145,6 @@ TEMPLATES = {  # template_key -> (mr, en)
         "[[schools]] शाळांची अपुरी माहिती पूर्ण करून घ्यावी.",
         "Get the missing data completed for the [[schools]] schools."),
 }
+
+
+from . import texts_block  # noqa: E402,F401  (registers the block-lens wording into the registries above)

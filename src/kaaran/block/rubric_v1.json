@@ -1,0 +1,34 @@
+{
+  "rubric_version": "1.0",
+  "source": "docs/06_DECISION_RUBRICS.md section 4",
+  "note": "Thresholds and actions are starting values to be validated with teachers and officers. Every action names an owner within their powers; the officer confirms before anything is forwarded.",
+  "limits": {"per_cluster": 3},
+  "actions": [
+    {"id": "A10", "when": {"cluster_status": ["DATA"]}, "constraints": [], "owner": "KENDRA_PRAMUKH", "horizon": "this_week",
+     "follow_up": "flags_confirmed_or_cleared", "priority": 0, "exclusive": true},
+    {"id": "A11", "when": {"cluster_status": ["INSUFFICIENT"]}, "constraints": [], "owner": "BEO", "horizon": "this_month",
+     "follow_up": "data_completeness", "priority": 0, "exclusive": true},
+    {"id": "A1", "when": {"diagnosis": ["D1"]}, "constraints": ["surplus_school_exists"], "owner": "DEO", "horizon": "this_month",
+     "follow_up": "working_teachers_and_ptr", "priority": 1},
+    {"id": "A2", "when": {"diagnosis": ["D1"]}, "constraints": ["no_surplus_school"], "owner": "DEO", "horizon": "this_month",
+     "follow_up": "posts_filled", "priority": 1},
+    {"id": "A3", "when": {"diagnosis": ["D1"]}, "constraints": ["multigrade_schools"], "owner": "KENDRA_PRAMUKH", "horizon": "this_week",
+     "follow_up": "visit_logged_next_round_change", "priority": 2},
+    {"id": "A4", "when": {"diagnosis": ["D2"]}, "constraints": ["visits_below_one"], "owner": "KENDRA_PRAMUKH", "horizon": "this_week",
+     "follow_up": "visits_per_school_month", "priority": 1},
+    {"id": "A5", "when": {"diagnosis": ["D2"]}, "constraints": ["training_stale"], "owner": "BEO", "horizon": "this_month",
+     "follow_up": "training_logged_competency_change", "priority": 2},
+    {"id": "A6", "when": {"diagnosis": ["D2", "D8"]}, "constraints": ["teachers_available"], "owner": "BEO", "horizon": "next_baithak",
+     "follow_up": "targets_set_next_round_change", "priority": 3},
+    {"id": "A7", "when": {"diagnosis": ["D3"]}, "constraints": ["attendance_trusted"], "owner": "BEO", "horizon": "this_month",
+     "follow_up": "attendance_next_month", "priority": 1},
+    {"id": "A8", "when": {"diagnosis": ["D4"]}, "constraints": [], "owner": "BEO", "horizon": "before_november",
+     "follow_up": "children_tracked_attendance_nov_mar", "priority": 1},
+    {"id": "A12", "when": {"diagnosis": ["D1", "D2"]}, "constraints": ["positive_deviant_same_constraint"], "owner": "BEO", "horizon": "this_month",
+     "follow_up": "peer_visit_done", "priority": 4}
+  ],
+  "brief_level": [
+    {"id": "A9", "when": {"duty": ["WEAK"]}, "owner": "DEO", "horizon": "before_next_duty", "follow_up": "duty_days_in_assessment_months"},
+    {"id": "A13", "when": {"twin": true}, "owner": "BEO", "horizon": "this_month", "follow_up": "exposure_visit_done"}
+  ]
+}

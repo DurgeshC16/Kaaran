@@ -33,12 +33,14 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Eval scorecard vs answer key: `.venv\Scripts\python -m kaaran.eval --seed 42` (repeat `--seed`; `--names fictional`; `--layout variant_b --proposer llm`)
 - Intent eval (25 questions): `.venv\Scripts\python -m kaaran.eval.intent --tier light --tier main --tier rule`
 - Brief eval (verifier pass, invented numbers, cost): `.venv\Scripts\python -m kaaran.eval.brief --seed 42 [--samples data/samples]`
+- Block-lens scorecard (risks, diagnoses, rubric actions vs truth3.json): `.venv\Scripts\python -m kaaran.eval.block --seed 42 [--seed 7 ...]`
 - Demo server (web + WhatsApp webhook): `.venv\Scripts\python -m kaaran.api` (http://127.0.0.1:8000, simulator at /whatsapp; setup in docs/DEMO.md)
 - Prompt-injection check: `.venv\Scripts\python -m kaaran.eval.guardrails`
 - Mapping eval (baseline vs LLM, both layouts): `.venv\Scripts\python -m kaaran.eval.mapping --seed 42` (`KAARAN_LLM_MODE=live` to record new responses)
 
 ## Layout
 - src/kaaran/synth: synthetic data generator and answer key (v2, taluka lens)
+- src/kaaran/block: block lens v2 (ingest, trust, insights = risk + diagnosis D1-D8, rubric.py + rubric_v1.json actions, pack.py block-1.0, brief.py three-part brief)
 - src/kaaran/synth3: v3 generator (block -> cluster -> school, UDISE+ microdata columns, competency assessment; truth3.json)
 - src/kaaran/evidence.py: Evidence pack contract (docs/EVIDENCE_SCHEMA.md)
 - src/kaaran/ingest, trust: raw files -> DuckDB with provenance; trust checks (docs/CONFIDENCE_RULES.md)
