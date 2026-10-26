@@ -73,6 +73,12 @@
   .spinner { display:inline-block; width:14px; height:14px; border:2px solid #9bb7e0; border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; vertical-align:middle; margin-right:6px; }
   @keyframes spin { to { transform:rotate(360deg); } }
   .error { color:#b00020; }
+  .alert { border:1px solid #f0c36d; background:#fffaf0; border-radius:6px; padding:8px 10px; margin:6px 0; font-size:13.5px; }
+  .alert b { font-size:14px; } .alert .counts { color:#8a5a00; font-size:12px; margin:2px 0 6px; }
+  .act { border:1px solid var(--line); border-radius:6px; padding:8px; margin:6px 0; font-size:13.5px; }
+  .act .ev { color:#555; font-size:12.5px; margin-top:4px; } .act .st { font-size:12px; font-weight:700; }
+  .st-open { color:#a15c00; } .st-confirmed { color:#0b57d0; } .st-done { color:#2e7d32; }
+  .act button { font:inherit; font-size:12px; margin:4px 4px 0 0; padding:2px 8px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -88,6 +94,9 @@
 <div class="synthetic" id="synthetic"></div>
 <main>
   <div>
+    <div class="card" id="alerts-card" style="display:none; margin-bottom:12px">
+      <h2 class="small" style="margin-top:0" id="lbl-alerts"></h2><div id="alerts"></div>
+    </div>
     <div class="card">
       <form id="ask-form">
         <label for="q" id="lbl-q" style="font-weight:600"></label>
@@ -122,7 +131,9 @@ const UI = {
         secs:"से.", your_q:"प्रश्न:", source:"स्रोत", computed:"गणना", inputs:"यावरून", file:"फाईल", sheet:"शीट", page:"पान",
         rows:"ओळी", view:"टेबल", filter:"अट", nrows:"ओळींची संख्या", constant:"नियमातील ठरलेली मर्यादा", more:"आणखी",
         schools:"शाळा", talukas:"तालुके", code:"UDISE कोड", name:"नाव", taluka:"तालुका", synth_note:"कृत्रिम डेटा: स्रोत फाईल्स डेमोसाठी तयार केल्या आहेत.",
-        err:"त्रुटी:" },
+        err:"त्रुटी:", alerts:"🔔 नवीन डेटा आला: इशारे", open:"अहवाल उघडा", baithak:"बैठक पॅक", confirm:"मान्य", done:"पूर्ण झाले",
+        st_open:"प्रलंबित", st_confirmed:"मान्य केले", st_done:"पूर्ण", follow:"पुढील तपासणी", based:"आधार", from_alert:"इशाऱ्यातून उघडले",
+        no_alerts:"सध्या कोणताही तातडीचा इशारा नाही.", risk_n:"केंद्रांना लक्ष हवे", data_n:"केंद्रांतील नोंदी तपासा" },
   en: { tagline:"AI data analyst for education officers", dataset:"Data:", wa:"WhatsApp demo →",
         synthetic:"⚠️ SYNTHETIC demo data - the figures here are not real and the findings are not real.",
         q:"Your question (Marathi or English)", ask:"Ask", examples:"Example questions", history:"Earlier questions",
@@ -134,7 +145,9 @@ const UI = {
         secs:"s", your_q:"Question:", source:"Source", computed:"Computed as", inputs:"From", file:"File", sheet:"Sheet", page:"Page",
         rows:"Rows", view:"Table", filter:"Filter", nrows:"Rows matched", constant:"Fixed threshold in the rule", more:"more",
         schools:"Schools", talukas:"Talukas", code:"UDISE code", name:"Name", taluka:"Taluka", synth_note:"Synthetic data: the source files were generated for the demo.",
-        err:"Error:" },
+        err:"Error:", alerts:"🔔 New data arrived: alerts", open:"Open brief", baithak:"Review meeting pack", confirm:"Confirm", done:"Mark done",
+        st_open:"open", st_confirmed:"confirmed", st_done:"done", follow:"Follow-up check", based:"Based on", from_alert:"Opened from an alert",
+        no_alerts:"No block needs urgent attention right now.", risk_n:"clusters need attention", data_n:"clusters with records to check" },
 };
 const state = { lang:"mr", dataset:null, datasets:[], answer:null, history:[], busy:false };
 const $ = (id) => document.getElementById(id);
@@ -145,10 +158,25 @@ function t(k) { return UI[state.lang][k]; }
 function applyUI() {
   document.documentElement.lang = state.lang;
   for (const [id, key] of [["tagline","tagline"],["lbl-dataset","dataset"],["link-wa","wa"],["synthetic","synthetic"],["lbl-q","q"],
-                           ["ask-btn","ask"],["lbl-examples","examples"],["lbl-history","history"]]) $(id).textContent = t(key);
+                           ["ask-btn","ask"],["lbl-examples","examples"],["lbl-history","history"],["lbl-alerts","alerts"]]) $(id).textContent = t(key);
   $("lang-mr").classList.toggle("on", state.lang === "mr");
   $("lang-en").classList.toggle("on", state.lang === "en");
-  renderDatasets(); renderExamples(); renderHistory(); renderAnswer();
+  renderDatasets(); renderExamples(); renderHistory(); renderAnswer(); renderAlerts();
+}
+
+async function renderAlerts() {
+  const d = current(), card = $("alerts-card");
+  if (!d || d.kind !== "block") { card.style.display = "none"; return; }
+  card.style.display = "block";
+  if (!d.alerts) {
+    const r = await fetch(`/api/datasets/${encodeURIComponent(d.id)}/alerts`);
+    d.alerts = r.ok ? await r.json() : [];
+  }
+  const L = state.lang;
+  $("alerts").innerHTML = d.alerts.length ? d.alerts.map((a, i) => `<div class="alert"><b>${esc(L === "mr" ? (a.name_mr || a.name) : a.name)}</b>
+      <div class="counts">${esc(a.at_risk)} ${esc(t("risk_n"))}${a.data ? " · " + esc(a.data) + " " + esc(t("data_n")) : ""}</div>
+      <div>${esc(a.text[L])}</div><button class="btn ghost" type="button" data-alert="${i}" style="margin-top:6px">${esc(t("open"))}</button></div>`).join("")
+    : `<div class="sub">${esc(t("no_alerts"))}</div>`;
 }
 
 function renderDatasets() {
@@ -175,8 +203,8 @@ function renderAnswer() {
   if (!a) { box.innerHTML = `<div class="empty">${esc(t("empty"))}</div>`; return; }
   if (a.error) { box.innerHTML = `<div class="error">${esc(t("err"))} ${esc(a.error)}</div>`; return; }
   const L = state.lang, info = a.info || {};
-  const q = `<div class="question-echo"><b>${esc(t("your_q"))}</b> ${esc(a.question)}</div>`;
-  const pills = [`<span class="pill">${esc(info.intent_source === "llm" ? t("intent_llm") : t("intent_rule"))}</span>`];
+  const q = a.question ? `<div class="question-echo"><b>${esc(t("your_q"))}</b> ${esc(a.question)}</div>` : "";
+  const pills = [`<span class="pill">${esc(info.intent_source === "llm" ? t("intent_llm") : info.intent_source === "alert" ? t("from_alert") : t("intent_rule"))}</span>`];
   if (a.status !== "ok") {
     box.innerHTML = q + `<div class="meta">${pills.join("")}</div><div class="reply ${esc(a.status)}">${esc(a.reply[L])}</div>`;
     return;
@@ -189,7 +217,8 @@ function renderAnswer() {
   const tools = `<div class="toolbar">
       <a class="btn ghost" href="/api/briefs/${id}/pdf?lang=mr" target="_blank" rel="noopener">⬇ ${esc(t("pdf"))}</a>
       <a class="btn ghost" href="/api/briefs/${id}/pdf?lang=en" target="_blank" rel="noopener">⬇ ${esc(t("pdfen"))}</a>
-      <a class="btn ghost" href="/api/briefs/${id}/evidence" target="_blank" rel="noopener">{ } ${esc(t("evidence"))}</a></div>`;
+      <a class="btn ghost" href="/api/briefs/${id}/evidence" target="_blank" rel="noopener">{ } ${esc(t("evidence"))}</a>
+      ${(current() || {}).kind === "block" ? `<button class="btn ghost" type="button" id="baithak-btn">📋 ${esc(t("baithak"))}</button>` : ""}</div>`;
   const notes = (a.summary[L].notes || []).length ? `<div class="notes">${a.summary[L].notes.map(n => "👉 " + esc(n)).join("<br>")}</div>` : "";
   box.innerHTML = q + tools + `<div class="meta">${pills.join("")}</div>` + notes + a.html[L];   // brief HTML is built and escaped by the server
 }
@@ -198,12 +227,12 @@ async function loadDatasets() {
   const r = await fetch("/api/datasets");
   state.datasets = await r.json();
   if (!state.dataset) state.dataset = (state.datasets.find(d => d.default) || state.datasets[0]).id;
-  renderDatasets(); renderExamples();
+  renderDatasets(); renderExamples(); renderAlerts();
   const d = current();
   if (d && !d.examples) {   // first use of this dataset: the server prepares it (generates it if missing)
     const r2 = await fetch(`/api/datasets/${encodeURIComponent(d.id)}/examples`);
     if (r2.ok) { d.examples = await r2.json(); d.ready = true; }
-    if (d.id === state.dataset) renderExamples();
+    if (d.id === state.dataset) { renderExamples(); renderAlerts(); }
   }
 }
 
@@ -286,6 +315,51 @@ $("answer").addEventListener("click", (e) => {
   const s = e.target.closest(".set"); if (s) return showSet(s.dataset.s);
 });
 $("drawer-close").addEventListener("click", () => $("drawer").classList.remove("open"));
+
+async function openBlock(focus, label) {
+  if (state.busy) return;
+  state.busy = true; $("status").innerHTML = `<span class="spinner"></span>${esc(t("working"))}`;
+  try {
+    const r = await fetch("/api/open", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ dataset: state.dataset, focus }) });
+    const body = await r.json();
+    if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+    body.question = label; state.answer = body; state.history.unshift(body); state.history = state.history.slice(0, 20);
+  } catch (e) { state.answer = { error: e.message }; }
+  finally { state.busy = false; $("status").textContent = ""; renderAnswer(); renderHistory(); }
+}
+
+async function showBaithak() {
+  const a = state.answer; if (!a || !a.brief_id) return;
+  const r = await fetch(`/api/briefs/${encodeURIComponent(a.brief_id)}/baithak?lang=${state.lang}`);
+  if (!r.ok) return;
+  const p = await r.json();
+  let h = `<h3>${esc(p.title)}</h3>` + (p.banner ? `<p style="font-size:12px;color:#a15c00">${esc(p.banner)}</p>` : "");
+  for (const [owner, acts] of Object.entries(p.groups)) {
+    h += `<h4 style="margin:12px 0 4px">${esc(owner)}</h4>`;
+    for (const x of acts) {
+      h += `<div class="act"><div>${esc(x.text)}</div>
+        <div style="font-size:12px;color:#555">${esc(x.when)} · ${esc(t("follow"))}: <code>${esc(x.follow_up)}</code> · <code>${esc(x.rubric_id)}</code></div>
+        ${x.evidence.length ? `<div class="ev"><b>${esc(t("based"))}:</b> ${x.evidence.map(esc).join(" | ")}</div>` : ""}
+        <div><span class="st st-${esc(x.status)}">${esc(t("st_" + x.status))}</span>
+          <button type="button" data-act="${esc(x.id)}" data-status="confirmed">${esc(t("confirm"))}</button>
+          <button type="button" data-act="${esc(x.id)}" data-status="done">${esc(t("done"))}</button></div></div>`;
+    }
+  }
+  openDrawer(h);
+}
+
+$("alerts").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-alert]"); if (!b) return;
+  const a = current().alerts[+b.dataset.alert];
+  openBlock(a.block, "🔔 " + a.text[state.lang]);
+});
+$("answer").addEventListener("click", (e) => { if (e.target.closest("#baithak-btn")) showBaithak(); });
+$("drawer-body").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-act]"); if (!b || !state.answer) return;
+  await fetch(`/api/briefs/${encodeURIComponent(state.answer.brief_id)}/actions`, { method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ action: b.dataset.act, status: b.dataset.status }) });
+  showBaithak();
+});
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("drawer").classList.remove("open"); });
 
 const params = new URLSearchParams(location.search);   // shareable demo links: /?q=...&lang=en&dataset=fictional

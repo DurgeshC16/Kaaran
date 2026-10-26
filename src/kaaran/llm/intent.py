@@ -109,7 +109,8 @@ REFUSE_DATA = ["phone", "mobile", "address", "aadhaar", "फोन", "मोब�
 RANKING = ["rank", "worst", "best", "क्रमवारी", "सर्वात वाईट", "सर्वोत्तम"]
 TOPIC_WORDS = ["maths", "math", "ganit", "गणित", "result", "nikal", "निकाल", "score", "attendance", "hajeri", "हजेरी",
                "data", "आकडेवारी", "decline", "fall", "drop", "improve", "taluka", "तालुका", "घसर", "ghasar", "pragati", "प्रगती",
-               "election", "निवडणूक", "infrastructure", "similar", "compare", "kasa", "कसा", "कशी", "का", "why", "how"]
+               "election", "निवडणूक", "infrastructure", "similar", "compare", "kasa", "कसा", "कशी", "का", "why", "how",
+               "केंद्र", "kendra", "cluster", "लक्ष", "attention", "mage", "मागे"]
 
 
 def _norm(s: str) -> str:
@@ -144,18 +145,23 @@ def rule_plan(question: str, gaz: list[dict], years: list[str]) -> dict:
         plan |= {"compare_with": hits[1], "question_type": "compare_talukas"}
     elif len(hits) > 1:
         return plan | {"status": "clarify", "reason": "ambiguous_place", "taluka_id": None}
-    if any(w in q for w in ("similar", "twin", "समान", "जुळा")):
+    if any(w in q for w in ("लक्ष", "attention", "mage", "मागे")):
+        plan["question_type"] = "trend"  # "where should I look?" -> the attention part
+    elif any(w in q for w in ("similar", "twin", "समान", "जुळा")):
         plan["question_type"] = "twin"
     elif any(w in q for w in ("data", "आकडेवारी", "विश्वास", "quality")):
         plan["question_type"] = "data_quality"
     return validate_plan(plan, {g["id"] for g in gaz}, years)
 
 
-def parse(question: str, talukas: pd.DataFrame, years: list[str], tier: str = "light", client=None) -> dict:
+def parse(question: str, talukas: pd.DataFrame, years: list[str], tier: str = "light", client=None,
+          scope_note: str = "") -> dict:
     """Returns the validated plan plus `source` (llm | rule_fallback)."""
     gaz = gazetteer(talukas)
     ids = [g["id"] for g in gaz]
     system = SYSTEM.format(gazetteer="\n".join(f"- {g['id']}: {g['en']} / {g['mr'] or '-'}" for g in gaz))
+    if scope_note:  # extra scope for the cluster lens; empty for v1, so its recorded answers stay valid
+        system += "\n\n" + scope_note
     user = f"Data years: {', '.join(years)}\n<question>\n{question}\n</question>"
     try:
         res = (client or get_client()).call(role="intent_parser", tier=tier, system=system, user=user,

@@ -48,6 +48,10 @@
       <span style="color:#555">This phone runs the same bot as the real WhatsApp webhook; nothing leaves this machine.</span>
       <div style="margin-top:8px">Commands: <code>hi</code> / <code>मदत</code> (help), <code>english</code>, <code>marathi</code></div>
     </div>
+    <div class="card"><h2>🔔 नवीन डेटा आला / New data arrived</h2>
+      नवीन मूल्यमापन किंवा हजेरीचा डेटा आल्यावर कारण स्वतः सर्व तालुके तपासते आणि अधिकाऱ्याला इशारा पाठवते (प्रश्नाची वाट न पाहता).<br>
+      <span style="color:#555">When new data arrives, Kaaran scans every block and messages the officer first, without waiting for a question.</span>
+      <div class="chips"><button type="button" id="alert-btn">🔔 इशारा पाठवा / Send alert</button></div></div>
     <div class="card"><h2>उदाहरणे / Examples</h2><div class="chips" id="ex"></div></div>
     <div class="card"><a href="/">← वेब डेमो / Web demo</a></div>
   </div>
@@ -98,13 +102,23 @@ async function send(text) {
 }
 
 $("f").addEventListener("submit", (e) => { e.preventDefault(); const v = $("t").value; $("t").value = ""; send(v); });
+async function pushAlert() {
+  if (busy) return;
+  busy = true;
+  try {
+    const r = await fetch("/api/whatsapp/simulate_alert", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ sender }) });
+    const body = await r.json();
+    for (const rep of body.replies) showReply(rep);
+  } finally { busy = false; }
+}
+$("alert-btn").addEventListener("click", pushAlert);
 $("ex").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) send(b.textContent); });
 
 (async () => {
   const ds = await (await fetch("/api/datasets")).json();
   const d = ds.find(x => x.default) || ds[0];
   const ex = d.examples || await (await fetch(`/api/datasets/${encodeURIComponent(d.id)}/examples`)).json();
-  $("ex").innerHTML = ["hi"].concat(ex.map(x => x.text)).concat(["english"]).map(x => `<button type="button">${esc(x)}</button>`).join("");
+  $("ex").innerHTML = ["hi"].concat(ex.map(x => x.text)).concat(["अहवाल", "english"]).map(x => `<button type="button">${esc(x)}</button>`).join("");
 })();
 send("नमस्कार");
 </script>

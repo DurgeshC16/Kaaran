@@ -45,6 +45,8 @@ HELP = (
 )
 HELP_WORDS = {"", "hi", "hello", "help", "start", "menu", "नमस्कार", "नमस्ते", "मदत", "हाय"}
 LANG_WORDS = {"en": {"english", "en", "इंग्रजी", "इंग्लिश"}, "mr": {"marathi", "mr", "मराठी"}}
+REPORT_WORDS = {"अहवाल", "report", "हो", "होय", "yes", "ho", "ahwal", "ahaval"}
+NO_ALERT = ("सध्या कोणत्याही तालुक्यात तातडीचा इशारा नाही.", "No block needs urgent attention right now.")
 
 
 @dataclass
@@ -87,6 +89,7 @@ class Bot:
         self.service = service
         self.dataset = dataset
         self.lang: dict[str, str] = {}
+        self.pending: dict[str, str] = {}  # sender -> block of the last alert (reply 'report' opens it)
 
     def help_text(self, lang: str) -> str:
         i = LANGS.index(lang)
@@ -109,10 +112,29 @@ class Bot:
         if cmd in HELP_WORDS:
             send(Reply("text", self.help_text(lang), lang=lang))
             return
-        answer = self.service.ask(text, self.dataset, on_progress=lambda: send(Reply("text", ACK[i], lang=lang)))
+        ack = lambda: send(Reply("text", ACK[i], lang=lang))  # noqa: E731
+        if cmd in REPORT_WORDS and sender in self.pending:
+            answer = self.service.open_block(self.dataset, self.pending.pop(sender), on_progress=ack)
+        else:
+            answer = self.service.ask(text, self.dataset, on_progress=ack)
         if answer.status != "ok":
             send(Reply("text", answer.reply[lang], lang=lang))
             return
+        self._deliver(answer, lang, send)
+
+    def alert(self, sender: str, send: Callable[[Reply], None]) -> None:
+        """Proactive message when new data arrives: the most urgent block (the officer replies 'report' to open it)."""
+        lang = self.lang.get(sender, "mr")
+        alerts = self.service.alerts(self.dataset)
+        if not alerts:
+            send(Reply("text", NO_ALERT[LANGS.index(lang)], lang=lang))
+            return
+        top = alerts[0]
+        self.pending[sender] = top["block"]
+        send(Reply("text", top["text"][lang], lang=lang))
+
+    def _deliver(self, answer, lang: str, send: Callable[[Reply], None]) -> None:
+        i = LANGS.index(lang)
         for part in split_text(as_text(answer.summary[lang], bold="*")):
             send(Reply("text", part, lang=lang))
         ws, focus = self.service.resolve_brief(answer.brief_id)
@@ -299,4 +321,10 @@ def simulate(bot: Bot, sender: str, text: str) -> list[Reply]:
     """Local simulator: same bot, replies collected instead of sent."""
     out: list[Reply] = []
     bot.handle(sender, "text", text, out.append)
+    return out
+
+
+def simulate_alert(bot: Bot, sender: str) -> list[Reply]:
+    out: list[Reply] = []
+    bot.alert(sender, out.append)
     return out

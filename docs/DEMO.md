@@ -12,6 +12,34 @@ Not in this build:
 
 Every page, reply and PDF carries the SYNTHETIC banner.
 
+
+## 0. Cluster lens (v2, default since 2026-10-27)
+
+The demo opens on **"सोलापूर जिल्हा - केंद्रनिहाय"** (dataset `blocks`, v3 synthetic data in real formats).
+`blocks_fictional` is the same with invented names. The v1 taluka-lens datasets (`solapur`, `fictional`) are
+still in the selector.
+
+| What | Where |
+|---|---|
+| **Alerts inbox**: the proactive district scan (runs when data arrives, no LLM); one card per block with clusters that need attention | left column of `/` |
+| **Three-part brief**: A what needs attention / B why it may be happening / C what to do (owner + deadline) | open an alert, or ask "पंढरपूर तालुक्यात कोणत्या केंद्रांकडे लक्ष द्यावे?" |
+| **Baithak pack**: every rubric action grouped by owner, with its evidence, follow-up metric and status (confirm / done) | "📋 बैठक पॅक" button on a brief |
+| **WhatsApp alert**: the simulator's "🔔 Send alert" pushes the most urgent block; reply `अहवाल` to get the summary + PDF | `/whatsapp` |
+| API | `GET /api/datasets/{id}/alerts`, `POST /api/open`, `GET /api/briefs/{id}/baithak`, `POST /api/briefs/{id}/actions`, `POST /api/whatsapp/simulate_alert` |
+
+Suggested 2-minute script (cluster lens):
+1. Point at the alerts inbox: "Nobody asked; the data arrived and Kaaran scanned all 11 blocks."
+2. Open Pandharpur. In part A, three clusters need attention and one has unreliable records.
+3. In part B, the clusters fail for different reasons:
+   - one lost Kendra Pramukh visits (subtraction weakest);
+   - one has teacher gaps (6 schools now multigrade);
+   - one shows seasonal migration.
+
+   Also in part B: poll duty is ruled out, one school improved despite the same gap ("learn from"), and Malshiras is the twin block.
+4. In part C, each cluster gets a different action with an owner. Open the baithak pack and confirm an action.
+5. Click a number to see its source (file, table, filter, rows).
+6. On `/whatsapp`, press "🔔 Send alert", then reply `अहवाल`.
+
 ## 1. Run it (Windows)
 
 ```

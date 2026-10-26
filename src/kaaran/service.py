@@ -37,9 +37,14 @@ class DatasetSpec:
     folder: str  # absolute, or relative to the repository root; generated here if raw/ is missing
     label_mr: str
     label_en: str
+    kind: str = "taluka"  # taluka (v1, taluka lens) | block (v2, cluster lens)
 
 
 DATASETS = {
+    "blocks": DatasetSpec("blocks", 42, "solapur", "data/synthetic/block_demo",
+                          "सोलापूर जिल्हा - केंद्रनिहाय (कृत्रिम डेमो डेटा)", "Solapur district - cluster lens (synthetic demo data)", "block"),
+    "blocks_fictional": DatasetSpec("blocks_fictional", 7, "fictional", "data/synthetic/block_demo_fictional",
+                                    "काल्पनिक जिल्हा - केंद्रनिहाय (कृत्रिम डेमो डेटा)", "Fictional district - cluster lens (synthetic demo data)", "block"),
     "solapur": DatasetSpec("solapur", 42, "solapur", "data/synthetic/demo",
                            "सोलापूर जिल्हा (कृत्रिम डेमो डेटा)", "Solapur district (synthetic demo data)"),
     "fictional": DatasetSpec("fictional", 7, "fictional", "data/synthetic/demo_fictional",
@@ -101,6 +106,8 @@ def taluka_name(entity: dict, lang: str) -> str:
 class Workspace:
     """One dataset: ingest + trust once, all evidence packs up front, briefs and PDFs on demand."""
 
+    kind = "taluka"
+
     def __init__(self, spec: DatasetSpec, root: Path = ROOT):
         self.spec = spec
         folder = Path(spec.folder)
@@ -146,10 +153,20 @@ class Workspace:
                     self.briefs[focus] = write_brief(self.pack(focus))
         return self.briefs[focus]
 
+    def print_html(self, focus: str, lang: str) -> str:
+        b = self.brief(focus)
+        return print_document(self.pack(focus), b.prose, lang, b.sources)
+
+    def fragment(self, focus: str, lang: str) -> str:
+        b = self.brief(focus)
+        return brief_fragment(self.pack(focus), b.prose, lang, b.sources)
+
+    def summarize(self, pack: dict, b: Brief, plan: dict, lang: str) -> dict:
+        return summarize(pack, b, plan, lang, self)
+
     def pdf(self, focus: str, lang: str) -> Path:
         """One-page PDF of the brief (cached on disk next to the dataset; regenerated when the wording changes)."""
-        b = self.brief(focus)
-        doc = print_document(self.pack(focus), b.prose, lang, b.sources)
+        doc = self.print_html(focus, lang)
         out = self.folder / "briefs" / f"brief_{focus}_{lang}.pdf"
         stamp = out.with_suffix(".html")
         with self._key_lock(f"pdf:{focus}:{lang}"):
@@ -191,7 +208,7 @@ class Service:
         self.default = default
         if self.default not in self.datasets:
             raise ValueError(f"unknown default dataset {self.default!r}")
-        self.workspaces = {k: Workspace(spec, root) for k, spec in self.datasets.items()}
+        self.workspaces = {k: _workspace_for(spec, root) for k, spec in self.datasets.items()}
 
     def workspace(self, dataset: str | None = None) -> Workspace:
         key = dataset or self.default
@@ -221,7 +238,7 @@ class Service:
         key = dataset or self.default
         ws = self.workspace(key)
         question = " ".join(question.split())[:MAX_QUESTION_CHARS]
-        plan = intent.parse(question, ws.talukas, ws.years, tier="light")
+        plan = intent.parse(question, ws.talukas, ws.years, tier="light", scope_note=getattr(ws, "intent_scope", ""))
         info = {"intent_source": plan.get("source"), "intent_cost_usd": plan.get("cost_usd", 0.0)}
         names = {lang: ", ".join(taluka_names(ws, lang)) for lang in LANGS}
         if plan["status"] == "refuse":
@@ -231,11 +248,28 @@ class Service:
             reply = {lang: f"{CLARIFY.get(plan['reason'], CLARIFY['missing_place'])[i]} {names[lang]}." for i, lang in enumerate(LANGS)}
             return Answer("clarify", key, question, plan, reply, info=info | {"seconds": round(time.monotonic() - t0, 2)})
 
+        return self._answer(key, ws, question, plan, info, t0, on_progress)
+
+    def open_block(self, dataset: str | None, focus: str, on_progress=None) -> Answer:
+        """Open a brief directly (from an alert), without a question."""
+        t0 = time.monotonic()
+        key = dataset or self.default
+        ws = self.workspace(key)
+        if focus not in ws.prepare().analyses:
+            raise KeyError(f"unknown block {focus!r}")
+        plan = {"status": "ok", "taluka_id": focus, "question_type": "other", "metric": "score", "source": "alert"}
+        return self._answer(key, ws, "", plan, {"intent_source": "alert", "intent_cost_usd": 0.0}, t0, on_progress)
+
+    def alerts(self, dataset: str | None = None) -> list[dict]:
+        ws = self.workspace(dataset)
+        return list(ws.prepare().alerts) if getattr(ws, "kind", "taluka") == "block" else []
+
+    def _answer(self, key, ws, question, plan, info, t0, on_progress) -> Answer:
         focus = plan["taluka_id"]
         if focus not in ws.briefs and on_progress is not None:
             on_progress()
         pack, b = ws.pack(focus), ws.brief(focus)
-        summary = {lang: summarize(pack, b, plan, lang, ws) for lang in LANGS}
+        summary = {lang: ws.summarize(pack, b, plan, lang) for lang in LANGS}
         wording = sorted(set(b.sources.values()))
         info |= {"brief_cost_usd": round(b.info.get("cost_usd", 0.0), 4), "wording": wording,
                  "llm_available": b.info.get("llm_available"), "verified": b.info.get("verification", {}).get("passed"),
@@ -246,8 +280,16 @@ class Service:
             reply={lang: as_text(summary[lang]) for lang in LANGS},
             focus=focus, focus_name={lang: taluka_name(ent, lang) for lang in LANGS},
             brief_id=self.brief_id(key, focus), summary=summary,
-            html={lang: brief_fragment(pack, b.prose, lang, b.sources) for lang in LANGS}, info=info,
+            html={lang: ws.fragment(focus, lang) for lang in LANGS}, info=info,
         )
+
+
+def _workspace_for(spec: DatasetSpec, root: Path):
+    if spec.kind == "block":
+        from .block.workspace import BlockWorkspace
+
+        return BlockWorkspace(spec, root)
+    return Workspace(spec, root)
 
 
 def taluka_names(ws: Workspace, lang: str) -> list[str]:

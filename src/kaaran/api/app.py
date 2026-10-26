@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from ..brief.pdf import PdfUnavailable, find_browser
 from ..llm.client import get_client
 from ..service import LANGS, MAX_QUESTION_CHARS, Service, get_service, number_detail, set_detail
-from ..whatsapp import Bot, Gateway, simulate, valid_signature, verify_challenge
+from ..whatsapp import Bot, Gateway, simulate, simulate_alert, valid_signature, verify_challenge
 
 STATIC = Path(__file__).resolve().parent / "static"
 
@@ -25,6 +25,16 @@ STATIC = Path(__file__).resolve().parent / "static"
 class AskIn(BaseModel):
     question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS * 2)
     dataset: str | None = None
+
+
+class OpenIn(BaseModel):
+    dataset: str | None = None
+    focus: str = Field(min_length=1, max_length=60)
+
+
+class ActionIn(BaseModel):
+    action: str = Field(min_length=1, max_length=80)
+    status: str = Field(pattern="^(open|confirmed|done)$")
 
 
 class SimIn(BaseModel):
@@ -80,7 +90,7 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
         for key, spec in svc.datasets.items():
             ws = svc.workspace(key)
             item = {"id": key, "label": {"mr": spec.label_mr, "en": spec.label_en}, "default": key == svc.default,
-                    "ready": ws.ingest is not None}
+                    "ready": ws.ingest is not None, "kind": spec.kind}
             if ws.ingest is not None:
                 item["examples"] = ws.examples()
             out.append(item)
@@ -98,6 +108,21 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
         if body.dataset is not None and body.dataset not in svc.datasets:
             raise HTTPException(404, f"unknown dataset {body.dataset!r}")
         return svc.ask(body.question, body.dataset).to_dict()
+
+    @app.get("/api/datasets/{dataset}/alerts")
+    def alerts(dataset: str):
+        """Proactive district scan: blocks with clusters that need attention (computed when data arrives, no LLM)."""
+        try:
+            return svc.alerts(dataset)
+        except KeyError as e:
+            raise HTTPException(404, str(e)) from e
+
+    @app.post("/api/open")
+    def open_block(body: OpenIn):
+        try:
+            return svc.open_block(body.dataset, body.focus).to_dict()
+        except KeyError as e:
+            raise HTTPException(404, str(e)) from e
 
     def _brief(brief_id: str):
         try:
@@ -118,11 +143,26 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
     @app.get("/api/briefs/{brief_id}/print", response_class=HTMLResponse)
     def brief_print(brief_id: str, lang: str = "mr"):
         """The exact HTML the PDF is printed from (fallback when no browser is available for PDF)."""
-        from ..brief.html import print_document
-
         ws, focus = _brief(brief_id)
-        b = ws.brief(focus)
-        return HTMLResponse(print_document(ws.pack(focus), b.prose, _lang(lang), b.sources))
+        return HTMLResponse(ws.print_html(focus, _lang(lang)))
+
+    @app.get("/api/briefs/{brief_id}/baithak")
+    def brief_baithak(brief_id: str, lang: str = "mr"):
+        """Review-meeting pack: every rubric action grouped by owner, with its evidence and tracked status."""
+        ws, focus = _brief(brief_id)
+        if getattr(ws, "kind", "taluka") != "block":
+            raise HTTPException(404, "baithak pack is available for the cluster lens only")
+        return ws.baithak(focus, _lang(lang))
+
+    @app.post("/api/briefs/{brief_id}/actions")
+    def brief_action(brief_id: str, body: ActionIn):
+        ws, focus = _brief(brief_id)
+        if getattr(ws, "kind", "taluka") != "block":
+            raise HTTPException(404, "action tracking is available for the cluster lens only")
+        try:
+            return ws.set_action(focus, body.action, body.status)
+        except KeyError as e:
+            raise HTTPException(404, str(e)) from e
 
     @app.get("/api/briefs/{brief_id}/evidence")
     def brief_evidence(brief_id: str):
@@ -175,6 +215,11 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
         return {"config": gw.cfg.status(), "events": list(gw.events)}
 
     # ---------- WhatsApp: local simulator (same bot logic, nothing leaves the machine) ----------
+
+    @app.post("/api/whatsapp/simulate_alert")
+    def whatsapp_simulate_alert(body: SimIn):
+        """Simulate 'new data arrived': the bot pushes the most urgent block alert to this simulated phone."""
+        return {"replies": [{"kind": r.kind, "text": r.text, "lang": r.lang} for r in simulate_alert(sim_bot, "sim:" + body.sender)]}
 
     @app.post("/api/whatsapp/simulate")
     def whatsapp_simulate(body: SimIn):

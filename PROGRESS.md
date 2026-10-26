@@ -35,6 +35,17 @@ Phase 2 stages:
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
 
+## Phase 6.1 result (2026-10-27): cluster lens in the product + proactive alerts
+- `block/workspace.py`: block-kind dataset workspace (same interface as v1).
+  - Packs for all 11 blocks are built at startup (~10 s); briefs and PDFs are cached.
+  - District scan -> alerts. Open a block from an alert.
+  - Baithak pack: all rubric actions by owner, with evidence, follow-up metric and status; action tracker in `actions.json` next to the data.
+- `service.py`: `DatasetSpec.kind`; default dataset `blocks` (v1 `solapur` / `fictional` kept). Adds `open_block()` and `alerts()`; intent gets a cluster-lens scope note (v1 prompt unchanged).
+- API: `/api/datasets/{id}/alerts`, `POST /api/open`, `/api/briefs/{id}/baithak`, `POST /api/briefs/{id}/actions`, `/api/whatsapp/simulate_alert`; the print view comes from the workspace.
+- Web: alerts inbox, three-part brief, baithak drawer with confirm/done. WhatsApp: the bot pushes an alert, and the reply `अहवाल` opens that block (summary + PDF). Simulator has a "Send alert" button.
+- Recorded: block-lens intents for the 14 example questions (all correct) and the fictional focus brief. Live spend ~$0.09.
+- Tests: 232 passed, 3 skipped (new: test_block_service.py).
+
 ## Phase 5 result (2026-10-27): block lens + decision rubric
 - 5.1 `kaaran.synth3`: v3 district (block -> cluster -> school, 1,292 schools).
   - 18 real-format raw files (UDISE+ microdata columns, kendra list, monthly posts with duty days, monthly attendance, competency-wise assessment in 3 rounds, visit log, training register).
@@ -109,11 +120,13 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - Code: src/kaaran/synth/{config,rng,entities,plant,tables,ground_truth,messy,writers,generate,__main__}.py; tests/{conftest,test_smoke,test_truths_clean,test_raw_files,test_cli,test_determinism}.py.
 
 ## Next task
-Phase 6 (docs/07):
-- 6.1 Block lens in the service, web and WhatsApp: question -> block brief; proactive district scan -> alerts inbox + WhatsApp alert.
-- 6.2 Baithak pack (all rubric actions with owners) + action tracker.
-- 6.3 Voice through a hosted API (team approved hosted for the demo; needs an API key: Bodhan AI / Sarvam / Bhashini).
-Then Phase 7: real data run (user downloads per docs/08), user tests, deploy.
+- 6.3 Voice through a hosted API (team approved hosted). Needs: provider choice + API key (Bodhan AI / Sarvam / Bhashini).
+- 6.4 Web upload of the officer's files (needs `python-multipart`, a new dependency, approval pending).
+- Phase 7:
+  - real data run (user downloads per docs/08: UDISE+ 2024-25 Maharashtra microdata, PRS state report, PAB minutes);
+  - user tests (interview guide in docs/06 §7) logged in docs/USER_TESTING.md;
+  - deploy a public link.
+- Phase 8: video + deck.
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
@@ -189,3 +202,5 @@ Then Phase 7: real data run (user downloads per docs/08), user tests, deploy.
 - 2026-10-27 Support gap is judged at cluster level (Kendra Pramukh post), since per-school visit counts are too noisy (Poisson). Positive deviants are excluded from exposure tests and shown separately. Timing = no pre-trend vs unexposed schools.
 - 2026-10-27 Competency focus uses current levels vs the block's profile (not changes), which halves small-school noise. The answer key checks that every reported competency is a planted one.
 - 2026-10-27 Exclusive data actions: a cluster with unreliable records gets only "verify registers"; its results are not acted on until verified.
+- 2026-10-27 Cluster lens is the default demo dataset; alerts come from the deterministic scan (no LLM), so they are free and instant. Real WhatsApp proactive messages outside the 24-hour window need an approved Meta template (the simulator shows the flow).
+- 2026-10-27 The intent prompt gets an optional scope note for the cluster lens. Without it, Haiku refused "Which clusters in Pandharpur need attention?" as out of scope.
