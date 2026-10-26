@@ -4,7 +4,9 @@ Deadline: 2026-11-01 (submit by afternoon).
 Budget: development <= $180, runtime/evals <= $60, demo/judging <= $40. Reserve untouched.
 Cumulative checkpoints: $60 by Oct 22, $130 by Oct 25, $200 by Oct 29.
 
-## Current phase: 4 in progress. Web demo + WhatsApp demo (typed questions, synthetic data) done 2026-10-24. Phase 3 (AI layers) done 2026-10-23.
+## Current phase: v2 rethink (after mentor review 2026-10-24). Docs 01-08 written 2026-10-27; implementation = Phase 5 (docs/07).
+
+v2 in one line: block -> cluster lens, 4 data domains in real formats (UDISE+ microdata), three-part brief (attention / why / what to do), decision rubric for actions, proactive alerts, baithak pack, voice. Plan and stages: docs/07_ROADMAP_AND_PHASES.md.
 
 Phase 4 stages:
 - [x] Demo service, HTML/PDF brief, web demo with click-to-source and school drill-down
@@ -86,13 +88,10 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - Code: src/kaaran/synth/{config,rng,entities,plant,tables,ground_truth,messy,writers,generate,__main__}.py; tests/{conftest,test_smoke,test_truths_clean,test_raw_files,test_cli,test_determinism}.py.
 
 ## Next task
-Phase 4, part 2:
-- Connect the real WhatsApp test number. User steps: Meta app + `.env` values + tunnel, as in docs/DEMO.md section 3.
-- Then demo-record the WhatsApp segment.
-- Voice in/out (Bhashini or Google STT/TTS; needs a decision on the provider and keys).
-- Officer file upload on the web (needs `python-multipart`, a new dependency to approve). It runs the LLM mapping proposer on the uploaded files.
-- Deploy (public link) and user testing; native-speaker review of the Marathi briefs and the UI strings.
-- Move `data/Report_Solapur_IND27496.pdf` (real data, untracked) into `data/real/` (git-ignored).
+Phase 5 (docs/07), after team approval of decisions D1-D7:
+- 5.1 synthetic v3 generator (clusters, UDISE+ microdata columns, competency assessment, visits, training, monthly posts, new truths + expected actions)
+- 5.2 ingest v2, 5.3 trust v2, 5.4 insight engine, 5.5 rubric engine (config/rubric_v1.json), 5.6 pack v1.1 + A/B/C brief, 5.7 eval v3
+User: download real files per docs/08 (UDISE+ 2024-25 Maharashtra microdata, PRS state report, PAB minutes).
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
@@ -160,3 +159,5 @@ Phase 4, part 2:
 - 2026-10-24 Replies are Marathi first. WhatsApp switches language per sender with "english" / "marathi".
 - 2026-10-24 WhatsApp webhook POSTs must carry a valid X-Hub-Signature-256. Without WHATSAPP_APP_SECRET every POST is rejected (no unsigned mode).
 - 2026-10-24 The brief and PDF never name schools (verifier). School lists appear only in the local web drill-down.
+- 2026-10-24 Mentor review (Rupala, CSF): proactive nudges instead of waiting for questions; data availability matrix; 4 core domains; three-part brief; decision rubric for actions (main weakness); baithak loop; OCR out of scope; check Bodhan AI for voice.
+- 2026-10-27 v2 rethink documented (docs/01-08, README). Real UDISE+ 2024-25 school-level microdata format verified (public Delhi release; pseudocode IDs; no cluster column). PRS 2024 Solapur: grade 3 maths 75 / MH 64 / India 60, language 79 / 69 / 64 (checked on the rendered page; PDF text order is misleading). Real PRS PDF moved to data/real/prs2024/.

@@ -51,7 +51,8 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - src/kaaran/api: FastAPI app (web demo, drill-down, PDF, webhook, simulator) and static pages
 - tests/: pytest suites
 - data/synthetic/: generated data (git-ignored except small samples)
-- docs/: specs (see docs/SYNTHETIC_DATA_SPEC.md); docs/source/ holds local-only originals (git-ignored)
+- docs/: 01 vision/rethink, 02 data strategy, 03 literature survey, 04 SRS, 05 architecture, 06 decision rubrics, 07 roadmap, 08 data download guide; plus EVIDENCE_SCHEMA, CONFIDENCE_RULES, SYNTHETIC_DATA_SPEC, DEMO. docs/source/ holds local-only originals (git-ignored)
+- data/real/: real downloaded files (git-ignored; never commit)
 - prompts/: LLM prompt templates (later phases)
 
 ## Working agreement
