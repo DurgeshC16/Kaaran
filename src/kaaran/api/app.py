@@ -72,6 +72,20 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
     def index():
         return FileResponse(STATIC / "index.html", media_type="text/html; charset=utf-8")
 
+    @app.get("/real", response_class=HTMLResponse, include_in_schema=False)
+    def real_page():
+        return FileResponse(STATIC / "real.html", media_type="text/html; charset=utf-8")
+
+    @app.get("/api/real/snapshot")
+    def real_snapshot():
+        """Aggregate-only snapshot of REAL public data, if built on this machine (data/real/ is never committed)."""
+        from ..service import ROOT
+
+        path = ROOT / "data" / "real" / "reports" / "real_snapshot.json"
+        if not path.exists():
+            raise HTTPException(404, "no real-data snapshot here; run python -m kaaran.real (docs/10_TESTING_GUIDE.md)")
+        return JSONResponse(json.loads(path.read_text(encoding="utf-8")))
+
     @app.get("/whatsapp", response_class=HTMLResponse, include_in_schema=False)
     def whatsapp_page():
         return FileResponse(STATIC / "whatsapp.html", media_type="text/html; charset=utf-8")

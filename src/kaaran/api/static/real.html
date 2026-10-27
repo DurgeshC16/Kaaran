@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="mr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>कारण - खरा सार्वजनिक डेटा / Real public data</title>
+<style>
+  body { margin:0; font-family:"Noto Sans Devanagari","Nirmala UI","Segoe UI",system-ui,sans-serif; background:#f5f7f9; color:#16202a; }
+  header { background:#12324f; color:#fff; padding:10px 18px; display:flex; gap:14px; align-items:center; }
+  header a { color:#cfe3ff; font-size:13px; }
+  .real { background:#e7f3ec; border-bottom:1px solid #2e7d32; padding:6px 18px; font-weight:600; font-size:13px; }
+  main { max-width:1200px; margin:0 auto; padding:16px 18px; }
+  .card { background:#fff; border:1px solid #d9dee3; border-radius:8px; padding:14px; margin-bottom:14px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th, td { border-bottom:1px solid #eee; padding:5px 6px; text-align:right; } th:first-child, td:first-child { text-align:left; }
+  th { background:#f1f4f8; }
+  .hi { color:#b00020; font-weight:700; }
+  .sub { color:#5b6670; font-size:13px; }
+  .ok { color:#2e7d32; } .bad { color:#b00020; }
+</style>
+</head>
+<body>
+<header><b>कारण (Kaaran)</b><span>खरा सार्वजनिक डेटा / Real public data</span><span style="flex:1"></span><a href="/">← डेमो / Demo</a></header>
+<div class="real">✅ REAL PUBLIC DATA: UDISE+ शाळा-स्तरीय माहिती (pseudocode), फक्त एकत्रित आकडे. Self-reported by schools; aggregates only; no school names.</div>
+<main id="m"><div class="card sub">Loading…</div></main>
+<script>
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+(async () => {
+  const r = await fetch("/api/real/snapshot");
+  if (!r.ok) {
+    document.getElementById("m").innerHTML = `<div class="card">No real-data snapshot on this machine. Real files are never committed.
+      Put the UDISE+ microdata in <code>data/real/udise_2425/</code> and run
+      <code>.venv\\Scripts\\python -m kaaran.real --udise data/real/udise_2425</code> (see docs/10_TESTING_GUIDE.md).</div>`;
+    return;
+  }
+  const s = await r.json();
+  const rows = [...s.blocks].sort((a, b) => b.schools - a.schools);
+  const maxNoCrc = Math.max(...rows.map(b => b.pct_no_crc_visit));
+  let h = `<div class="card"><h2 style="margin:0 0 4px">${esc(s.district)} · UDISE+ ${esc(s.year)}</h2>
+    <div class="sub">${esc(s.filter)} · ${esc(s.note)}</div>
+    <p><b>${s.totals.schools}</b> schools · <b>${s.totals.teachers}</b> teachers · PTR <b>${s.totals.ptr}</b> ·
+       <b>${s.totals.single_teacher}</b> single-teacher schools · <b>${s.totals.no_crc_visit}</b> schools reported no CRC visit last year</p></div>
+    <div class="card"><table><tr><th>Block / तालुका</th><th>Schools</th><th>Teachers</th><th>PTR</th><th>One teacher</th><th>PTR&gt;30</th>
+    <th>No CRC visit</th><th>% no CRC visit</th><th>% teachers on non-teaching work</th></tr>` +
+    rows.map(b => `<tr><td>${esc(b.block)}</td><td>${b.schools}</td><td>${b.teachers}</td><td>${b.ptr}</td>
+      <td class="${b.single_teacher >= 20 ? "hi" : ""}">${b.single_teacher}</td><td>${b.ptr_over_30}</td><td>${b.no_crc_visit}</td>
+      <td class="${b.pct_no_crc_visit === maxNoCrc ? "hi" : ""}">${b.pct_no_crc_visit}%</td><td>${b.pct_teachers_non_teaching}%</td></tr>`).join("") +
+    `</table><p class="sub">Provenance: ${esc(Object.values(s.provenance).map(p => p.file).filter((v, i, a) => a.indexOf(v) === i).join(", "))}</p></div>`;
+  if (s.benchmarks) {
+    const b = s.benchmarks;
+    h += `<div class="card"><h3 style="margin-top:0">PARAKH Rashtriya Sarvekshan 2024 · grade 3</h3><table><tr><th>District</th><th>Maths %</th><th>Language %</th><th>Source</th></tr>` +
+      Object.entries(b.districts).map(([d, v]) => `<tr><td>${esc(d)}</td><td>${v.maths}</td><td>${v.language}</td><td>${esc(v.file)} p.${v.page}</td></tr>`).join("") +
+      `<tr><td>Maharashtra</td><td>${b.state.maths}</td><td>${b.state.language}</td><td></td></tr><tr><td>India</td><td>${b.india.maths}</td><td>${b.india.language}</td><td></td></tr></table>
+      <p class="sub">${esc(b.method)}. District sample only (about 40 grade-3 schools): a benchmark, not a block-level result.</p></div>`;
+  }
+  if (s.cross_check_2019_20) {
+    h += `<div class="card"><h3 style="margin-top:0">Cross-check: local-body teachers, 2019-20 vs ${esc(s.year)}</h3><table><tr><th>Block</th><th>2019-20</th><th>Now</th><th>Ratio</th></tr>` +
+      s.cross_check_2019_20.map(c => `<tr><td>${esc(c.index ?? c.Block_Name ?? c.block)}</td><td>${c.teachers_2019_20}</td><td>${c.teachers_now}</td><td>${c.ratio}</td></tr>`).join("") + `</table></div>`;
+  }
+  h += `<div class="card"><h3 style="margin-top:0">Checks</h3>` + s.checks.map(c => `<div class="${c.ok ? "ok" : "bad"}">${c.ok ? "✓" : "✗"} ${esc(c.id)}: ${esc(c.detail)}</div>`).join("") + `</div>`;
+  document.getElementById("m").innerHTML = h;
+})();
+</script>
+</body>
+</html>

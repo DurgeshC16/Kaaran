@@ -35,6 +35,26 @@ Phase 2 stages:
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
 
+## Phase 7.1 result (2026-10-28): real public data
+- The user downloaded real files to data/real/ (git-ignored):
+  - UDISE+ 2024-25 microdata for **Solapur district** (`2730_*`, 4,698 schools, 13 blocks);
+  - PRS 2024 Solapur/Sangli/Satara;
+  - AIKosh 2019-20 teachers (Solapur); PAB 2026-27 CSV (India, Maharashtra); FLS 2022; ASER 2024; HCES.
+  - NAS 2021 PDF uses a legacy font (unreadable without OCR; skipped). The data.gov.in item failed (not needed). The nfhs5/ folder holds ASER copies.
+- `src/kaaran/real/udise.py` + `python -m kaaran.real`:
+  - validation (unique ids, same schools across files, ranges, single district);
+  - aggregate block snapshot for local-body elementary schools (PTR, one-teacher / no-teacher schools, PTR > 30, no CRC visit, non-teaching teachers);
+  - cross-check against AIKosh 2019-20, which validates management code 3 = local body via per-block teacher totals (ratios 0.87-0.97); 11/11 checks pass.
+  - Reports go to data/real/reports/.
+- `data/real/prs2024/benchmarks.json`: grade-3 maths/language for 3 districts, read from the rendered page 15 (hand-verified).
+- Web page `/real` + `GET /api/real/snapshot` (local data only).
+- Real findings (self-reported, aggregates):
+  - 2,900 ZP schools, PTR 20.1, 99 single-teacher schools (Sangola 27, Malshiras 20);
+  - 789 schools report no CRC visit (Solapur North 79%); Karmala 17.5% of teachers on non-teaching work;
+  - local-body teachers 8% below 2019-20 overall.
+- docs/09_PROGRESS_REPORT.md and docs/10_TESTING_GUIDE.md (step-by-step run/test/validate; all commands verified).
+- Tests: 235 passed, 3 skipped (new: tests/test_real.py with a fake file set in the real format).
+
 ## Phase 6.1 result (2026-10-27): cluster lens in the product + proactive alerts
 - `block/workspace.py`: block-kind dataset workspace (same interface as v1).
   - Packs for all 11 blocks are built at startup (~10 s); briefs and PDFs are cached.
@@ -120,13 +140,10 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - Code: src/kaaran/synth/{config,rng,entities,plant,tables,ground_truth,messy,writers,generate,__main__}.py; tests/{conftest,test_smoke,test_truths_clean,test_raw_files,test_cli,test_determinism}.py.
 
 ## Next task
-- 6.3 Voice through a hosted API (team approved hosted). Needs: provider choice + API key (Bodhan AI / Sarvam / Bhashini).
-- 6.4 Web upload of the officer's files (needs `python-multipart`, a new dependency, approval pending).
-- Phase 7:
-  - real data run (user downloads per docs/08: UDISE+ 2024-25 Maharashtra microdata, PRS state report, PAB minutes);
-  - user tests (interview guide in docs/06 §7) logged in docs/USER_TESTING.md;
-  - deploy a public link.
-- Phase 8: video + deck.
+- 7.2 Real school frame in the demo: synth3 `--frame` using the real Solapur UDISE+ schools (pseudocodes, enrolment, teachers) with synthetic outcomes; clusters approximated by village panchayat; SYNTHETIC-marked outputs kept in data/real/.
+- 7.3 Link rubric actions to PAB 2026-27 Maharashtra line items (funded interventions).
+- 6.3 Voice (needs a provider key); 6.4 upload (needs python-multipart approval).
+- Deploy; user testing (even 2-3 sessions; the user may skip it); video and deck.
 
 ## Decisions
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
@@ -204,3 +221,6 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - 2026-10-27 Exclusive data actions: a cluster with unreliable records gets only "verify registers"; its results are not acted on until verified.
 - 2026-10-27 Cluster lens is the default demo dataset; alerts come from the deterministic scan (no LLM), so they are free and instant. Real WhatsApp proactive messages outside the 24-hour window need an approved Meta template (the simulator shows the flow).
 - 2026-10-27 The intent prompt gets an optional scope note for the cluster lens. Without it, Haiku refused "Which clusters in Pandharpur need attention?" as out of scope.
+- 2026-10-28 Real public data stays in data/real/ (outputs too). The committed code and tests use only fake files in the real format. PRS numbers are hand-verified from the page images, because PDF text order is unreliable.
+- 2026-10-28 UDISE+ management code 3 = local body is validated by per-block teacher totals against the 2019-20 tables (their own ids are 16-18, so the codes cannot be compared directly).
+- 2026-10-28 (user) Interviews may be skipped for now; the guide keeps a minimal version (the team teacher reviews one printed brief).

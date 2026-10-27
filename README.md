@@ -111,6 +111,8 @@ Other commands:
 | [06 Decision rubrics](docs/06_DECISION_RUBRICS.md) | risk rules, differential diagnosis, action matrix with constraints, validation plan |
 | [07 Roadmap and phases](docs/07_ROADMAP_AND_PHASES.md) | done, plan to submission, decisions, post-hackathon pilot, risks |
 | [08 Data download guide](docs/08_DATA_DOWNLOAD_GUIDE.md) | where to get each real dataset and where to put it |
+| [09 Progress report](docs/09_PROGRESS_REPORT.md) | what is built, real-data findings, quality numbers, what is left |
+| [10 Testing guide](docs/10_TESTING_GUIDE.md) | **how to run and test everything, step by step**, and how results are validated |
 | [Evidence schema](docs/EVIDENCE_SCHEMA.md) · [Confidence rules](docs/CONFIDENCE_RULES.md) · [Synthetic data spec](docs/SYNTHETIC_DATA_SPEC.md) · [Demo](docs/DEMO.md) | technical contracts and how to run |
 
 ## Repository layout
