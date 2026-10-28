@@ -6,27 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from kaaran.api import create_app
-from kaaran.service import DatasetSpec, Service
 from kaaran.whatsapp import Bot, CloudConfig, Gateway, simulate, simulate_alert
-
-
-@pytest.fixture(scope="session")
-def block_service(tmp_path_factory, block_folder):
-    import shutil
-
-    folder = tmp_path_factory.mktemp("blocksvc") / "data"
-    shutil.copytree(block_folder, folder)  # actions.json is written next to the data: keep tests off the shared folder
-    spec = DatasetSpec("blocks", 42, "solapur", str(folder), "डेमो", "Demo", "block")
-    return Service({"blocks": spec}, default="blocks")
-
-
-@pytest.fixture(scope="session")
-def block_folder(tmp_path_factory):
-    from kaaran.synth3.generate import generate
-
-    out = tmp_path_factory.mktemp("block42svc")
-    generate(42, out)
-    return out
 
 
 def test_scan_alerts_lead_with_the_focus_block(block_service):

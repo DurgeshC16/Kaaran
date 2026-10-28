@@ -78,3 +78,8 @@ def test_rationalisation_rte_rule(tmp_path):
     # BETA: school 202 (25 pupils, 0 teachers) needs 2; school 201 is category 2 (not judged)
     assert int(r.loc["BETA", "posts_needed"]) == 2 and int(r.loc["BETA", "primary_schools"]) == 1
     assert int(r.loc["ALPHA", "covered_by_redeployment"]) == 0 and int(r.loc["ALPHA", "still_needed"]) == 3
+    snap = snapshot(load_microdata(tmp_path / "u"))
+    j, m = write_report(snap, tmp_path / "out", None, r)
+    data = json.loads(j.read_text(encoding="utf-8"))["rationalisation"]
+    assert data["totals"]["posts_needed"] == 5 and {b["block"] for b in data["blocks"]} == {"ALPHA", "BETA"}
+    assert "Teacher rationalisation potential" in m.read_text(encoding="utf-8")

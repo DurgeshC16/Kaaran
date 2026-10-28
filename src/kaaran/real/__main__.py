@@ -22,7 +22,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--pab", default=None, help="PAB line-item CSV: verify the rubric's funded_under citations")
     p.add_argument("--out", default="data/real/reports")
     args = p.parse_args(argv)
-    snap = snapshot(load_microdata(args.udise), args.year)
+    tables = load_microdata(args.udise)
+    snap = snapshot(tables, args.year)
     if args.pab and Path(args.pab).exists():
         from .pab import verify_pab
 
@@ -30,7 +31,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.aikosh and Path(args.aikosh).exists():
         cross_check_aikosh(snap, args.aikosh)
     bench = json.loads(Path(args.benchmarks).read_text(encoding="utf-8")) if args.benchmarks and Path(args.benchmarks).exists() else None
-    j, m = write_report(snap, args.out, bench)
+    from .inputs import rationalisation
+
+    j, m = write_report(snap, args.out, bench, rationalisation(tables))
     failed = [c for c in snap.checks if not c["ok"]]
     print(f"REAL snapshot: {snap.district} {snap.year}: {snap.totals['schools']} schools in {len(snap.blocks)} blocks -> {j}, {m}")
     print(f"checks: {len(snap.checks) - len(failed)}/{len(snap.checks)} passed" + (f" FAILED: {failed}" if failed else ""))

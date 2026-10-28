@@ -57,6 +57,19 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&
     h += `<div class="card"><h3 style="margin-top:0">Cross-check: local-body teachers, 2019-20 vs ${esc(s.year)}</h3><table><tr><th>Block</th><th>2019-20</th><th>Now</th><th>Ratio</th></tr>` +
       s.cross_check_2019_20.map(c => `<tr><td>${esc(c.index ?? c.Block_Name ?? c.block)}</td><td>${c.teachers_2019_20}</td><td>${c.teachers_now}</td><td>${c.ratio}</td></tr>`).join("") + `</table></div>`;
   }
+  if (s.rationalisation) {
+    const r = s.rationalisation, t = r.totals;
+    h += `<div class="card"><h3 style="margin-top:0">Teacher rationalisation potential · शिक्षक समायोजन</h3>
+      <p><b>${t.posts_needed}</b> posts needed in <b>${t.schools_short}</b> schools ·
+         <b>${t.covered_by_redeployment}</b> could be covered by moving teachers inside the same block (rubric A1) ·
+         <b>${t.still_needed}</b> need new or guest teachers (A2)</p>
+      <table><tr><th>Block</th><th>Primary schools</th><th>Schools short</th><th>Posts needed</th><th>Schools with extra</th>
+      <th>Extra teachers</th><th>Covered by redeployment</th><th>Still needed</th></tr>` +
+      r.blocks.map(b => `<tr><td>${esc(b.block)}</td><td>${b.primary_schools}</td><td>${b.schools_short}</td><td>${b.posts_needed}</td>
+        <td>${b.schools_with_extra}</td><td>${b.extra_teachers}</td><td>${b.covered_by_redeployment}</td>
+        <td class="${b.still_needed >= 20 ? "hi" : ""}">${b.still_needed}</td></tr>`).join("") +
+      `</table><p class="sub">${esc(r.rule)}. Self-reported UDISE+ data; the decision belongs to the officer.</p></div>`;
+  }
   h += `<div class="card"><h3 style="margin-top:0">Checks</h3>` + s.checks.map(c => `<div class="${c.ok ? "ok" : "bad"}">${c.ok ? "✓" : "✗"} ${esc(c.id)}: ${esc(c.detail)}</div>`).join("") + `</div>`;
   document.getElementById("m").innerHTML = h;
 })();

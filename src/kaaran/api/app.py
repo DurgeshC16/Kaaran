@@ -229,12 +229,15 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
     def brief_evidence(brief_id: str):
         ws, focus = _brief(brief_id)
         name = ws.pack(focus)["entities"][focus]["name_en"].replace(" ", "_")
-        return JSONResponse(ws.pack(focus), headers={"Content-Disposition": f'attachment; filename="evidence_{name}.json"'})
+        pack = ws.answer_pack(focus) if hasattr(ws, "answer_pack") else ws.pack(focus)  # incl. direct-answer figures
+        return JSONResponse(pack, headers={"Content-Disposition": f'attachment; filename="evidence_{name}.json"'})
 
     @app.get("/api/briefs/{brief_id}/number")
     def brief_number(brief_id: str, id: str = Query(min_length=1, max_length=200)):
         ws, focus = _brief(brief_id)
         pack = ws.pack(focus)
+        if id not in pack["numbers"] and hasattr(ws, "fact_block") and ws.fact_block(id):
+            pack = ws.answer_pack(focus, [ws.fact_block(id)])  # a direct-answer fact (this or a compared block)
         if id not in pack["numbers"]:
             raise HTTPException(404, f"unknown number {id!r}")
         return number_detail(pack, id)

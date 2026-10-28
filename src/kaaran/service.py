@@ -20,6 +20,7 @@ from .brief.pdf import html_to_pdf
 from .brief.render import fill
 from .ingest import IngestResult, ingest
 from .llm import intent
+from .block.answers import is_greeting
 from .llm.client import setting
 from .synth.generate import generate
 from .trust import TrustResult, run_trust
@@ -68,8 +69,8 @@ REFUSE = {
                           "I don't answer questions about individual teachers or students. Please ask about a taluka."),
     "personal_data": ("वैयक्तिक माहिती (नावे, फोन नंबर, ओळख क्रमांक) दिली जात नाही.",
                       "I don't share personal data (names, phone numbers, identifiers)."),
-    "out_of_scope": ("हा प्रश्न या शिक्षण डेटाच्या बाहेरचा आहे. मी तालुक्यांच्या गणित निकाल, हजेरी आणि डेटाच्या गुणवत्तेबद्दल उत्तर देतो.",
-                     "That is outside this education data. I answer about talukas' maths results, attendance and data quality."),
+    "out_of_scope": ("हा प्रश्न या शिक्षण डेटाच्या बाहेरचा आहे. मी तालुका व केंद्रांचे निकाल, हजेरी, शिक्षक, भेटी आणि डेटाच्या गुणवत्तेबद्दल उत्तर देतो.",
+                     "That is outside this education data. I answer about talukas and clusters: results, attendance, teachers, visits and data quality."),
 }
 ANSWER_SECTION = {"why_change": "main_cause", "trend": "trend", "twin": "twin", "data_quality": "data_warning",
                   "compare_talukas": "trend"}
@@ -78,6 +79,12 @@ NO_CAUSE = ("तपासलेल्या कोणत्याही का�
             "None of the causes checked met the evidence rules; the causes checked are listed in the appendix.")
 COMPARE = ("हा अहवाल {a} तालुक्याचा आहे. {b} तालुक्यासाठी वेगळा प्रश्न विचारा.",
            "This brief is about {a}. Ask a separate question about {b}.")
+HELP_REPLY = {
+    "block": ("नमस्कार! मी कारण, शिक्षण डेटा विश्लेषक (डेमो: कृत्रिम डेटा). एका तालुक्याबद्दल किंवा केंद्राबद्दल विचारा, उदा.:",
+              "Hello! I am Kaaran, an education data analyst (demo: synthetic data). Ask about one block or cluster, for example:"),
+    "taluka": ("नमस्कार! मी कारण, शिक्षण डेटा विश्लेषक (डेमो: कृत्रिम डेटा). एका तालुक्याबद्दल विचारा, उदा.:",
+               "Hello! I am Kaaran, an education data analyst (demo: synthetic data). Ask about one taluka, for example:"),
+}
 YEARS_NOTE = ("विश्लेषण उपलब्ध पूर्ण कालावधीचे आहे.", "The analysis covers the full period in the data.")
 
 
@@ -274,6 +281,16 @@ class Service:
         question = " ".join(question.split())[:MAX_QUESTION_CHARS]
         plan = intent.parse(question, ws.talukas, ws.years, tier="light", scope_note=getattr(ws, "intent_scope", ""))
         info = {"intent_source": plan.get("source"), "intent_cost_usd": plan.get("cost_usd", 0.0)}
+        if getattr(ws, "kind", "taluka") == "block":  # deterministic fixes on top of the parsed plan (block/answers.py)
+            plan = ws.resolve(question, plan)
+        if plan["status"] != "ok" and plan.get("reason") not in ("individual_people", "personal_data") and is_greeting(question):
+            # examples in the officer's language; never the refused one, never the one without a place
+            ex = [e for e in ws.examples() if "नावे" not in e["text"] and "names" not in e["text"] and len(e["text"].split()) > 3]
+            lens = getattr(ws, "kind", "taluka")
+            reply = {lang: HELP_REPLY[lens][i] + "\n" + "\n".join(f"• {e['text']}" for e in [e for e in ex if e["lang"] == lang][:3])
+                     for i, lang in enumerate(LANGS)}
+            return Answer("clarify", key, question, plan | {"reason": "help"}, reply,
+                          info=info | {"seconds": round(time.monotonic() - t0, 2)})
         names = {lang: ", ".join(taluka_names(ws, lang)) for lang in LANGS}
         if plan["status"] == "refuse":
             reply = {lang: REFUSE.get(plan["reason"], REFUSE["out_of_scope"])[i] for i, lang in enumerate(LANGS)}
@@ -303,6 +320,8 @@ class Service:
         if focus not in ws.briefs and on_progress is not None:
             on_progress()
         pack, b = ws.pack(focus), ws.brief(focus)
+        if hasattr(ws, "direct_answer"):
+            plan = plan | {"answer": ws.direct_answer(focus, question, plan)}
         summary = {lang: ws.summarize(pack, b, plan, lang) for lang in LANGS}
         wording = sorted(set(b.sources.values()))
         info |= {"brief_cost_usd": round(b.info.get("cost_usd", 0.0), 4), "wording": wording,
@@ -314,7 +333,8 @@ class Service:
             reply={lang: as_text(summary[lang]) for lang in LANGS},
             focus=focus, focus_name={lang: taluka_name(ent, lang) for lang in LANGS},
             brief_id=self.brief_id(key, focus), summary=summary,
-            html={lang: ws.fragment(focus, lang) for lang in LANGS}, info=info,
+            html={lang: (ws.answer_html(focus, plan, lang) if hasattr(ws, "answer_html") else "") + ws.fragment(focus, lang)
+                  for lang in LANGS}, info=info,
         )
 
 
@@ -385,7 +405,8 @@ def as_text(summary: dict, bold: str = "") -> str:
         if it["section"] != section:
             lines += ["", f"{bold}{it['heading']}{bold}"]
             section = it["section"]
-        lines.append(("• " if it["owner"] else "") + f"[{it['badge']}] {it['text']}" + (f" — {it['owner']}" if it["owner"] else ""))
+        badge = f"[{it['badge']}] " if it.get("badge") else ""
+        lines.append(("• " if it["owner"] else "") + badge + it["text"] + (f" — {it['owner']}" if it["owner"] else ""))
     if summary["notes"]:
         lines.append("")
         lines += [f"👉 {n}" for n in summary["notes"]]

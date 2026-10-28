@@ -121,6 +121,23 @@ Open **http://127.0.0.1:8000**. The first start prepares the data, which takes a
 - [ ] Change **डेटा** to "काल्पनिक जिल्हा - केंद्रनिहाय" (fictional names) and repeat E1.
 - [ ] Change to "सोलापूर जिल्हा (कृत्रिम डेमो डेटा)". This is the older taluka-lens demo, which still works.
 
+**E6b Direct answers to everyday questions** (a blue "थेट उत्तर / Direct answer" box appears above the brief)
+- [ ] "पंढरपूर मध्ये किती शाळा आहेत?" → "पंढरपूरमध्ये १४० शाळा आहेत (१२ केंद्रे)." Click १४०: the source file is shown.
+- [ ] "What is PTR in Karmala?" → pupil-teacher ratio and the number of schools above 30.
+- [ ] "What is the attendance in Sangola?" → average attendance for the last three months (trusted records only).
+- [ ] "How many teacher posts are vacant in Mohol?" → working teachers, sanctioned posts, vacancies.
+- [ ] "What about Bhalwad Khurd kendra?" (or "भाळवड खुर्द केंद्राची हजेरी किती आहे?") → the kendra's status, schools,
+  results, attendance and visits; Pandharpur's brief opens below.
+- [ ] "Which block needs most attention?" → "Pandharpur (3 clusters), Karmala (1 cluster), Madha (1 cluster)".
+- [ ] "Compare Pandharpur and Sangola maths results" → one line for each block, and a note that the brief is about Pandharpur.
+- [ ] "Which block has the best maths results?" → the top 3 blocks with their maths figures; "Which block has the lowest PTR?"
+  and "कोणत्या तालुक्यात हजेरी सर्वात कमी आहे?" work the same way.
+- [ ] "Bhalwad Khurd kendra in Sangola" → Pandharpur's brief, with a note that the kendra is in Pandharpur.
+- [ ] "hello" → a help message with example questions. "What is the weather in Pandharpur?", "Best hotels in Pandharpur" are
+  refused; "Which teacher in Pandharpur is absent most often?" is refused (no questions about individual people).
+- [ ] For the best answers to new wordings, run with `KAARAN_LLM_MODE=live` (needs `ANTHROPIC_API_KEY`; the intent model
+  costs a fraction of a cent per question). In `replay` mode, questions that were not recorded use the rule matcher.
+
 **E7 WhatsApp simulator**: open **http://127.0.0.1:8000/whatsapp**
 - [ ] A welcome message appears.
 - [ ] Click **🔔 इशारा पाठवा / Send alert**. The alert for Pandharpur arrives.

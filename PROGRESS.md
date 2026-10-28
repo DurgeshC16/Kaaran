@@ -35,6 +35,51 @@ Phase 2 stages:
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
 
+## Phase 6.5 result (2026-10-28): direct answers (fix for "dummy answers" from user testing)
+- Root causes:
+  - The demo runs in replay mode, so any question not already recorded falls back to the rule matcher. The matcher refused valid questions (PTR, "how many schools", "what should I do").
+  - Factual questions got the generic brief and an unrelated pointer.
+  - Kendra questions and "which block needs most attention" got a request to clarify.
+  - When two places were named, one was silently dropped.
+- `block/answers.py`:
+  - computes each block's and each kendra's facts from the canonical tables (trusted records only where trust matters). The facts are schools, clusters, working, sanctioned and vacant posts, single-teacher schools, PTR, schools with PTR over 30, attendance (last 3 months), low-attendance schools, maths and language level and change, Kendra Pramukh visits, and flagged or incomplete schools;
+  - each fact has query provenance;
+  - fixed Marathi/English templates with placeholders turn facts into sentences. No LLM is involved.
+  - Facts are kept outside the evidence pack (`BlockWorkspace.facts/answer_pack`), so the prompts of recorded briefs do not change.
+- `BlockWorkspace.resolve`, deterministic fixes on top of the intent plan:
+  - a named kendra opens its block, matched by fuzzy Devanagari-to-Latin romanisation;
+  - "which block needs most attention" opens the top alert and shows a ranked line;
+  - a data question naming a block is never refused as out of scope;
+  - a second named block gets the same figures side by side, plus a note that the brief is about the first block.
+- Service:
+  - greeting/help reply;
+  - the "थेट उत्तर / Direct answer" section comes first in the reply, the web page (blue box, clickable figures) and the WhatsApp text;
+  - the drill-down finds fact ids, including a compared block's.
+- Rankings: "which block has the best maths / lowest PTR / least attendance" ranks the blocks by that figure. The top 3 are shown with clickable figures, and the top block's brief follows.
+- Rule fallback:
+  - wider topic words, including transliterated ones;
+  - a bare place ("What about Karmala?") counts as in scope;
+  - off-topic words are refused;
+  - people patterns are refused ("which teacher", "list of … teachers", "who is the …");
+  - place names must start at a word boundary; Marathi oblique forms match ("सांगोल्यासारखा");
+  - places are listed in the order they were said.
+  - Intent rule-tier accuracy went from 88% to 96% (25 questions).
+- Adversarial review (4 lenses, 8 agents): 23 findings confirmed, all fixed. Main fixes:
+  - PTR cited an assessment file;
+  - blank cells crashed the block's answers;
+  - "which block has the best X" got the attention ranking;
+  - any question naming a block was answered;
+  - fuzzy kendra swaps;
+  - "madhale" matched Madha;
+  - schools with no teacher were left out of PTR > 30;
+  - learning figures without INSUFFICIENT schools had no coverage note;
+  - "0.0 points lower";
+  - unrelated pointer notes;
+  - English examples in the Marathi help;
+  - "reasons" claimed for unexplained kendras;
+  - trust counts had no source.
+- Tests: tests/test_answers.py (17). Facts are checked against the generator's clean tables, the provenance files per view, blank cells, zero-teacher schools, rankings, kendra matching, scope/people refusals, the drill-down and the evidence download.
+
 ## Phase 6.3 result (2026-10-28): voice (Sarvam AI) + PAB funding links
 - `src/kaaran/voice/`:
   - `sarvam.py`: SarvamClient (httpx, no new dependency).
@@ -64,7 +109,7 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
   - the first Marathi summary takes about 14 s, and replays come from the cache.
 - Rubric `funded_under`: 7 actions are linked to Samagra Shiksha PAB 2026-27 Maharashtra line items (code, page). They are shown in the baithak pack.
   - `kaaran.real --pab` verifies each citation against the PAB CSV, using Maharashtra rows only. Real run: 18/18 checks.
-- `real/inputs.py`: RTE-norm teacher rationalisation (not yet wired into the report).
+- `real/inputs.py`: RTE-norm teacher rationalisation, now in `kaaran.real` (JSON and Markdown report) and on the /real page.
   - Real Solapur: 213 posts needed, 89 coverable by redeployment, 124 needing new posts.
 - Deploy prep:
   - Dockerfile: python 3.11-slim, Chromium and Noto fonts, replay mode;
@@ -187,21 +232,13 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 
 ## Next task
 - 7.2 Real school frame in the demo: synth3 `--frame` using the real Solapur UDISE+ schools (pseudocodes, enrolment, teachers) with synthetic outcomes; clusters approximated by village panchayat; SYNTHETIC-marked outputs kept in data/real/.
-- **Fix "dummy answers"** (user testing, Parts C/D): direct-answer layer `block/answers.py` (written, not wired).
-  - Plan:
-    - facts per block and cluster registered as pack numbers;
-    - answer lines at the top of the brief, reply and voice;
-    - cluster questions;
-    - "which block needs most attention";
-    - greeting/help;
-    - wider rule-fallback topics;
-    - two places → clarify.
-  - Then re-test with the user's own questions.
-- Wire `real/inputs.py` rationalisation into the real report and /real.
+- Re-test Parts C/D/E6b with the user's own questions (ask for the exact wording of any that still look like dummy answers).
+- Demo in live intent mode (`KAARAN_LLM_MODE=live`, spend cap) for unseen wordings; record new intents for the deck questions.
 - 6.4 upload (raw-body, no new dependency), optional.
 - Deploy; user testing (even 2-3 sessions; the user may skip it); video and deck.
 
 ## Decisions
+- 2026-10-28 Direct answers: facts are computed by code and phrased by fixed templates (no LLM). They are kept outside the evidence pack so recorded brief prompts stay valid. A data question naming a place is never refused.
 - 2026-10-28 Voice provider: Sarvam AI (saaras:v4 STT, bulbul:v4-flash TTS); key in .env only. Voice is optional: without a key, the mic and Listen buttons are hidden and WhatsApp asks the officer to type.
 - 2026-10-28 Voice reply format: MP3 audio message (no ffmpeg dependency); spoken script built by code from the summary (no LLM, no new numbers).
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.

@@ -156,6 +156,28 @@ def demo_service(demo_dir):
     return Service({"demo": spec}, default="demo")
 
 
+@pytest.fixture(scope="session")
+def block_service_folder(tmp_path_factory):
+    from kaaran.synth3.generate import generate
+
+    out = tmp_path_factory.mktemp("block42svc")
+    generate(42, out)
+    return out
+
+
+@pytest.fixture(scope="session")
+def block_service(tmp_path_factory, block_service_folder):
+    """Block-lens Service over seed-42 v3 data (a copy: actions.json is written next to the data)."""
+    import shutil
+
+    from kaaran.service import DatasetSpec, Service
+
+    folder = tmp_path_factory.mktemp("blocksvc") / "data"
+    shutil.copytree(block_service_folder, folder)
+    spec = DatasetSpec("blocks", 42, "solapur", str(folder), "डेमो", "Demo", "block")
+    return Service({"blocks": spec}, default="blocks")
+
+
 @pytest.fixture(autouse=True)
 def _voice_off(monkeypatch, tmp_path):
     """Tests never call Sarvam: voice is off unless a test injects a fake client."""

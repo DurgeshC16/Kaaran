@@ -155,12 +155,18 @@ def cross_check_aikosh(snap: Snapshot, aikosh_csv: str | Path) -> pd.DataFrame:
     return out
 
 
-def write_report(snap: Snapshot, out_dir: str | Path, benchmarks: dict | None = None) -> tuple[Path, Path]:
+def write_report(snap: Snapshot, out_dir: str | Path, benchmarks: dict | None = None,
+                 rationalisation: pd.DataFrame | None = None) -> tuple[Path, Path]:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     data = snap.to_dict()
     if benchmarks:
         data["benchmarks"] = benchmarks
+    if rationalisation is not None and len(rationalisation):
+        tot = rationalisation.sum(numeric_only=True)
+        data["rationalisation"] = {"rule": "RTE norm for primary-only local-body schools: at least 2 teachers and one per 30 pupils",
+                                   "blocks": rationalisation.reset_index().to_dict("records"),
+                                   "totals": {k: int(v) for k, v in tot.items()}}
     j = out_dir / "real_snapshot.json"
     j.write_text(json.dumps(data, indent=1, ensure_ascii=False, default=str), encoding="utf-8")
     m = out_dir / "real_snapshot.md"
@@ -189,5 +195,9 @@ def write_report(snap: Snapshot, out_dir: str | Path, benchmarks: dict | None = 
         st = benchmarks.get("state", {})
         if st:
             lines.append(f"- Maharashtra: maths {st['maths']}%, language {st['language']}%; India: maths {benchmarks['india']['maths']}%, language {benchmarks['india']['language']}%")
+    if rationalisation is not None and len(rationalisation):
+        from .inputs import rationalisation_markdown
+
+        lines += ["", rationalisation_markdown(rationalisation, snap.district, snap.year).rstrip()]
     m.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return j, m

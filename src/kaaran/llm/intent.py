@@ -110,7 +110,19 @@ RANKING = ["rank", "worst", "best", "क्रमवारी", "सर्वा
 TOPIC_WORDS = ["maths", "math", "ganit", "गणित", "result", "nikal", "निकाल", "score", "attendance", "hajeri", "हजेरी",
                "data", "आकडेवारी", "decline", "fall", "drop", "improve", "taluka", "तालुका", "घसर", "ghasar", "pragati", "प्रगती",
                "election", "निवडणूक", "infrastructure", "similar", "compare", "kasa", "कसा", "कशी", "का", "why", "how",
-               "केंद्र", "kendra", "cluster", "लक्ष", "attention", "mage", "मागे"]
+               "केंद्र", "kendra", "cluster", "लक्ष", "attention", "mage", "मागे",
+               "school", "शाळा", "shala", "teacher", "शिक्षक", "ptr", "ratio", "प्रमाण", "vacan", "रिक्त", "visit", "भेट",
+               "किती", "kiti", "how many", "what should", "काय करा", "action", "कृती", "happen", "झाले", "status", "स्थिती",
+               "report", "अहवाल", "learning", "language", "भाषा", "reading", "वाचन", "enrol", "पट",
+               "aakdevari", "akdevari", "vishwas", "विश्वास", "mahiti", "माहिती", "nond", "नोंद", "reliable", "quality"]
+PEOPLE_PATTERNS = ["which teacher", "which student", "teachers who", "students who", "who is the", "कोणता शिक्षक", "कोणते शिक्षक",
+                   "कोणत्या शिक्षक", "कोण आहे", "headmaster", "मुख्याध्यापक", "absent teachers", "गैरहजर शिक्षक"]
+LIST_WORDS = ["list", "यादी", "who", "कोण"]  # with a teacher/student word: a request about individual people
+COMPARE_TOKENS = {"compare", "vs", "versus", "and", "with", "आणि"}
+BARE_FILLER = {"what", "about", "and", "how", "is", "the", "of", "in", "tell", "me", "status", "kay", "kasa", "kase", "आहे",
+               "काय", "बद्दल", "विषयी", "सांगा", "कसा", "कसे"}
+OFF_TOPIC = ["weather", "हवामान", "cricket", "क्रिकेट", "movie", "film", "चित्रपट", "recipe", "joke", "विनोद", "song", "गाणे",
+             "poem", "कविता", "politic", "राजकारण", "share price", "stock market"]
 
 
 def _norm(s: str) -> str:
@@ -118,36 +130,81 @@ def _norm(s: str) -> str:
     return re.sub(r"[^\wऀ-ॿ ]", " ", s)
 
 
-def rule_plan(question: str, gaz: list[dict], years: list[str]) -> dict:
+def _name_patterns(name: str) -> list[re.Pattern]:
+    """Where a place name may start in a normalised question. Names start at a word boundary; Marathi endings may follow
+    ("पंढरपूरमधील", "pandharpurchya"), and a name ending in -a also matches its oblique stem ("सांगोल्यात", "sangolyat").
+    Short Latin names (5 letters or fewer) must be a whole word: "madha" is not "madhale" ("in" in Marathi typed in Latin)."""
+    nn = " ".join(_norm(name).split())
+    if not nn:
+        return []
+    if re.fullmatch(r"[a-z0-9 ]+", nn):
+        pats = [re.escape(nn) + (r"(?![a-z0-9])" if len(nn) <= 5 else "")]
+        if nn.endswith("a") and len(nn) >= 6:
+            pats.append(re.escape(nn[:-1]) + "y")
+        return [re.compile(r"(?<![a-z0-9])" + p) for p in pats]
+    pats = [re.escape(nn)]
+    if nn.endswith("ा"):
+        pats.append(re.escape(nn[:-1]) + "्या")
+    return [re.compile(r"(?<![\wऀ-ॿ])" + p) for p in pats]
+
+
+def places_in(question: str, gaz: list[dict]) -> list[str]:
+    """Gazetteer ids named in the question (exact or close spelling), in the order they are said, no duplicates."""
     q = _norm(question)
     tokens = q.split()
+    starts, pos = [], 0
+    for t in tokens:
+        pos = q.find(t, pos)
+        starts.append(pos)
+        pos += len(t)
+    found: dict[str, int] = {}
+    for g in gaz:
+        for n in (g["en"], g["mr"]):
+            if not n:
+                continue
+            at = min((m.start() for p in _name_patterns(n) for m in [p.search(q)] if m), default=-1)
+            if at < 0:  # a misspelling: whole words only, stricter for short names
+                nn = " ".join(_norm(n).split())
+                k, cut = len(nn.split()), 0.85 if len(nn) > 5 else 0.92
+                at = next((starts[i] for i in range(len(tokens))
+                           if difflib.SequenceMatcher(None, nn, " ".join(tokens[i:i + k])).ratio() >= cut), -1)
+            if at >= 0:
+                found[g["id"]] = min(at, found.get(g["id"], at))
+    return sorted(found, key=lambda gid: found[gid])
+
+
+def is_bare_place(question: str, gaz: list[dict]) -> bool:
+    """Just a place, maybe with filler words: "Pandharpur?", "What about Karmala?", "करमाळ्याबद्दल सांगा"."""
+    hits = places_in(question, gaz)
+    if not hits:
+        return False
+    names = [" ".join(_norm(n).split()) for g in gaz if g["id"] in hits for n in (g["en"], g["mr"]) if n]
+    rest = [t for t in _norm(question).split() if not any(t.startswith(nm.split()[0][:4]) for nm in names)]
+    return len(rest) <= 3 and set(rest) <= BARE_FILLER
+
+
+def rule_plan(question: str, gaz: list[dict], years: list[str]) -> dict:
+    q = _norm(question)
     plan = {"status": "ok", "taluka_id": None, "compare_with": None, "subject": "maths", "question_type": "why_change",
             "metric": "attendance" if any(w in q for w in ("attendance", "hajeri", "हजेरी", "उपस्थिती")) else "score",
             "year_from": None, "year_to": None, "reason": None}
-    if any(w in q for w in REFUSE_DATA) or (any(w in q for w in REFUSE_PEOPLE) and any(w in q for w in RANKING + ["name", "नाव"])):
+    people = any(w in q for w in REFUSE_PEOPLE + ["student", "विद्यार्थी"])
+    if any(w in q for w in REFUSE_DATA) or any(w in q for w in PEOPLE_PATTERNS) or (
+            people and any(w in q for w in RANKING + LIST_WORDS + ["name", "नाव"])):
         return plan | {"status": "refuse", "reason": "personal_data" if any(w in q for w in REFUSE_DATA) else "individual_people"}
-    hits = []
-    for g in gaz:
-        names = [n for n in (g["en"], g["mr"]) if n]
-        for n in names:
-            nn = _norm(n)
-            if nn in q or any(difflib.SequenceMatcher(None, nn, " ".join(tokens[i:i + len(nn.split())])).ratio() >= 0.85
-                              for i in range(len(tokens))):
-                hits.append(g["id"])
-                break
-    hits = list(dict.fromkeys(hits))
-    if not any(w in q for w in TOPIC_WORDS):
+    hits = places_in(question, gaz)
+    if any(w in q for w in OFF_TOPIC) or not (any(w in q for w in TOPIC_WORDS) or is_bare_place(question, gaz)):
         return plan | {"status": "refuse", "reason": "out_of_scope"}
     if not hits:
         return plan | {"status": "clarify", "reason": "missing_place"}
     plan["taluka_id"] = hits[0]
-    if len(hits) > 1 and any(w in q for w in ("compare", "तुलना", "vs", "and", "आणि")):
+    if len(hits) > 1 and (set(q.split()) & COMPARE_TOKENS or "तुलना" in q):
         plan |= {"compare_with": hits[1], "question_type": "compare_talukas"}
     elif len(hits) > 1:
         return plan | {"status": "clarify", "reason": "ambiguous_place", "taluka_id": None}
     if any(w in q for w in ("लक्ष", "attention", "mage", "मागे")):
         plan["question_type"] = "trend"  # "where should I look?" -> the attention part
-    elif any(w in q for w in ("similar", "twin", "समान", "जुळा")):
+    elif any(w in q for w in ("similar", "twin", "समान", "जुळा", "सारख", "sarkha", "sarakha")):
         plan["question_type"] = "twin"
     elif any(w in q for w in ("data", "आकडेवारी", "विश्वास", "quality")):
         plan["question_type"] = "data_quality"
