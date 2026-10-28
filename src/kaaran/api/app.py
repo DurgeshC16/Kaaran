@@ -17,7 +17,10 @@ from pydantic import BaseModel, Field
 from ..brief.pdf import PdfUnavailable, find_browser
 from ..llm.client import get_client
 from ..service import LANGS, MAX_QUESTION_CHARS, Service, get_service, number_detail, set_detail
-from ..whatsapp import Bot, Gateway, simulate, simulate_alert, valid_signature, verify_challenge
+from ..whatsapp import Bot, Gateway, simulate, simulate_alert, simulate_voice, valid_signature, verify_challenge
+from starlette.concurrency import run_in_threadpool
+
+MAX_AUDIO_BYTES = 4_500_000  # about 30 s of compressed speech (the sync STT limit)
 
 STATIC = Path(__file__).resolve().parent / "static"
 
@@ -154,6 +157,50 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
         name = ws.pack(focus)["entities"][focus]["name_en"].replace(" ", "_")
         return FileResponse(path, media_type="application/pdf", filename=f"Kaaran_{name}_{lang}.pdf")
 
+    # ---------- voice (Sarvam AI) ----------
+
+    async def _audio_body(request: Request) -> tuple[bytes, str]:
+        mime = (request.headers.get("content-type") or "").split(";")[0].strip().lower()
+        if not mime.startswith(("audio/", "video/webm")):
+            raise HTTPException(415, "send the recording as the raw request body with an audio/* Content-Type")
+        body = await request.body()
+        if not body:
+            raise HTTPException(400, "empty audio")
+        if len(body) > MAX_AUDIO_BYTES:
+            raise HTTPException(413, "recording too long: keep it under 30 seconds")
+        return body, request.headers.get("content-type")
+
+    @app.get("/api/voice/status")
+    def voice_status():
+        return svc.voice.status()
+
+    @app.post("/api/voice/ask")
+    async def voice_ask(request: Request, dataset: str | None = None, lang: str = "mr"):
+        """A spoken question (raw audio body) -> transcript -> the normal answer (with info.transcript)."""
+        from ..voice.sarvam import VoiceUnavailable
+
+        dataset = dataset or None
+        if dataset is not None and dataset not in svc.datasets:
+            raise HTTPException(404, f"unknown dataset {dataset!r}")
+        audio, mime = await _audio_body(request)
+        try:
+            answer = await run_in_threadpool(svc.ask_voice, audio, mime, dataset, _lang(lang))
+        except VoiceUnavailable as e:
+            raise HTTPException(503, f"voice unavailable: {e}") from e
+        return answer.to_dict()
+
+    @app.get("/api/briefs/{brief_id}/voice")
+    def brief_voice(brief_id: str, lang: str = "mr"):
+        """One-minute spoken summary (MP3, generated once and cached)."""
+        from ..voice.sarvam import VoiceUnavailable
+
+        _brief(brief_id)
+        try:
+            path = svc.voice_summary(brief_id, _lang(lang))
+        except VoiceUnavailable as e:
+            raise HTTPException(503, f"voice unavailable: {e}") from e
+        return FileResponse(path, media_type="audio/mpeg", filename=f"Kaaran_{brief_id.replace('.', '_')}_{lang}.mp3")
+
     @app.get("/api/briefs/{brief_id}/print", response_class=HTMLResponse)
     def brief_print(brief_id: str, lang: str = "mr"):
         """The exact HTML the PDF is printed from (fallback when no browser is available for PDF)."""
@@ -239,10 +286,22 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
     def whatsapp_simulate(body: SimIn):
         out = []
         for r in simulate(sim_bot, "sim:" + body.sender, body.text):
-            item = {"kind": r.kind, "text": r.text, "lang": r.lang}
-            if r.kind == "document":
-                item |= {"filename": r.filename, "url": f"/api/briefs/{r.brief_id}/pdf?lang={r.lang}"}
-            out.append(item)
+            out.append(_sim_item(r))
         return {"replies": out}
+
+    def _sim_item(r) -> dict:
+        item = {"kind": r.kind, "text": r.text, "lang": r.lang}
+        if r.kind == "document":
+            item |= {"filename": r.filename, "url": f"/api/briefs/{r.brief_id}/pdf?lang={r.lang}"}
+        if r.kind == "audio":
+            item |= {"filename": r.filename, "url": f"/api/briefs/{r.brief_id}/voice?lang={r.lang}"}
+        return item
+
+    @app.post("/api/whatsapp/simulate_voice")
+    async def whatsapp_simulate_voice(request: Request, sender: str = Query("demo-officer", min_length=1, max_length=40)):
+        """Simulated WhatsApp voice note: same bot and speech-to-text path as the real webhook."""
+        audio, mime = await _audio_body(request)
+        replies = await run_in_threadpool(simulate_voice, sim_bot, "sim:" + sender, audio, mime)
+        return {"replies": [_sim_item(r) for r in replies]}
 
     return app

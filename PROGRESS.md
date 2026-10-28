@@ -11,7 +11,7 @@ v2 in one line: block -> cluster lens, 4 data domains in real formats (UDISE+ mi
 Phase 4 stages:
 - [x] Demo service, HTML/PDF brief, web demo with click-to-source and school drill-down
 - [x] WhatsApp: Cloud API webhook (signature, dedupe), bot (summary + PDF), local simulator
-- [ ] Voice in (Marathi speech-to-text) and voice summary out
+- [x] Voice in (Marathi speech-to-text) and voice summary out (Sarvam AI, 2026-10-28)
 - [ ] Officer file upload (web), then WhatsApp media
 - [ ] Deploy (public link) + real Meta test number connected
 
@@ -34,6 +34,52 @@ Phase 2 stages:
 - [x] Phase 2B: Stage 4 causes, Stage 5 twins (+ taluka profile file), Stage 6 analyze + eval harness, Stage 7 real sample pack
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
+
+## Phase 6.3 result (2026-10-28): voice (Sarvam AI) + PAB funding links
+- `src/kaaran/voice/`:
+  - `sarvam.py`: SarvamClient (httpx, no new dependency).
+    - STT: saaras:v4, mr-IN, keyterms = place names.
+    - TTS: bulbul:v4-flash, ritu_mr_narration / ritu_en_edtech, MP3. Devanagari digits are converted to ASCII before TTS. Audio is cached by text hash in data/voice_cache/.
+    - Usage log goes to data/voice_usage.jsonl.
+    - Per-process spend cap `KAARAN_MAX_VOICE_INR` (default 100).
+    - Every failure raises VoiceUnavailable with a fixed reason code.
+  - `script.py`: a one-minute spoken script built from the brief summary.
+    - Lens-aware: block lens = attention / why / what to do; taluka lens = trend / cause / data warning / action.
+    - Data warnings and actions are always spoken, and the rule-based labels are spoken with them.
+    - Brackets, symbols and "%" are made speakable.
+- Web:
+  - mic button (MediaRecorder, max 28 s): POST /api/voice/ask returns the transcript, then the normal answer;
+  - 🔊 Listen button: GET /api/briefs/{id}/voice (MP3);
+  - GET /api/voice/status;
+  - a Sarvam notice appears when voice is on.
+- WhatsApp:
+  - an incoming voice note is downloaded from Meta, sent to STT, and the bot replies "🎤 I heard: ..."; the question then takes the same path as a typed one;
+  - after the PDF, the bot sends the MP3 voice summary (also when the PDF fails);
+  - voice off gives a "please type" message;
+  - failures give fixed bilingual reasons (the raw API text is never shown).
+  - The simulator has a mic. MP3 arrives as an audio message; a voice-note bubble would need OGG/Opus and ffmpeg (not installed).
+- Live check:
+  - TTS returns in about 3 s;
+  - STT is correct for पंढरपूर/मंगळवेढा;
+  - the first Marathi summary takes about 14 s, and replays come from the cache.
+- Rubric `funded_under`: 7 actions are linked to Samagra Shiksha PAB 2026-27 Maharashtra line items (code, page). They are shown in the baithak pack.
+  - `kaaran.real --pab` verifies each citation against the PAB CSV, using Maharashtra rows only. Real run: 18/18 checks.
+- `real/inputs.py`: RTE-norm teacher rationalisation (not yet wired into the report).
+  - Real Solapur: 213 posts needed, 89 coverable by redeployment, 124 needing new posts.
+- Deploy prep:
+  - Dockerfile: python 3.11-slim, Chromium and Noto fonts, replay mode;
+  - .dockerignore keeps out .env and data;
+  - KAARAN_HOST/PORT;
+  - Chromium `--no-sandbox` switch.
+- Docs: 11 pitch deck outline, 12 video script, DEMO.md voice section, testing guide E7b.
+- Adversarial review: 16 findings confirmed and fixed. Main fixes:
+  - the taluka-lens script had dropped trend and cause;
+  - raw errors were shown to officers;
+  - no spend cap;
+  - the PAB check had no state filter;
+  - the privacy notice was wrong;
+  - no voice note when the PDF was missing;
+  - test isolation.
 
 ## Phase 7.1 result (2026-10-28): real public data
 - The user downloaded real files to data/real/ (git-ignored):
@@ -141,11 +187,23 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 
 ## Next task
 - 7.2 Real school frame in the demo: synth3 `--frame` using the real Solapur UDISE+ schools (pseudocodes, enrolment, teachers) with synthetic outcomes; clusters approximated by village panchayat; SYNTHETIC-marked outputs kept in data/real/.
-- 7.3 Link rubric actions to PAB 2026-27 Maharashtra line items (funded interventions).
-- 6.3 Voice (needs a provider key); 6.4 upload (needs python-multipart approval).
+- **Fix "dummy answers"** (user testing, Parts C/D): direct-answer layer `block/answers.py` (written, not wired).
+  - Plan:
+    - facts per block and cluster registered as pack numbers;
+    - answer lines at the top of the brief, reply and voice;
+    - cluster questions;
+    - "which block needs most attention";
+    - greeting/help;
+    - wider rule-fallback topics;
+    - two places → clarify.
+  - Then re-test with the user's own questions.
+- Wire `real/inputs.py` rationalisation into the real report and /real.
+- 6.4 upload (raw-body, no new dependency), optional.
 - Deploy; user testing (even 2-3 sessions; the user may skip it); video and deck.
 
 ## Decisions
+- 2026-10-28 Voice provider: Sarvam AI (saaras:v4 STT, bulbul:v4-flash TTS); key in .env only. Voice is optional: without a key, the mic and Listen buttons are hidden and WhatsApp asks the officer to type.
+- 2026-10-28 Voice reply format: MP3 audio message (no ffmpeg dependency); spoken script built by code from the summary (no LLM, no new numbers).
 - 2026-10-23 Repo layout: project flattened from kaaran-starter/ to the repo root.
 - 2026-10-23 docs/source/ (original problem statement, deck, guidelines) is local-only and git-ignored. docs/PROJECT_CONTEXT.md is the distilled version.
 - 2026-10-23 Git workflow: commit + push after every green stage; message format `phaseN: ...` with a body (see CLAUDE.md).

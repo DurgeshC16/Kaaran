@@ -28,6 +28,7 @@ class ActionPick:
     based_on: list
     targets: list = field(default_factory=list)
     detail: dict = field(default_factory=dict)
+    funded_under: dict | None = None  # PAB line that can pay for the action (citation)
 
 
 def load_rubric(path: str | Path = RUBRIC_PATH) -> dict:
@@ -110,7 +111,8 @@ def pick_actions(an: BlockAnalysis, tables: dict, rubric: dict | None = None) ->
             if not ok:
                 continue
             targets = sorted({x for info in details.values() for k, v in info.items() if isinstance(v, list) for x in v})
-            picks.append(ActionPick(row["id"], cid, row["owner"], row["horizon"], row["follow_up"], based_on, targets, details))
+            picks.append(ActionPick(row["id"], cid, row["owner"], row["horizon"], row["follow_up"], based_on, targets, details,
+                                    row.get("funded_under")))
             if row.get("exclusive"):
                 break
         per_cluster[cid] = picks[:limit]

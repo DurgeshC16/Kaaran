@@ -66,3 +66,15 @@ def test_report_is_aggregate_only(tmp_path):
     assert "REAL" in text and "101" not in json.dumps(json.loads(j.read_text(encoding="utf-8"))["blocks"])
     assert "| ALPHA | 2 |" in m.read_text(encoding="utf-8")
     assert snap.checks[-1]["id"] == "local_body_mapping_vs_2019_20" and snap.checks[-1]["ok"]
+
+
+def test_rationalisation_rte_rule(tmp_path):
+    from kaaran.real.inputs import rationalisation, required_teachers
+
+    assert [required_teachers(p) for p in (0, 20, 60, 61, 95)] == [2, 2, 2, 3, 4]
+    r = rationalisation(load_microdata(write_fake(tmp_path / "u")))
+    # ALPHA primary-only local body: school 101 (40 pupils, 1 teacher) needs 1 more; 102 (100 pupils, 2) needs 2 more
+    assert int(r.loc["ALPHA", "posts_needed"]) == 3 and int(r.loc["ALPHA", "schools_short"]) == 2
+    # BETA: school 202 (25 pupils, 0 teachers) needs 2; school 201 is category 2 (not judged)
+    assert int(r.loc["BETA", "posts_needed"]) == 2 and int(r.loc["BETA", "primary_schools"]) == 1
+    assert int(r.loc["ALPHA", "covered_by_redeployment"]) == 0 and int(r.loc["ALPHA", "still_needed"]) == 3

@@ -154,3 +154,16 @@ def demo_service(demo_dir):
 
     spec = DatasetSpec("demo", 42, "solapur", str(demo_dir), "डेमो", "Demo")
     return Service({"demo": spec}, default="demo")
+
+
+@pytest.fixture(autouse=True)
+def _voice_off(monkeypatch, tmp_path):
+    """Tests never call Sarvam: voice is off unless a test injects a fake client."""
+    from kaaran.voice.sarvam import reset_voice
+
+    monkeypatch.setenv("KAARAN_VOICE", "off")
+    monkeypatch.setenv("KAARAN_VOICE_CACHE", str(tmp_path / "voice_cache"))
+    monkeypatch.setenv("KAARAN_VOICE_USAGE_LOG", str(tmp_path / "voice_usage.jsonl"))
+    reset_voice(None)
+    yield
+    reset_voice(None)

@@ -398,7 +398,8 @@ def _action_finding(b, t, an, r: ClusterResult | None, pk: ActionPick, comps: li
     return b.finding(id=f"F.action.{cs}.{pk.id}", type="ACTION", label="ACTION", rule_id=f"RUBRIC-{pk.id}", template_key=key,
                      params=params, action={"actor_role": pk.owner, "horizon": pk.horizon, "based_on": pk.based_on,
                                             "follow_up": pk.follow_up, "rubric_id": pk.id, "targets": targets,
-                                            "within_officer_powers": True})
+                                            "within_officer_powers": True,
+                                            **({"funded_under": pk.funded_under} if pk.funded_under else {})})
 
 
 def validate_block_pack(pack: dict) -> list[str]:

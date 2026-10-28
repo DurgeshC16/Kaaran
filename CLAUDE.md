@@ -36,6 +36,7 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Block-lens scorecard (risks, diagnoses, rubric actions vs truth3.json): `.venv\Scripts\python -m kaaran.eval.block --seed 42 [--seed 7 ...]`
 - Real public data snapshot (UDISE+ microdata in data/real/, never committed): `.venv\Scripts\python -m kaaran.real --udise data/real/udise_2425 --aikosh data/real/aikosh/UDISE_plus-19-20_teachers_solapur_mah.csv --benchmarks data/real/prs2024/benchmarks.json` (writes data/real/reports/; web page /real)
 - Demo server (web + WhatsApp webhook): `.venv\Scripts\python -m kaaran.api` (http://127.0.0.1:8000, simulator at /whatsapp; setup in docs/DEMO.md)
+- Voice (Sarvam AI, optional): set SARVAM_API_KEY in .env; check with `GET /api/voice/status`. Tests never call Sarvam (conftest sets KAARAN_VOICE=off)
 - Prompt-injection check: `.venv\Scripts\python -m kaaran.eval.guardrails`
 - Mapping eval (baseline vs LLM, both layouts): `.venv\Scripts\python -m kaaran.eval.mapping --seed 42` (`KAARAN_LLM_MODE=live` to record new responses)
 
@@ -53,6 +54,7 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - src/kaaran/brief: Brief Writer (texts.py wording, render.py placeholder filling, writer.py LLM + fallback)
 - src/kaaran/service.py: demo service (datasets, cached packs/briefs, question -> clarify | refuse | brief + summary)
 - src/kaaran/brief/html.py, pdf.py: interactive/print HTML brief; PDF via headless Edge/Chrome
+- src/kaaran/voice: Sarvam STT/TTS client (cache, usage log, spend cap) and the spoken one-minute script
 - src/kaaran/whatsapp.py: WhatsApp bot, Cloud API client, webhook signature + de-duplication
 - src/kaaran/api: FastAPI app (web demo, drill-down, PDF, webhook, simulator) and static pages
 - tests/: pytest suites

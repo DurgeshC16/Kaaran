@@ -40,6 +40,30 @@ Suggested 2-minute script (cluster lens):
 5. Click a number to see its source (file, table, filter, rows).
 6. On `/whatsapp`, press "🔔 Send alert", then reply `अहवाल`.
 
+
+## 0b. Voice (Sarvam AI)
+
+- **In:** press 🎤 on the web page (or the WhatsApp simulator) and speak for up to 28 seconds.
+  - Sarvam **speech-to-text** (`saaras:v4`, Marathi) turns the recording into text, with the district's taluka names as
+    `keyterms` so place names are heard correctly.
+  - Kaaran then answers exactly as for a typed question. The heard text is shown ("🎤 ऐकले: …").
+  - On real WhatsApp, a voice note is downloaded from Meta, transcribed, echoed and answered the same way.
+- **Out:** "🔊 आवाजात ऐका" plays a **one-minute Marathi voice summary** of the brief.
+  - Sarvam **text-to-speech** (`bulbul:v4-flash`, voice `ritu_mr_narration`, MP3) reads a script built by code from
+    the verified summary: what needs attention, why, what to do. No new numbers are added.
+  - Each brief's audio is generated once and cached (`data/voice_cache/`).
+  - On WhatsApp the MP3 follows the PDF as an audio message. A voice-note bubble would need OGG/Opus, which needs a
+    transcoder (ffmpeg) that is not installed.
+- **Setup:** put `SARVAM_API_KEY=...` in `.env` (never commit it). Models and voices are settings in `.env.example`:
+  `KAARAN_STT_MODEL`, `KAARAN_TTS_MODEL`, `KAARAN_TTS_SPEAKER_MR`, `KAARAN_TTS_SPEAKER_EN`.
+  `KAARAN_VOICE=off` switches voice off (tests do this).
+- **Cost:**
+  - speech-to-text is about ₹0.49 per minute;
+  - text-to-speech is about ₹1 per 1,000 characters, roughly ₹0.6 per brief, generated once.
+- **Privacy:** the officer's recording goes to Sarvam (an Indian provider) only to be transcribed. The voice summary
+  text contains only aggregate figures and no school names.
+- **Without a key** the 🎤 and 🔊 buttons are hidden and everything else works.
+
 ## 1. Run it (Windows)
 
 ```

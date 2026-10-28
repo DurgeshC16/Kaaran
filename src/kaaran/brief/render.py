@@ -96,7 +96,15 @@ def fill(text: str, pack: dict, lang: str) -> str:
         if ref not in X.TEXT_KEYS:
             raise FillError(f"unknown text key {ref!r}")
         return X.TEXT_KEYS[ref][0 if lang == "mr" else 1]
-    return PLACEHOLDER.sub(sub, text)
+    return tidy(PLACEHOLDER.sub(sub, text))
+
+
+DOUBLED_KENDRA = re.compile(r"\b(Kendra)(\s+Kendra)+\b")
+
+
+def tidy(text: str) -> str:
+    """Rendering clean-up that never changes facts: a cluster name already ends in 'Kendra'."""
+    return DOUBLED_KENDRA.sub(r"\1", text)
 
 
 def allowed_refs(finding: dict, pack: dict) -> dict[str, set]:

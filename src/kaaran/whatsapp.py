@@ -34,7 +34,21 @@ MEDIA_TTL_S = 25 * 24 * 3600  # Meta keeps uploaded media for 30 days
 ACK = ("⏳ प्रश्न मिळाला. पुरावे तपासत आहे, थोडा वेळ लागेल...", "⏳ Got your question. Checking the evidence, this takes a moment...")
 PDF_CAPTION = ("{title} - एक पानी अहवाल. कृत्रिम (SYNTHETIC) डेमो डेटा.", "{title} - one-page brief. SYNTHETIC demo data.")
 PDF_MISSING = ("PDF सध्या तयार करता आला नाही; वरील सारांश पाहा.", "Could not make the PDF right now; see the summary above.")
-UNSUPPORTED = ("सध्या फक्त टाइप केलेले प्रश्न समजतात (व्हॉइस नोट नंतर येईल).", "For now I understand typed questions only (voice notes come later).")
+UNSUPPORTED = ("हा संदेश वाचता आला नाही. कृपया प्रश्न टाइप करा किंवा व्हॉइस नोट पाठवा.", "I could not read this message. Please type your question or send a voice note.")
+VOICE_FAILED = ("आवाज समजला नाही ({why}). कृपया पुन्हा बोला (३० सेकंदांपेक्षा कमी) किंवा प्रश्न टाइप करा.",
+                "I could not understand the voice note ({why}). Please try again (under 30 seconds) or type the question.")
+HEARD = ("🎤 ऐकले: \"{text}\"", "🎤 I heard: \"{text}\"")
+VOICE_OFF = ("सध्या व्हॉइस नोट समजण्याची सोय सुरू नाही. कृपया प्रश्न टाइप करा.", "Voice notes are not available right now. Please type your question.")
+VOICE_REASON = {
+    "too_long": ("व्हॉइस नोट खूप मोठी आहे", "the voice note is too long"),
+    "no_speech": ("आवाज स्पष्ट ऐकू आला नाही", "no clear speech was heard"),
+    "unsupported": ("हा ऑडिओ प्रकार चालत नाही", "this audio type is not supported"),
+    "download": ("व्हॉइस नोट डाउनलोड झाली नाही", "the voice note could not be downloaded"),
+    "cap": ("आजची आवाज-सेवेची मर्यादा संपली", "today's voice limit is used up"),
+    "service": ("आवाज-सेवा सध्या उपलब्ध नाही", "the voice service is unavailable"),
+    "off": ("आवाज-सेवा बंद आहे", "voice is switched off"),
+}
+VOICE_CAPTION = ("🔊 {title}: एका मिनिटाचा आवाज-सारांश", "🔊 {title}: one-minute voice summary")
 LANG_SET = ("ठीक आहे, आता उत्तरे मराठीत येतील.", "OK, replies will now be in English.")
 ERROR = ("माफ करा, काहीतरी चुकले. कृपया पुन्हा प्रयत्न करा.", "Sorry, something went wrong. Please try again.")
 HELP = (
@@ -51,7 +65,7 @@ NO_ALERT = ("सध्या कोणत्याही तालुक्य�
 
 @dataclass
 class Reply:
-    kind: str  # text | document
+    kind: str  # text | document | audio
     text: str = ""  # message body, or the document caption
     path: Path | None = None
     filename: str = ""
@@ -97,9 +111,27 @@ class Bot:
         picks = [ex[0], ex[3], ex[2]] if lang == "mr" else [ex[1], ex[4], ex[2]]
         return HELP[i].format(examples="\n".join(f"• {q}" for q in picks))
 
-    def handle(self, sender: str, kind: str, text: str, send: Callable[[Reply], None]) -> None:
+    def handle(self, sender: str, kind: str, text: str, send: Callable[[Reply], None],
+               audio: tuple[bytes, str] | None = None) -> None:
         lang = self.lang.get(sender, "mr")
         i = LANGS.index(lang)
+        if kind == "audio":
+            from .voice.sarvam import VoiceUnavailable
+
+            if not self.service.voice.configured:
+                send(Reply("text", VOICE_OFF[i], lang=lang))
+                return
+            if audio is None:  # the gateway could not download it
+                send(Reply("text", VOICE_FAILED[i].format(why=VOICE_REASON["download"][i]), lang=lang))
+                return
+            try:  # speech -> text, then exactly the same path as a typed message
+                tr = self.service.voice.stt(audio[0], audio[1], self.service.keyterms(self.dataset),
+                                            language="mr" if lang == "mr" else None)
+            except VoiceUnavailable as e:  # fixed bilingual reason; the raw API message is never shown
+                send(Reply("text", VOICE_FAILED[i].format(why=VOICE_REASON.get(e.reason, VOICE_REASON["service"])[i]), lang=lang))
+                return
+            send(Reply("text", HEARD[i].format(text=tr.text), lang=lang))
+            kind, text = "text", tr.text
         if kind != "text":
             send(Reply("text", UNSUPPORTED[i], lang=lang))
             return
@@ -142,10 +174,27 @@ class Bot:
             path = ws.pdf(focus, lang)
         except PdfUnavailable:
             send(Reply("text", PDF_MISSING[i], lang=lang))
+            self._voice_note(answer, lang, send)  # the voice summary does not depend on the PDF
             return
         caption = PDF_CAPTION[i].format(title=answer.summary[lang]["title"])[:CAPTION_LIMIT]
         filename = f"Kaaran_{answer.focus_name['en'].replace(' ', '_')}_{lang}.pdf"
         send(Reply("document", caption, path, filename, answer.brief_id, lang))
+        self._voice_note(answer, lang, send)
+
+    def _voice_note(self, answer, lang: str, send: Callable[[Reply], None]) -> None:
+        """One-minute spoken summary after the PDF (skipped quietly when voice is off or fails)."""
+        from .voice.sarvam import VoiceUnavailable
+
+        if not self.service.voice.configured or setting("KAARAN_VOICE_REPLY", "on") == "off":
+            return
+        try:
+            path = self.service.voice_summary(answer.brief_id, lang)
+        except (VoiceUnavailable, OSError):  # the text and PDF already went out; the voice note is a bonus
+            return
+        i = LANGS.index(lang)
+        caption = VOICE_CAPTION[i].format(title=answer.summary[lang]["title"])
+        filename = f"Kaaran_{answer.focus_name['en'].replace(' ', '_')}_{lang}.mp3"
+        send(Reply("audio", caption, path, filename, answer.brief_id, lang))
 
 
 # ---------- Cloud API ----------
@@ -201,13 +250,16 @@ class CloudAPI:
                                             "type": "text", "text": {"preview_url": False, "body": body}})
 
     def upload_pdf(self, path: Path) -> str:
+        return self.upload(path, "application/pdf")
+
+    def upload(self, path: Path, mime: str) -> str:
         key = (str(path), path.stat().st_mtime)
         cached = self._media.get(key)
         if cached and time.time() - cached[1] < MEDIA_TTL_S:
             return cached[0]
         with open(path, "rb") as f:
-            data = self._post("media", data={"messaging_product": "whatsapp", "type": "application/pdf"},
-                              files={"file": (path.name, f, "application/pdf")})
+            data = self._post("media", data={"messaging_product": "whatsapp", "type": mime},
+                              files={"file": (path.name, f, mime)})
         self._media[key] = (data["id"], time.time())
         return data["id"]
 
@@ -216,9 +268,33 @@ class CloudAPI:
                                             "type": "document",
                                             "document": {"id": media_id, "filename": filename, "caption": caption}})
 
+    def send_audio(self, to: str, media_id: str) -> dict:
+        # MP3 is sent as an audio message; a WhatsApp voice-note bubble would need OGG/Opus (no transcoder installed)
+        return self._post("messages", json={"messaging_product": "whatsapp", "recipient_type": "individual", "to": to,
+                                            "type": "audio", "audio": {"id": media_id}})
+
+    def download_media(self, media_id: str, max_bytes: int = 16_000_000) -> tuple[bytes, str]:
+        """Incoming media: GET /{media-id} for a 5-minute URL, then GET the URL with the same Bearer token."""
+        if not self.cfg.can_send:
+            raise CloudAPIError("WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID not set")
+        auth = {"Authorization": f"Bearer {self.cfg.token}"}
+        r = self.http.get(f"{GRAPH}/{self.cfg.graph_version}/{media_id}", headers=auth,
+                          params={"phone_number_id": self.cfg.phone_number_id})
+        if r.status_code >= 400:
+            raise CloudAPIError(f"media lookup HTTP {r.status_code}")
+        meta = r.json()
+        if int(meta.get("file_size") or 0) > max_bytes:
+            raise CloudAPIError("media too large")
+        r2 = self.http.get(meta["url"], headers=auth)
+        if r2.status_code >= 400:
+            raise CloudAPIError(f"media download HTTP {r2.status_code}")
+        return r2.content, meta.get("mime_type") or r2.headers.get("content-type", "")
+
     def deliver(self, to: str, reply: Reply) -> None:
         if reply.kind == "document":
             self.send_document(to, self.upload_pdf(reply.path), reply.filename, reply.text)
+        elif reply.kind == "audio":
+            self.send_audio(to, self.upload(reply.path, "audio/mpeg"))
         else:
             self.send_text(to, reply.text)
 
@@ -254,8 +330,12 @@ def incoming_messages(payload) -> list[dict]:
                 if not isinstance(m, dict) or not m.get("id") or not m.get("from"):
                     continue
                 text = (m.get("text") or {}).get("body", "") if m.get("type") == "text" else ""
-                out.append({"id": m["id"], "from": str(m["from"]), "type": m.get("type", ""), "text": text,
-                            "phone_number_id": meta.get("phone_number_id")})
+                item = {"id": m["id"], "from": str(m["from"]), "type": m.get("type", ""), "text": text,
+                        "phone_number_id": meta.get("phone_number_id")}
+                audio = m.get("audio") if m.get("type") == "audio" else None
+                if isinstance(audio, dict) and audio.get("id"):
+                    item |= {"media_id": str(audio["id"]), "mime_type": str(audio.get("mime_type") or "audio/ogg")}
+                out.append(item)
     return out
 
 
@@ -310,8 +390,15 @@ class Gateway:
             except (CloudAPIError, httpx.HTTPError, OSError) as e:
                 self.log(dir="out", who=mask(msg["from"]), kind=reply.kind, status="failed", error=str(e)[:300])
 
+        audio = None
+        if msg.get("type") == "audio" and msg.get("media_id") and self.bot.service.voice.configured:
+            try:
+                audio = self.api.download_media(msg["media_id"])
+                audio = (audio[0], audio[1] or msg.get("mime_type", "audio/ogg"))
+            except (CloudAPIError, httpx.HTTPError, OSError, KeyError, ValueError) as e:
+                self.log(dir="in", who=mask(msg["from"]), kind="audio", status="download_failed", error=str(e)[:200])
         try:
-            self.bot.handle(msg["from"], msg["type"], msg["text"], send)
+            self.bot.handle(msg["from"], msg["type"], msg["text"], send, audio=audio)
         except Exception as e:  # never let one message kill the worker; tell the officer
             self.log(dir="bot", who=mask(msg["from"]), status="error", error=f"{type(e).__name__}: {e}"[:300])
             send(Reply("text", ERROR[LANGS.index(self.bot.lang.get(msg["from"], "mr"))]))
@@ -321,6 +408,13 @@ def simulate(bot: Bot, sender: str, text: str) -> list[Reply]:
     """Local simulator: same bot, replies collected instead of sent."""
     out: list[Reply] = []
     bot.handle(sender, "text", text, out.append)
+    return out
+
+
+def simulate_voice(bot: Bot, sender: str, audio: bytes, mime: str) -> list[Reply]:
+    """Local simulator for a voice note: same bot, same speech-to-text path."""
+    out: list[Reply] = []
+    bot.handle(sender, "audio", "", out.append, audio=(audio, mime))
     return out
 
 

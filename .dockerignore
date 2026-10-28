@@ -1,0 +1,11 @@
+# never ship secrets, real data, generated data or local tooling in the image
+.env
+data/
+docs/source/
+.venv/
+.git/
+.claude/
+**/__pycache__/
+.pytest_cache/
+out/
+*.pdf

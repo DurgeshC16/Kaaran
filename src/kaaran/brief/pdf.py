@@ -40,6 +40,14 @@ def find_browser() -> str | None:
     return None
 
 
+def _needs_no_sandbox() -> bool:
+    import os
+
+    if setting("KAARAN_BROWSER_NO_SANDBOX") == "1":
+        return True
+    return hasattr(os, "geteuid") and os.geteuid() == 0
+
+
 def html_to_pdf(document: str, out_path: str | Path, timeout: int = 90) -> Path:
     browser = find_browser()
     if browser is None:
@@ -52,6 +60,8 @@ def html_to_pdf(document: str, out_path: str | Path, timeout: int = 90) -> Path:
         cmd = [browser, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
                "--disable-extensions", f"--user-data-dir={Path(d) / 'profile'}", "--no-pdf-header-footer",
                "--print-to-pdf-no-header", f"--print-to-pdf={out_path}", src.as_uri()]
+        if _needs_no_sandbox():  # Chromium refuses to run as root (containers) without this flag
+            cmd.insert(1, "--no-sandbox")
         if out_path.exists():
             out_path.unlink()
         try:

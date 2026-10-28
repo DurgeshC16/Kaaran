@@ -127,6 +127,15 @@ Open **http://127.0.0.1:8000**. The first start prepares the data, which takes a
 - [ ] Type **अहवाल**. A "checking…" message, the summary, then a **PDF** bubble arrive. Click the PDF.
 - [ ] Type `english`, then ask "Which clusters in Pandharpur need attention?". The reply comes in English.
 
+**E7b Voice** (needs `SARVAM_API_KEY` in `.env`; the buttons are hidden without it)
+- [ ] On `/`, click **🎤 बोला**, allow the microphone, say "पंढरपूर तालुक्यात कोणत्या केंद्रांकडे लक्ष द्यावे?", click
+  **⏹ थांबवा**. The heard text appears ("🎤 ऐकले: …") and the brief opens.
+- [ ] Click **🔊 आवाजात ऐका**. A Marathi voice of about 40-60 s plays: what needs attention, why, what to do.
+  The second play is instant (cached).
+- [ ] On `/whatsapp`, press 🎤, speak, and stop. You get the heard text, the summary, the PDF and an audio bubble with the
+  voice summary.
+- [ ] Say "english" by voice. The bot switches language (spoken commands work like typed ones).
+
 **E8 Real data page**: open **http://127.0.0.1:8000/real** (run Part F first)
 - [ ] The green "REAL PUBLIC DATA" bar is visible, followed by the Solapur block table, the PRS benchmarks,
   the 2019-20 cross-check and "Checks" all ✓.

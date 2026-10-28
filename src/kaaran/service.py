@@ -201,7 +201,8 @@ class Workspace:
 
 
 class Service:
-    def __init__(self, datasets: dict[str, DatasetSpec] | None = None, root: Path = ROOT, default: str | None = None):
+    def __init__(self, datasets: dict[str, DatasetSpec] | None = None, root: Path = ROOT, default: str | None = None,
+                 voice=None):
         self.datasets = datasets or DATASETS
         if default is None:  # KAARAN_DEMO_DATASET names a dataset of the built-in registry
             default = (setting("KAARAN_DEMO_DATASET") if datasets is None else None) or next(iter(self.datasets))
@@ -209,6 +210,39 @@ class Service:
         if self.default not in self.datasets:
             raise ValueError(f"unknown default dataset {self.default!r}")
         self.workspaces = {k: _workspace_for(spec, root) for k, spec in self.datasets.items()}
+        self._voice = voice  # SarvamClient; created lazily from settings when None
+
+    # ---------- voice (Sarvam AI) ----------
+
+    @property
+    def voice(self):
+        if self._voice is None:
+            from .voice.sarvam import get_voice
+
+            self._voice = get_voice()
+        return self._voice
+
+    def keyterms(self, dataset: str | None = None) -> list[str]:
+        """Place names that bias speech recognition (Sarvam keyterms; at most 50)."""
+        t = self.workspace(dataset).talukas
+        names = [str(n) for col in ("taluka_mr", "taluka") if col in t for n in t[col] if isinstance(n, str) and n]
+        return list(dict.fromkeys(names))[:50]
+
+    def ask_voice(self, audio: bytes, mime: str, dataset: str | None = None, lang: str = "mr", on_progress=None) -> Answer:
+        """Speech -> text (Sarvam) -> the normal question flow. Raises VoiceUnavailable when speech cannot be used."""
+        tr = self.voice.stt(audio, mime, self.keyterms(dataset), language="mr" if lang == "mr" else None)
+        answer = self.ask(tr.text, dataset, on_progress=on_progress)
+        answer.info |= {"transcript": tr.text, "stt_language": tr.language_code, "stt_seconds": tr.seconds, "input": "voice"}
+        return answer
+
+    def voice_summary(self, brief_id: str, lang: str = "mr") -> Path:
+        """One-minute spoken summary (MP3, cached) of a brief, built by code from the verified summary."""
+        from .voice.script import spoken_summary
+
+        ws, focus = self.resolve_brief(brief_id)
+        plan = {"status": "ok", "taluka_id": focus, "question_type": None}
+        summary = ws.summarize(ws.pack(focus), ws.brief(focus), plan, lang)
+        return self.voice.tts(spoken_summary(summary, lang), lang)
 
     def workspace(self, dataset: str | None = None) -> Workspace:
         key = dataset or self.default
@@ -317,7 +351,8 @@ def summarize(pack: dict, b: Brief, plan: dict, lang: str, ws: Workspace | None 
                 when = X.HORIZONS.get(f["action"].get("horizon"), ("", ""))[i]
                 owner = X.ACTORS[f["action"]["actor_role"]][i] + (f", {when}" if when else "")
             items.append({"section": name, "heading": X.SECTION_HEADINGS[name][i],
-                          "badge": X.BADGES[(f["type"], f["label"])][i], "text": text, "owner": owner})
+                          "badge": X.BADGES[(f["type"], f["label"])][i], "text": text, "owner": owner,
+                          "type": f["type"], "label": f["label"]})
     notes = []
     if plan.get("metric") == "attendance" and plan.get("question_type") != "data_quality":
         sec = next((o["section"] for o in pack["outline"] for fid in o["finding_ids"]

@@ -2,33 +2,251 @@
   "rubric_version": "1.0",
   "source": "docs/06_DECISION_RUBRICS.md section 4",
   "note": "Thresholds and actions are starting values to be validated with teachers and officers. Every action names an owner within their powers; the officer confirms before anything is forwarded.",
-  "limits": {"per_cluster": 3},
+  "limits": {
+    "per_cluster": 3
+  },
   "actions": [
-    {"id": "A10", "when": {"cluster_status": ["DATA"]}, "constraints": [], "owner": "KENDRA_PRAMUKH", "horizon": "this_week",
-     "follow_up": "flags_confirmed_or_cleared", "priority": 0, "exclusive": true},
-    {"id": "A11", "when": {"cluster_status": ["INSUFFICIENT"]}, "constraints": [], "owner": "BEO", "horizon": "this_month",
-     "follow_up": "data_completeness", "priority": 0, "exclusive": true},
-    {"id": "A1", "when": {"diagnosis": ["D1"]}, "constraints": ["surplus_school_exists"], "owner": "DEO", "horizon": "this_month",
-     "follow_up": "working_teachers_and_ptr", "priority": 1},
-    {"id": "A2", "when": {"diagnosis": ["D1"]}, "constraints": ["no_surplus_school"], "owner": "DEO", "horizon": "this_month",
-     "follow_up": "posts_filled", "priority": 1},
-    {"id": "A3", "when": {"diagnosis": ["D1"]}, "constraints": ["multigrade_schools"], "owner": "KENDRA_PRAMUKH", "horizon": "this_week",
-     "follow_up": "visit_logged_next_round_change", "priority": 2},
-    {"id": "A4", "when": {"diagnosis": ["D2"]}, "constraints": ["visits_below_one"], "owner": "KENDRA_PRAMUKH", "horizon": "this_week",
-     "follow_up": "visits_per_school_month", "priority": 1},
-    {"id": "A5", "when": {"diagnosis": ["D2"]}, "constraints": ["training_stale"], "owner": "BEO", "horizon": "this_month",
-     "follow_up": "training_logged_competency_change", "priority": 2},
-    {"id": "A6", "when": {"diagnosis": ["D2", "D8"]}, "constraints": ["teachers_available"], "owner": "BEO", "horizon": "next_baithak",
-     "follow_up": "targets_set_next_round_change", "priority": 3},
-    {"id": "A7", "when": {"diagnosis": ["D3"]}, "constraints": ["attendance_trusted"], "owner": "BEO", "horizon": "this_month",
-     "follow_up": "attendance_next_month", "priority": 1},
-    {"id": "A8", "when": {"diagnosis": ["D4"]}, "constraints": [], "owner": "BEO", "horizon": "before_november",
-     "follow_up": "children_tracked_attendance_nov_mar", "priority": 1},
-    {"id": "A12", "when": {"diagnosis": ["D1", "D2"]}, "constraints": ["positive_deviant_same_constraint"], "owner": "BEO", "horizon": "this_month",
-     "follow_up": "peer_visit_done", "priority": 4}
+    {
+      "id": "A10",
+      "when": {
+        "cluster_status": [
+          "DATA"
+        ]
+      },
+      "constraints": [],
+      "owner": "KENDRA_PRAMUKH",
+      "horizon": "this_week",
+      "follow_up": "flags_confirmed_or_cleared",
+      "priority": 0,
+      "exclusive": true
+    },
+    {
+      "id": "A11",
+      "when": {
+        "cluster_status": [
+          "INSUFFICIENT"
+        ]
+      },
+      "constraints": [],
+      "owner": "BEO",
+      "horizon": "this_month",
+      "follow_up": "data_completeness",
+      "priority": 0,
+      "exclusive": true
+    },
+    {
+      "id": "A1",
+      "when": {
+        "diagnosis": [
+          "D1"
+        ]
+      },
+      "constraints": [
+        "surplus_school_exists"
+      ],
+      "owner": "DEO",
+      "horizon": "this_month",
+      "follow_up": "working_teachers_and_ptr",
+      "priority": 1
+    },
+    {
+      "id": "A2",
+      "when": {
+        "diagnosis": [
+          "D1"
+        ]
+      },
+      "constraints": [
+        "no_surplus_school"
+      ],
+      "owner": "DEO",
+      "horizon": "this_month",
+      "follow_up": "posts_filled",
+      "priority": 1
+    },
+    {
+      "id": "A3",
+      "when": {
+        "diagnosis": [
+          "D1"
+        ]
+      },
+      "constraints": [
+        "multigrade_schools"
+      ],
+      "owner": "KENDRA_PRAMUKH",
+      "horizon": "this_week",
+      "follow_up": "visit_logged_next_round_change",
+      "priority": 2,
+      "funded_under": {
+        "source": "Samagra Shiksha PAB 2026-27, Maharashtra",
+        "code": "C6800",
+        "component": "Foundational Literacy and Numeracy",
+        "item": "Teaching Learning Material (TLM) for innovative pedagogy",
+        "page": 62,
+        "mr": "पायाभूत साक्षरता व संख्याज्ञान: अध्ययन-अध्यापन साहित्य (TLM)"
+      }
+    },
+    {
+      "id": "A4",
+      "when": {
+        "diagnosis": [
+          "D2"
+        ]
+      },
+      "constraints": [
+        "visits_below_one"
+      ],
+      "owner": "KENDRA_PRAMUKH",
+      "horizon": "this_week",
+      "follow_up": "visits_per_school_month",
+      "priority": 1,
+      "funded_under": {
+        "source": "Samagra Shiksha PAB 2026-27, Maharashtra",
+        "code": "C476",
+        "component": "Academic support through BRC/URC/CRC",
+        "item": "Meeting, TA (CRC level)",
+        "page": 57,
+        "mr": "BRC/URC/CRC मार्फत शैक्षणिक सहाय्य: बैठक, प्रवास भत्ता"
+      }
+    },
+    {
+      "id": "A5",
+      "when": {
+        "diagnosis": [
+          "D2"
+        ]
+      },
+      "constraints": [
+        "training_stale"
+      ],
+      "owner": "BEO",
+      "horizon": "this_month",
+      "follow_up": "training_logged_competency_change",
+      "priority": 2,
+      "funded_under": {
+        "source": "Samagra Shiksha PAB 2026-27, Maharashtra",
+        "code": "C6779",
+        "component": "Foundational Literacy and Numeracy",
+        "item": "Capacity building of teachers, grades I to V",
+        "page": 62,
+        "mr": "पायाभूत साक्षरता व संख्याज्ञान: इयत्ता १ ते ५ शिक्षक क्षमता-विकास"
+      }
+    },
+    {
+      "id": "A6",
+      "when": {
+        "diagnosis": [
+          "D2",
+          "D8"
+        ]
+      },
+      "constraints": [
+        "teachers_available"
+      ],
+      "owner": "BEO",
+      "horizon": "next_baithak",
+      "follow_up": "targets_set_next_round_change",
+      "priority": 3,
+      "funded_under": {
+        "source": "Samagra Shiksha PAB 2026-27, Maharashtra",
+        "code": "C403",
+        "component": "Funds for Quality (LEP, Innovation, Guidance)",
+        "item": "Learning Enhancement / Enrichment Programme (remedial teaching)",
+        "page": 54,
+        "mr": "गुणवत्ता निधी: अध्ययन संवर्धन कार्यक्रम (उपचारात्मक अध्यापन)"
+      }
+    },
+    {
+      "id": "A7",
+      "when": {
+        "diagnosis": [
+          "D3"
+        ]
+      },
+      "constraints": [
+        "attendance_trusted"
+      ],
+      "owner": "BEO",
+      "horizon": "this_month",
+      "follow_up": "attendance_next_month",
+      "priority": 1,
+      "funded_under": {
+        "source": "Samagra Shiksha PAB 2026-27, Maharashtra",
+        "code": "C391",
+        "component": "Community Mobilization",
+        "item": "Training of SMC / SDMC",
+        "page": 39,
+        "mr": "समुदाय सहभाग: शाळा व्यवस्थापन समिती प्रशिक्षण"
+      }
+    },
+    {
+      "id": "A8",
+      "when": {
+        "diagnosis": [
+          "D4"
+        ]
+      },
+      "constraints": [],
+      "owner": "BEO",
+      "horizon": "before_november",
+      "follow_up": "children_tracked_attendance_nov_mar",
+      "priority": 1,
+      "funded_under": {
+        "source": "Samagra Shiksha PAB 2026-27, Maharashtra",
+        "code": "C380",
+        "component": "Special Training of Out of School Children (OoSC)",
+        "item": "6 months, residential, migrant children",
+        "page": 38,
+        "mr": "शाळाबाह्य मुलांचे विशेष प्रशिक्षण: स्थलांतरित मुलांसाठी निवासी (६ महिने)"
+      }
+    },
+    {
+      "id": "A12",
+      "when": {
+        "diagnosis": [
+          "D1",
+          "D2"
+        ]
+      },
+      "constraints": [
+        "positive_deviant_same_constraint"
+      ],
+      "owner": "BEO",
+      "horizon": "this_month",
+      "follow_up": "peer_visit_done",
+      "priority": 4,
+      "funded_under": {
+        "source": "Samagra Shiksha PAB 2026-27, Maharashtra",
+        "code": "C476",
+        "component": "Academic support through BRC/URC/CRC",
+        "item": "Meeting, TA (peer and exposure visits)",
+        "page": 57,
+        "mr": "BRC/URC/CRC मार्फत शैक्षणिक सहाय्य: बैठक, प्रवास भत्ता"
+      }
+    }
   ],
   "brief_level": [
-    {"id": "A9", "when": {"duty": ["WEAK"]}, "owner": "DEO", "horizon": "before_next_duty", "follow_up": "duty_days_in_assessment_months"},
-    {"id": "A13", "when": {"twin": true}, "owner": "BEO", "horizon": "this_month", "follow_up": "exposure_visit_done"}
-  ]
+    {
+      "id": "A9",
+      "when": {
+        "duty": [
+          "WEAK"
+        ]
+      },
+      "owner": "DEO",
+      "horizon": "before_next_duty",
+      "follow_up": "duty_days_in_assessment_months"
+    },
+    {
+      "id": "A13",
+      "when": {
+        "twin": true
+      },
+      "owner": "BEO",
+      "horizon": "this_month",
+      "follow_up": "exposure_visit_done"
+    }
+  ],
+  "funding_note": "funded_under cites the Samagra Shiksha PAB 2026-27 (Maharashtra) line that can pay for the action; A1 redeployment and A10/A11 data actions are administrative (no budget line). Verify with `python -m kaaran.real --pab <PAB csv>`."
 }

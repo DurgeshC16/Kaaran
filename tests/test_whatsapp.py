@@ -10,7 +10,7 @@ import pytest
 
 from kaaran.brief.pdf import PdfUnavailable
 from kaaran.service import Workspace
-from kaaran.whatsapp import (ACK, ERROR, PDF_MISSING, UNSUPPORTED, Bot, CloudAPI, CloudAPIError, CloudConfig, Gateway, Reply,
+from kaaran.whatsapp import (ACK, ERROR, PDF_MISSING, UNSUPPORTED, VOICE_OFF, Bot, CloudAPI, CloudAPIError, CloudConfig, Gateway, Reply,
                              Seen, incoming_messages, simulate, split_text, valid_signature, verify_challenge)
 
 CFG = CloudConfig("TOKEN", "PNID", "verify-me", "app-secret", "v26.0")
@@ -90,7 +90,8 @@ def test_bot_help_language_and_non_text(demo_service):
     bot = Bot(demo_service)
     help_mr = run(bot, "नमस्कार")
     assert len(help_mr) == 1 and "कारण" in help_mr[0].text and "पंढरपूर" in help_mr[0].text
-    assert run(bot, "x", kind="audio")[0].text == UNSUPPORTED[0]
+    assert run(bot, "x", kind="audio")[0].text == VOICE_OFF[0]  # conftest switches voice off
+    assert run(bot, "x", kind="image")[0].text == UNSUPPORTED[0]
     assert run(bot, "English")[0].lang == "en" and bot.lang["s1"] == "en"
     assert "Hello" in run(bot, "hi")[0].text
     assert run(bot, "मराठी")[0].lang == "mr"

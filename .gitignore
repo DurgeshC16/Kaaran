@@ -27,3 +27,10 @@ Thumbs.db
 
 # LLM usage log (local; recorded responses in llm_cache/ ARE committed)
 data/llm_usage.jsonl
+
+# voice cache (synthesised audio, local) and per-session uploads
+data/voice_cache/
+data/uploads/
+
+# voice usage log (local)
+data/voice_usage.jsonl

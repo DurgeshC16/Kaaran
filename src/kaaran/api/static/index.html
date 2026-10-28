@@ -104,7 +104,11 @@
         <textarea id="q" maxlength="900"></textarea>
         <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
           <button class="btn" id="ask-btn" type="submit"></button>
+          <button class="btn ghost" id="mic-btn" type="button" style="display:none"></button>
           <span id="status" class="sub" style="font-size:13px"></span>
+        </div>
+        <div id="voice-note" class="sub" style="font-size:11.5px;color:#5b6670;margin-top:4px;display:none">
+          🎤 / 🔊 आवाज Sarvam AI कडून मजकुरात बदलला जातो व आवाज-सारांश तयार होतो. Voice is transcribed and spoken by Sarvam AI.
         </div>
       </form>
       <h2 class="small" id="lbl-examples"></h2>
@@ -134,7 +138,9 @@ const UI = {
         schools:"शाळा", talukas:"तालुके", code:"UDISE कोड", name:"नाव", taluka:"तालुका", synth_note:"कृत्रिम डेटा: स्रोत फाईल्स डेमोसाठी तयार केल्या आहेत.",
         err:"त्रुटी:", alerts:"🔔 नवीन डेटा आला: इशारे", open:"अहवाल उघडा", baithak:"बैठक पॅक", confirm:"मान्य", done:"पूर्ण झाले",
         st_open:"प्रलंबित", st_confirmed:"मान्य केले", st_done:"पूर्ण", follow:"पुढील तपासणी", based:"आधार", from_alert:"इशाऱ्यातून उघडले",
-        no_alerts:"सध्या कोणताही तातडीचा इशारा नाही.", risk_n:"केंद्रांना लक्ष हवे", data_n:"केंद्रांतील नोंदी तपासा" },
+        no_alerts:"सध्या कोणताही तातडीचा इशारा नाही.", risk_n:"केंद्रांना लक्ष हवे", data_n:"केंद्रांतील नोंदी तपासा",
+        mic:"🎤 बोला", mic_stop:"⏹ थांबवा", recording:"रेकॉर्डिंग सुरू (३० सेकंदांपर्यंत)…", listening:"आवाज समजून घेत आहे…",
+        listen:"🔊 आवाजात ऐका", heard:"🎤 ऐकले:", voice_input:"प्रश्न: आवाज", mic_denied:"मायक्रोफोन वापरण्याची परवानगी मिळाली नाही." },
   en: { tagline:"AI data analyst for education officers", dataset:"Data:", wa:"WhatsApp demo →",
         synthetic:"⚠️ SYNTHETIC demo data - the figures here are not real and the findings are not real.",
         q:"Your question (Marathi or English)", ask:"Ask", examples:"Example questions", history:"Earlier questions",
@@ -148,9 +154,11 @@ const UI = {
         schools:"Schools", talukas:"Talukas", code:"UDISE code", name:"Name", taluka:"Taluka", synth_note:"Synthetic data: the source files were generated for the demo.",
         err:"Error:", alerts:"🔔 New data arrived: alerts", open:"Open brief", baithak:"Review meeting pack", confirm:"Confirm", done:"Mark done",
         st_open:"open", st_confirmed:"confirmed", st_done:"done", follow:"Follow-up check", based:"Based on", from_alert:"Opened from an alert",
-        no_alerts:"No block needs urgent attention right now.", risk_n:"clusters need attention", data_n:"clusters with records to check" },
+        no_alerts:"No block needs urgent attention right now.", risk_n:"clusters need attention", data_n:"clusters with records to check",
+        mic:"🎤 Speak", mic_stop:"⏹ Stop", recording:"Recording (up to 30 seconds)…", listening:"Understanding the voice note…",
+        listen:"🔊 Listen", heard:"🎤 Heard:", voice_input:"Question: voice", mic_denied:"Microphone permission was not given." },
 };
-const state = { lang:"mr", dataset:null, datasets:[], answer:null, history:[], busy:false };
+const state = { lang:"mr", dataset:null, datasets:[], answer:null, history:[], busy:false, voice:false, rec:null };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -160,6 +168,9 @@ function applyUI() {
   document.documentElement.lang = state.lang;
   for (const [id, key] of [["tagline","tagline"],["lbl-dataset","dataset"],["link-wa","wa"],["synthetic","synthetic"],["lbl-q","q"],
                            ["ask-btn","ask"],["lbl-examples","examples"],["lbl-history","history"],["lbl-alerts","alerts"]]) $(id).textContent = t(key);
+  $("mic-btn").textContent = state.rec ? t("mic_stop") : t("mic");
+  $("mic-btn").style.display = state.voice ? "inline-block" : "none";
+  $("voice-note").style.display = state.voice ? "block" : "none";
   $("lang-mr").classList.toggle("on", state.lang === "mr");
   $("lang-en").classList.toggle("on", state.lang === "en");
   renderDatasets(); renderExamples(); renderHistory(); renderAnswer(); renderAlerts();
@@ -204,7 +215,9 @@ function renderAnswer() {
   if (!a) { box.innerHTML = `<div class="empty">${esc(t("empty"))}</div>`; return; }
   if (a.error) { box.innerHTML = `<div class="error">${esc(t("err"))} ${esc(a.error)}</div>`; return; }
   const L = state.lang, info = a.info || {};
-  const q = a.question ? `<div class="question-echo"><b>${esc(t("your_q"))}</b> ${esc(a.question)}</div>` : "";
+  const heard = (a.info || {}).transcript;
+  const q = heard ? `<div class="question-echo"><b>${esc(t("heard"))}</b> ${esc(heard)}</div>`
+          : a.question ? `<div class="question-echo"><b>${esc(t("your_q"))}</b> ${esc(a.question)}</div>` : "";
   const pills = [`<span class="pill">${esc(info.intent_source === "llm" ? t("intent_llm") : info.intent_source === "alert" ? t("from_alert") : t("intent_rule"))}</span>`];
   if (a.status !== "ok") {
     box.innerHTML = q + `<div class="meta">${pills.join("")}</div><div class="reply ${esc(a.status)}">${esc(a.reply[L])}</div>`;
@@ -219,7 +232,9 @@ function renderAnswer() {
       <a class="btn ghost" href="/api/briefs/${id}/pdf?lang=mr" target="_blank" rel="noopener">⬇ ${esc(t("pdf"))}</a>
       <a class="btn ghost" href="/api/briefs/${id}/pdf?lang=en" target="_blank" rel="noopener">⬇ ${esc(t("pdfen"))}</a>
       <a class="btn ghost" href="/api/briefs/${id}/evidence" target="_blank" rel="noopener">{ } ${esc(t("evidence"))}</a>
-      ${(current() || {}).kind === "block" ? `<button class="btn ghost" type="button" id="baithak-btn">📋 ${esc(t("baithak"))}</button>` : ""}</div>`;
+      ${(current() || {}).kind === "block" ? `<button class="btn ghost" type="button" id="baithak-btn">📋 ${esc(t("baithak"))}</button>` : ""}
+      ${state.voice ? `<button class="btn ghost" type="button" id="listen-btn">${esc(t("listen"))}</button>` : ""}</div>
+      <div id="voice-player"></div>`;
   const notes = (a.summary[L].notes || []).length ? `<div class="notes">${a.summary[L].notes.map(n => "👉 " + esc(n)).join("<br>")}</div>` : "";
   box.innerHTML = q + tools + `<div class="meta">${pills.join("")}</div>` + notes + a.html[L];   // brief HTML is built and escaped by the server
 }
@@ -317,6 +332,57 @@ $("answer").addEventListener("click", (e) => {
 });
 $("drawer-close").addEventListener("click", () => $("drawer").classList.remove("open"));
 
+// ---------- voice (Sarvam AI): record a question, listen to the summary ----------
+async function initVoice() {
+  try { const r = await fetch("/api/voice/status"); state.voice = r.ok && (await r.json()).configured && !!navigator.mediaDevices; }
+  catch (e) { state.voice = false; }
+  applyUI();
+}
+
+async function toggleMic() {
+  if (state.rec) { state.rec.stop(); return; }
+  if (state.busy) return;
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { $("status").textContent = t("mic_denied"); return; }
+  const type = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "";
+  const rec = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+  const chunks = [];
+  rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    stream.getTracks().forEach(tr => tr.stop());
+    clearTimeout(rec.limit); state.rec = null; applyUI();
+    const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" });
+    await askVoice(blob);
+  };
+  rec.limit = setTimeout(() => rec.state === "recording" && rec.stop(), 28000);  // the sync STT limit is 30 s
+  state.rec = rec; rec.start(); applyUI();
+  $("status").innerHTML = `<span class="spinner"></span>${esc(t("recording"))}`;
+}
+
+async function askVoice(blob) {
+  state.busy = true; $("ask-btn").disabled = true;
+  $("status").innerHTML = `<span class="spinner"></span>${esc(t("listening"))}`;
+  try {
+    const ds = state.dataset ? `&dataset=${encodeURIComponent(state.dataset)}` : "";
+    const r = await fetch(`/api/voice/ask?lang=${state.lang}${ds}`,
+                          { method: "POST", headers: { "Content-Type": blob.type || "audio/webm" }, body: blob });
+    const body = await r.json();
+    if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+    body.question = body.question || t("voice_input");
+    $("q").value = (body.info || {}).transcript || "";
+    state.answer = body; state.history.unshift(body); state.history = state.history.slice(0, 20);
+  } catch (e) { state.answer = { error: e.message }; }
+  finally { state.busy = false; $("ask-btn").disabled = false; $("status").textContent = ""; renderAnswer(); renderHistory(); }
+}
+
+$("mic-btn").addEventListener("click", toggleMic);
+$("answer").addEventListener("click", (e) => {
+  if (!e.target.closest("#listen-btn") || !state.answer) return;
+  $("voice-player").innerHTML = `<audio controls autoplay style="width:100%;margin:6px 0" src="/api/briefs/${encodeURIComponent(state.answer.brief_id)}/voice?lang=${state.lang}"></audio>`;
+});
+initVoice();
+
 async function openBlock(focus, label) {
   if (state.busy) return;
   state.busy = true; $("status").innerHTML = `<span class="spinner"></span>${esc(t("working"))}`;
@@ -341,6 +407,7 @@ async function showBaithak() {
       h += `<div class="act"><div>${esc(x.text)}</div>
         <div style="font-size:12px;color:#555">${esc(x.when)} · ${esc(t("follow"))}: <code>${esc(x.follow_up)}</code> · <code>${esc(x.rubric_id)}</code></div>
         ${x.evidence.length ? `<div class="ev"><b>${esc(t("based"))}:</b> ${x.evidence.map(esc).join(" | ")}</div>` : ""}
+        ${x.funding ? `<div class="ev" style="color:#0b6e4f">💰 ${esc(x.funding)}</div>` : ""}
         <div><span class="st st-${esc(x.status)}">${esc(t("st_" + x.status))}</span>
           <button type="button" data-act="${esc(x.id)}" data-status="confirmed">${esc(t("confirm"))}</button>
           <button type="button" data-act="${esc(x.id)}" data-status="done">${esc(t("done"))}</button></div></div>`;

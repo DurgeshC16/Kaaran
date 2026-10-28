@@ -12,7 +12,7 @@ import re
 
 from ..evidence import format_number
 from . import texts as X
-from .render import MR_JOIN, PLACEHOLDER, caveat_lines, period_text
+from .render import MR_JOIN, PLACEHOLDER, caveat_lines, period_text, tidy
 
 LABEL_CLASS = {"STRONG": "strong", "WEAK": "weak", "INSUFFICIENT": "insufficient", "RED_FLAG": "redflag",
                "LEARN_FROM": "learn", "RULED_OUT": "ruledout", "CLEARED": "cleared", "ACTION": "action"}
@@ -41,7 +41,7 @@ def fill_html(text: str, pack: dict, lang: str, interactive: bool = True) -> str
             out.append(html.escape(X.TEXT_KEYS[ref][0 if lang == "mr" else 1]))
         pos = m.end()
     out.append(html.escape(text[pos:]))
-    return "".join(out)
+    return tidy("".join(out))
 
 
 def _caveats_html(f: dict, pack: dict, lang: str) -> str:

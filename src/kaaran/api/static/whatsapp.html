@@ -38,14 +38,15 @@
   <div class="phone">
     <div class="top"><div class="avatar">का</div><div><div class="name">कारण (Kaaran)</div><div class="st" id="st">online · demo</div></div></div>
     <div class="chat" id="chat"></div>
-    <form id="f"><input id="t" autocomplete="off" placeholder="प्रश्न टाइप करा... / Type a question..." maxlength="900"><button id="b" aria-label="send">➤</button></form>
+    <form id="f"><input id="t" autocomplete="off" placeholder="प्रश्न टाइप करा... / Type a question..." maxlength="900"><button type="button" id="mic" aria-label="voice note" style="display:none">🎤</button><button id="b" aria-label="send">➤</button></form>
   </div>
   <div class="side">
     <div class="card warn"><b>⚠️ कृत्रिम (SYNTHETIC) डेमो डेटा.</b> आकडे आणि निष्कर्ष खरे नाहीत.<br>SYNTHETIC demo data: figures and findings are not real.</div>
     <div class="card">
       <h2>WhatsApp simulator</h2>
-      हा फोन तोच बॉट चालवतो जो खऱ्या WhatsApp वेबहुकवर (<code>/whatsapp/webhook</code>) चालतो; येथून काहीही बाहेर पाठवले जात नाही.<br>
-      <span style="color:#555">This phone runs the same bot as the real WhatsApp webhook; nothing leaves this machine.</span>
+      हा फोन तोच बॉट चालवतो जो खऱ्या WhatsApp वेबहुकवर (<code>/whatsapp/webhook</code>) चालतो. संदेश WhatsApp ला पाठवले जात नाहीत;
+      🎤 व्हॉइस नोट मात्र मजकुरात बदलण्यासाठी Sarvam AI कडे जाते आणि आवाज-सारांश Sarvam तयार करते.<br>
+      <span style="color:#555">This phone runs the same bot as the real WhatsApp webhook. Nothing is sent to WhatsApp; 🎤 voice notes are sent to Sarvam AI for transcription, and the voice summary is made by Sarvam.</span>
       <div style="margin-top:8px">Commands: <code>hi</code> / <code>मदत</code> (help), <code>english</code>, <code>marathi</code></div>
     </div>
     <div class="card"><h2>🔔 नवीन डेटा आला / New data arrived</h2>
@@ -75,6 +76,10 @@ function bubble(html, side) {
 }
 
 function showReply(r) {
+  if (r.kind === "audio") {
+    bubble(`<audio controls preload="none" style="width:240px" src="${esc(r.url)}"></audio><div>${waFormat(r.text)}</div>`, "in");
+    return;
+  }
   if (r.kind === "document") {
     bubble(`<a class="doc" href="${esc(r.url)}" target="_blank" rel="noopener"><span class="ic">PDF</span><span>${esc(r.filename)}</span></a>${waFormat(r.text)}`, "in");
   } else {
@@ -112,6 +117,39 @@ async function pushAlert() {
   } finally { busy = false; }
 }
 $("alert-btn").addEventListener("click", pushAlert);
+
+// ---------- voice notes (Sarvam speech-to-text; same bot as the real webhook) ----------
+let rec = null;
+(async () => {
+  try { const r = await fetch("/api/voice/status"); if (r.ok && (await r.json()).configured && navigator.mediaDevices) $("mic").style.display = "inline-block"; } catch (e) {}
+})();
+$("mic").addEventListener("click", async () => {
+  if (rec) { rec.stop(); return; }
+  if (busy) return;
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { bubble("⚠️ microphone permission was not given", "in"); return; }
+  const type = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "";
+  rec = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+  const chunks = [], started = performance.now();
+  rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    stream.getTracks().forEach(tr => tr.stop()); clearTimeout(rec.limit);
+    const blob = new Blob(chunks, { type: rec.mimeType || "audio/webm" }); rec = null;
+    $("mic").textContent = "🎤"; $("mic").style.background = "";
+    const secs = Math.round((performance.now() - started) / 1000);
+    bubble(`🎤 <audio controls style="width:200px" src="${URL.createObjectURL(blob)}"></audio> <span style="font-size:11px">${secs}s</span>`, "out");
+    busy = true; $("b").disabled = true; $("st").textContent = "typing…";
+    try {
+      const r = await fetch(`/api/whatsapp/simulate_voice?sender=${encodeURIComponent(sender)}`, { method: "POST", headers: { "Content-Type": blob.type || "audio/webm" }, body: blob });
+      const body = await r.json();
+      if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+      for (const rep of body.replies) { showReply(rep); await new Promise(res => setTimeout(res, 350)); }
+    } catch (e) { bubble("⚠️ " + esc(e.message), "in"); }
+    finally { busy = false; $("b").disabled = false; $("st").textContent = "online · demo"; }
+  };
+  rec.limit = setTimeout(() => rec && rec.state === "recording" && rec.stop(), 28000);
+  rec.start(); $("mic").textContent = "⏹"; $("mic").style.background = "#c62828";
+});
 $("ex").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) send(b.textContent); });
 
 (async () => {

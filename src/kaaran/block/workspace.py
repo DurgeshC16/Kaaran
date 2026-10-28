@@ -188,7 +188,7 @@ class BlockWorkspace:
                     owner = X.ACTORS[f["action"]["actor_role"]][i] + (f", {when}" if when else "")
                 items.append({"section": o["section"], "heading": BLOCK_HEADINGS[o["section"]][i],
                               "badge": X.BADGES[(f["type"], f["label"])][i], "text": fill(b.prose[fid][lang], pack, lang),
-                              "owner": owner})
+                              "owner": owner, "type": f["type"], "label": f["label"]})
         notes = []
         sec = SECTION_FOR.get(plan.get("question_type"))
         if sec:
@@ -235,10 +235,22 @@ class BlockWorkspace:
                      "when": X.HORIZONS.get(act.get("horizon"), ("", ""))[i], "rubric_id": act["rubric_id"],
                      "follow_up": act["follow_up"], "evidence": evidence,
                      "status": status.get(f"{focus}:{f['id']}", {}).get("status", "open"),
-                     "cluster": pack["entities"].get(f["params"].get("cluster", {}).get("entity", ""), {}).get("name_en")}
+                     "cluster": pack["entities"].get(f["params"].get("cluster", {}).get("entity", ""), {}).get("name_en"),
+                     "funding": _funding_text(act.get("funded_under"), lang)}
             groups.setdefault(X.ACTORS[act["actor_role"]][i], []).append(entry)
         title = ("बैठक पॅक: " if lang == "mr" else "Review meeting pack: ") + pack["entities"][focus]["name_en"]
         return {"title": title, "banner": X.BANNER[i] if pack.get("synthetic") else "", "groups": groups}
+
+
+def _funding_text(f: dict | None, lang: str) -> str:
+    """Citation of the budget line that can pay for an action (never a figure)."""
+    if not f:
+        return ""
+    if lang == "mr":
+        mr_digits = str.maketrans("0123456789", "०१२३४५६७८९")
+        # the budget code stays exactly as printed in the PAB (e.g. C476); year and page in Devanagari digits
+        return f"निधी: समग्र शिक्षा PAB {'2026-27'.translate(mr_digits)} ({f['code']}, पान {str(f['page']).translate(mr_digits)}): {f['mr']}"
+    return f"Funded under: {f['source']} ({f['code']}, p.{f['page']}): {f['component']} - {f['item']}"
 
 
 def _evidence_ids(pack: dict, action: dict) -> list[str]:
