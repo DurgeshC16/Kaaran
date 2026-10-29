@@ -33,6 +33,9 @@ RUN python -m kaaran.synth3 --seed 42 --out data/synthetic/block_demo \
  && python -m kaaran.synth --seed 42 --out data/synthetic/demo \
  && python -m kaaran.synth --seed 7 --names fictional --out data/synthetic/demo_fictional
 
+# Briefs and one-page PDFs of the main demo dataset, made now so a small (0.1 CPU) host serves them instantly.
+RUN python -m kaaran.warm --dataset blocks
+
 EXPOSE 8000
 HEALTHCHECK --interval=60s --timeout=10s --start-period=120s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"
 CMD ["python", "-m", "kaaran.api"]

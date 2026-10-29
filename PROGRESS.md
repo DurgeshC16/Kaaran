@@ -268,12 +268,13 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 
 ## Next task
 - 7.2 Real school frame in the demo: synth3 `--frame` using the real Solapur UDISE+ schools (pseudocodes, enrolment, teachers) with synthetic outcomes; clusters approximated by village panchayat; SYNTHETIC-marked outputs kept in data/real/.
-- Deploy to HF Spaces once HF_TOKEN/HF_USER are in .env (`scripts/deploy_hf.py`); connect Meta WhatsApp webhook (docs/DEPLOY.md); tag `build-submission`.
+- Owner: Render Blueprint deploy (docs/DEPLOY.md, render.yaml); find WHATSAPP_PHONE_NUMBER_ID; permanent token; run scripts/check_webhook.py; then Meta Verify and save; tag `build-submission`.
 - Record the video (docs/12) and polish the deck; submit before 2026-11-01 (hours early).
 - 6.4 upload (raw-body, no new dependency), optional.
 - Deploy; user testing (even 2-3 sessions; the user may skip it); video and deck.
 
 ## Decisions
+- 2026-10-30 Hosting: Hugging Face Docker Spaces need PRO (HTTP 402); owner chose the free route -> Render free plan (render.yaml). Image pre-builds briefs, PDFs and a prepared-state cache (kaaran.warm) and loads only the main dataset: under 512 MB / 0.1 CPU it is up in about 13 s, first answer about 16 s, then instant. Real-data aggregate goes to Render as a Secret File, never git.
 - 2026-10-29 Hosting: Hugging Face Spaces (Docker). WhatsApp: Meta Cloud API with the owner's phone, and evaluators use the web simulator (a Meta test number only reaches registered phones). Live Claude on the host with a spend cap. Deck generated with python-pptx (dev-only).
 - 2026-10-29 Answer shape: the short answer first, kendra cards only for attention/why questions, the full brief always one click away; reply language = question language.
 - 2026-10-28 Direct answers: facts are computed by code and phrased by fixed templates (no LLM). They are kept outside the evidence pack so recorded brief prompts stay valid. A data question naming a place is never refused.

@@ -110,19 +110,62 @@ class BlockWorkspace:
                     from ..synth3.generate import generate
 
                     generate(seed=self.spec.seed, out=self.folder, names=self.spec.names)
-                ing = ingest_block(raw)
-                trust = run_block_trust(ing.tables)
-                packs = {}
-                for name in sorted(ing.tables["schools"]["block"].unique()):
-                    an = analyze_block(ing.tables, trust, name)
-                    per, brief_actions, log = pick_actions(an, ing.tables)
-                    pack = _assemble(ing, trust, an, per, brief_actions, log)
-                    packs[pack["scope"]["focus"]] = pack
+                cached = self._load_prepared(raw)
+                if cached is not None:  # built at image build time (python -m kaaran.warm): fast start on small hosts
+                    ing, trust, packs, self._facts, self._district = cached
+                else:
+                    ing = ingest_block(raw)
+                    trust = run_block_trust(ing.tables)
+                    packs = {}
+                    for name in sorted(ing.tables["schools"]["block"].unique()):
+                        an = analyze_block(ing.tables, trust, name)
+                        per, brief_actions, log = pick_actions(an, ing.tables)
+                        pack = _assemble(ing, trust, an, per, brief_actions, log)
+                        packs[pack["scope"]["focus"]] = pack
                 self.packs = packs
                 self.block_names = {eid: p["entities"][eid]["name_en"] for eid, p in packs.items()}
                 self.ingest, self.trust = ing, trust
                 self.alerts = self.scan()
         return self
+
+    # ---- prepared-state cache (only written by `python -m kaaran.warm`; keyed on the raw files and the code) ----
+    def _prepared_key(self, raw: Path) -> str:
+        import hashlib
+
+        h = hashlib.sha256()
+        for f in sorted(raw.rglob("*")):
+            if f.is_file():
+                h.update(f"{f.relative_to(raw)}:{f.stat().st_size}".encode())
+        for f in sorted(Path(__file__).resolve().parents[1].rglob("*.py")):  # any code change invalidates the cache
+            h.update(f.read_bytes())
+        return h.hexdigest()
+
+    def _load_prepared(self, raw: Path):
+        import pickle
+
+        path = self.folder / "prepared.pkl"
+        if not path.exists():
+            return None
+        try:
+            with path.open("rb") as fh:
+                key, state = pickle.load(fh)
+            return state if key == self._prepared_key(raw) else None
+        except Exception:  # noqa: BLE001 - a stale or broken cache is simply rebuilt
+            return None
+
+    def save_prepared(self) -> Path:
+        """Write the prepared state (ingest, trust, packs, direct-answer facts) next to the data."""
+        import pickle
+
+        self.prepare()
+        self.district()
+        for b in self.packs:
+            self.facts(b)
+        path = self.folder / "prepared.pkl"
+        with path.open("wb") as fh:
+            pickle.dump((self._prepared_key(self.folder / "raw"), (self.ingest, self.trust, self.packs, self._facts, self._district)),
+                        fh, protocol=pickle.HIGHEST_PROTOCOL)
+        return path
 
     @property
     def analyses(self) -> dict[str, dict]:  # interface used by Service.resolve_brief

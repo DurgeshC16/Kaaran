@@ -60,8 +60,8 @@ def html_to_pdf(document: str, out_path: str | Path, timeout: int = 90) -> Path:
         cmd = [browser, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
                "--disable-extensions", f"--user-data-dir={Path(d) / 'profile'}", "--no-pdf-header-footer",
                "--print-to-pdf-no-header", f"--print-to-pdf={out_path}", src.as_uri()]
-        if _needs_no_sandbox():  # Chromium refuses to run as root (containers) without this flag
-            cmd.insert(1, "--no-sandbox")
+        if _needs_no_sandbox():  # containers: Chromium refuses to run as root without --no-sandbox, and the default
+            cmd[1:1] = ["--no-sandbox", "--disable-dev-shm-usage"]  # 64 MB /dev/shm can crash it on small hosts
         if out_path.exists():
             out_path.unlink()
         try:

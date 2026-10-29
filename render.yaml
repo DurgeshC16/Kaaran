@@ -1,0 +1,38 @@
+# Render Blueprint (free plan): Dashboard > New > Blueprint > pick this repo > fill the secrets > Apply. docs/DEPLOY.md
+# Free web services have 512 MB RAM and sleep after 15 minutes idle (the first visit then takes about a minute).
+services:
+  - type: web
+    name: kaaran
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: false   # the evaluated version stays frozen; deploy by hand (Manual Deploy) when needed
+    envVars:
+      - key: KAARAN_DATASETS        # only the main demo dataset fits in 512 MB
+        value: blocks
+      - key: KAARAN_DEMO_DATASET
+        value: blocks
+      - key: KAARAN_LLM_MODE        # live Claude for new wordings, recorded answers first; capped below
+        value: live
+      - key: KAARAN_MAX_LIVE_USD
+        value: "10"
+      - key: KAARAN_MAX_VOICE_INR
+        value: "500"
+      - key: KAARAN_MODEL_MAIN      # must match the recorded llm_cache
+        value: claude-sonnet-5-5
+      - key: KAARAN_MODEL_LIGHT
+        value: claude-haiku-5-5
+      - key: ANTHROPIC_API_KEY      # secrets: Render asks for these when the Blueprint is applied (never in git)
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false

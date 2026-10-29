@@ -25,8 +25,8 @@ source file, sheet and rows. Claude reads the question and writes the Marathi; i
 
 | | |
 |---|---|
-| Web app | **https://&lt;HF_USER&gt;-kaaran.hf.space** (TODO: replace with the real Space URL after deploy, see [docs/DEPLOY.md](docs/DEPLOY.md)) |
-| WhatsApp simulator | **https://&lt;HF_USER&gt;-kaaran.hf.space/whatsapp** (TODO) |
+| Web app | **https://kaaran.onrender.com** (TODO: confirm the URL after deploy, see [docs/DEPLOY.md](docs/DEPLOY.md); free plan, first visit after a quiet spell can take ~15 s) |
+| WhatsApp simulator | **https://kaaran.onrender.com/whatsapp** (TODO: confirm) |
 | Source | https://github.com/DurgeshC16/Kaaran |
 
 The free Space may sleep when idle. The synthetic data is generated when the image is built; the first request
@@ -199,7 +199,7 @@ docker run -p 8000:8000 --env-file .env kaaran                    # with your ke
 The image has Chromium and Noto fonts (for Devanagari PDFs). Secrets come from the environment only.
 `.dockerignore` keeps `.env` and `data/` out of the image.
 
-Public deploy (Hugging Face Spaces) and the real WhatsApp number: [docs/DEPLOY.md](docs/DEPLOY.md).
+Public deploy (Render free plan, render.yaml; Hugging Face Spaces with PRO as an alternative) and the real WhatsApp number: [docs/DEPLOY.md](docs/DEPLOY.md).
 Demo script and WhatsApp details: [docs/DEMO.md](docs/DEMO.md).
 
 ## Configuration (`.env.example`)
@@ -321,7 +321,7 @@ Dockerfile         demo image (Python 3.11-slim + Chromium + Noto fonts)
 | [09 Progress report](docs/09_PROGRESS_REPORT.md) | what is built, real-data findings, quality numbers |
 | [10 Testing guide](docs/10_TESTING_GUIDE.md) | how to run and test everything, step by step |
 | [User testing](docs/USER_TESTING.md) | test rounds, feedback, what we changed, pilot protocol |
-| [Deploy](docs/DEPLOY.md) | Hugging Face Spaces, Meta WhatsApp setup, smoke tests |
+| [Deploy](docs/DEPLOY.md) | Render (free) / Hugging Face Spaces, Meta WhatsApp setup, webhook checker, smoke tests |
 | [Demo](docs/DEMO.md) · [Evidence schema](docs/EVIDENCE_SCHEMA.md) · [Confidence rules](docs/CONFIDENCE_RULES.md) · [Synthetic data spec](docs/SYNTHETIC_DATA_SPEC.md) | demo script and technical contracts |
 
 ## Data note

@@ -1,7 +1,43 @@
-# Deploying Kaaran (Hugging Face Spaces + Meta WhatsApp Cloud API)
+# Deploying Kaaran (Render free plan + Meta WhatsApp Cloud API)
 
-This guide puts the demo on a public link (`https://<HF_USER>-kaaran.hf.space`), connects the real WhatsApp test
-number, and freezes the submitted version. For running locally and the demo script, see [DEMO.md](DEMO.md).
+This guide puts the demo on a public link on **Render's free plan** (`https://kaaran.onrender.com`, or the URL
+Render gives your service), connects the real WhatsApp test number, and freezes the submitted version. For running
+locally and the demo script, see [DEMO.md](DEMO.md).
+
+> Hugging Face Spaces (sections 1-2) now need a paid PRO subscription for Docker Spaces (HTTP 402 since Oct 2026),
+> so the submitted demo runs on Render. The Hugging Face path is kept for teams that have PRO.
+
+## Render free plan (the deployed demo)
+
+The free plan gives 512 MB RAM and 0.1 CPU, and the service sleeps after 15 minutes without visits. Kaaran is
+prepared for this (tested locally with `docker run --memory=512m --cpus=0.1`):
+- the image **pre-builds** the main dataset at build time (`python -m kaaran.warm`): packs, briefs, all 22 one-page
+  PDFs and a prepared-state cache (`prepared.pkl`, keyed on the raw files and the code);
+- `KAARAN_DATASETS=blocks` loads only the main demo dataset (about 210 MB in use);
+- measured under those limits: up in about 13 s, first answer about 16 s, then answers, home pages and PDFs in under
+  a second.
+
+Steps (about 10 minutes):
+1. Sign up at https://render.com with GitHub (free, no card). When asked, allow Render's GitHub app to access the
+   `DurgeshC16/Kaaran` repository (it is private).
+2. Dashboard → **New → Blueprint** → pick `DurgeshC16/Kaaran`. Render reads `render.yaml` (web service `kaaran`,
+   Docker, free plan, Singapore, health check `/healthz`, auto-deploy off so the evaluated version stays frozen).
+3. Render asks for the secret values (they are stored by Render, never in git). Copy them from your local `.env`:
+   `ANTHROPIC_API_KEY`, `SARVAM_API_KEY`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`,
+   `WHATSAPP_VERIFY_TOKEN`. Leave one empty if you do not have it yet (WhatsApp sending then stays off); add it later
+   under the service's **Environment** tab and click **Save, rebuild and deploy**.
+4. Click **Apply**. The first build takes about 10 minutes (Chromium, fonts, data, PDFs). The URL appears at the top
+   of the service page.
+5. **Keep it awake (recommended):** create a free monitor at https://uptimerobot.com (HTTP, every 5 minutes) on
+   `https://<your-service>.onrender.com/healthz`. One always-on free service fits in Render's 750 free hours a month,
+   and judges then never wait for a cold start.
+6. Run the checks: `.venv\Scripts\python scripts\check_webhook.py https://<your-service>.onrender.com` (section 4)
+   and the smoke tests (section 5).
+7. **Real-data page (`/real`):** the aggregate Solapur snapshot (block totals from public UDISE+, no school
+   identifiers) is never in git. Upload it as a Render **Secret File**: service → **Environment → Secret Files → Add**,
+   file name `real_snapshot.json`, contents = your local `data/real/reports/real_snapshot.json`. Render mounts it at
+   `/etc/secrets/real_snapshot.json`, where the app looks for it. Save and redeploy, then open `/real`.
+
 
 What the image already does (`Dockerfile`):
 - Python 3.11-slim, with Chromium and Noto fonts so the Marathi PDF is shaped correctly.
@@ -127,12 +163,19 @@ simulator still works.
    4. Copy the token into the `WHATSAPP_TOKEN` secret.
 
    The temporary token on the API Setup page expires after 24 hours. Use it only for a quick test.
-5. **Phone number id.** Copy *Phone number ID* from *WhatsApp → API Setup* into `WHATSAPP_PHONE_NUMBER_ID`.
+5. **Phone number id.** It is a long number (15-16 digits), not the phone number itself. Find it in either place:
+   - developers.facebook.com → *My Apps* → your app → left menu **WhatsApp → API Setup** (in the new dashboard:
+     *Use cases → Connect with customers through WhatsApp → Customize → API Setup*). In *Step 1, Send and receive
+     messages*, the **From** box shows the test number and, right under it, **Phone number ID** (with a copy icon) and
+     **WhatsApp Business Account ID**;
+   - or business.facebook.com → **WhatsApp Manager → Phone numbers** → click the number → **Phone number ID**.
+
+   Put it in `WHATSAPP_PHONE_NUMBER_ID` (digits only).
 6. **App secret.** Copy it from *App settings → Basic → App secret* (click *Show*) into `WHATSAPP_APP_SECRET`.
-7. **Restart the Space** so the new secrets load. `GET /api/whatsapp/status` should show `"send": true`,
+7. **Redeploy** (Render: *Save, rebuild and deploy*; Hugging Face: restart the Space) so the new secrets load. `GET /api/whatsapp/status` should show `"send": true`,
    `"verify_token": true` and `"app_secret": true`.
 8. **Webhook.** Open *WhatsApp → Configuration → Webhook → Edit* and enter:
-   - **Callback URL:** `https://<HF_USER>-kaaran.hf.space/whatsapp/webhook`;
+   - **Callback URL:** `https://<your-service>.onrender.com/whatsapp/webhook`;
    - **Verify token:** the same value as `WHATSAPP_VERIFY_TOKEN`.
 
    Click **Verify and save**. Meta sends a GET with `hub.challenge`, and Kaaran echoes it only when the token
@@ -146,7 +189,7 @@ simulator still works.
 ## 5. Smoke tests (after every deploy)
 
 ```bash
-BASE=https://<HF_USER>-kaaran.hf.space
+BASE=https://<your-service>.onrender.com
 curl -s $BASE/healthz                 # {"ok": true, "llm_mode": "live"|"replay", "pdf_browser": true, "whatsapp": {...}, "default_dataset": "blocks"}
 curl -s $BASE/api/voice/status        # "configured": true, stt_model saaras:v4, tts_model bulbul:v4-flash
 curl -s $BASE/api/whatsapp/status     # config send / verify_token / app_secret all true; recent events
@@ -170,8 +213,8 @@ Then by hand in a browser:
 - [ ] the PDF downloads as one A4 page;
 - [ ] `/whatsapp` (simulator): `hello`, then a question;
 - [ ] if voice is on, 🎤 and 🔊 work;
-- [ ] `/real` says "No real-data snapshot on this machine". This is expected: real files are never committed or
-      deployed, so the real-data page is shown from a local run (video) only.
+- [ ] `/real` shows the green REAL PUBLIC DATA page once the aggregate snapshot is uploaded as a Render Secret File
+      (Render step 7); without it the page says no snapshot is available, which is also safe.
 
 ## 6. Freeze the submitted version
 
