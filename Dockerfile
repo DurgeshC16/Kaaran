@@ -37,5 +37,5 @@ RUN python -m kaaran.synth3 --seed 42 --out data/synthetic/block_demo \
 RUN python -m kaaran.warm --dataset blocks
 
 EXPOSE 8000
-HEALTHCHECK --interval=60s --timeout=10s --start-period=120s CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"
+HEALTHCHECK --interval=60s --timeout=10s --start-period=120s CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/healthz' % os.environ.get('PORT', '8000'))"
 CMD ["python", "-m", "kaaran.api"]
