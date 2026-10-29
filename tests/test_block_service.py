@@ -20,10 +20,11 @@ def test_scan_alerts_lead_with_the_focus_block(block_service):
 def test_question_and_alert_open_the_same_brief(block_service):
     a = block_service.ask("पंढरपूर तालुक्यात कोणत्या केंद्रांकडे लक्ष द्यावे?")
     assert a.status == "ok" and a.brief_id == "blocks.BPandharpur" and a.info["verified"]
-    assert a.summary["mr"]["notes"] and "लक्ष देण्याची गरज" in a.summary["mr"]["notes"][0]
+    assert a.summary["mr"]["mode"] == "cards" and "full-evidence" in a.html["mr"]  # kendra cards first, the brief behind a button
     o = block_service.open_block(None, "BPandharpur")
     assert o.status == "ok" and o.info["intent_source"] == "alert" and o.html["en"] == a.html["en"]
-    assert {it["section"] for it in a.summary["en"]["items"]} == {"attention", "why", "action"}
+    assert all(it["section"].startswith("card:") for it in a.summary["en"]["items"])
+    assert {it["type"] for it in a.summary["en"]["items"]} >= {"RISK", "CAUSE", "ACTION"}
     with pytest.raises(KeyError):
         block_service.open_block(None, "BNowhere")
 

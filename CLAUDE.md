@@ -37,6 +37,8 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Real public data snapshot (UDISE+ microdata in data/real/, never committed): `.venv\Scripts\python -m kaaran.real --udise data/real/udise_2425 --aikosh data/real/aikosh/UDISE_plus-19-20_teachers_solapur_mah.csv --benchmarks data/real/prs2024/benchmarks.json` (writes data/real/reports/; web page /real)
 - Demo server (web + WhatsApp webhook): `.venv\Scripts\python -m kaaran.api` (http://127.0.0.1:8000, simulator at /whatsapp; setup in docs/DEMO.md)
 - Voice (Sarvam AI, optional): set SARVAM_API_KEY in .env; check with `GET /api/voice/status`. Tests never call Sarvam (conftest sets KAARAN_VOICE=off)
+- Deploy to Hugging Face Spaces (needs HF_TOKEN, HF_USER in .env): `.venv\Scripts\python scripts\deploy_hf.py` (docs/DEPLOY.md)
+- Build the submission deck: `.venv\Scripts\python scripts\make_deck.py` (writes docs/Kaaran_Build_Deck.pptx)
 - Prompt-injection check: `.venv\Scripts\python -m kaaran.eval.guardrails`
 - Mapping eval (baseline vs LLM, both layouts): `.venv\Scripts\python -m kaaran.eval.mapping --seed 42` (`KAARAN_LLM_MODE=live` to record new responses)
 
@@ -54,6 +56,7 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - src/kaaran/brief: Brief Writer (texts.py wording, render.py placeholder filling, writer.py LLM + fallback)
 - src/kaaran/service.py: demo service (datasets, cached packs/briefs, question -> clarify | refuse | brief + summary)
 - src/kaaran/brief/html.py, pdf.py: interactive/print HTML brief; PDF via headless Edge/Chrome
+- src/kaaran/block/answers.py, view.py: direct answers (facts, rankings, district, why-it-improved, multi-part, language) and the answer views (answer card, kendra cards, brief behind a button)
 - src/kaaran/voice: Sarvam STT/TTS client (cache, usage log, spend cap) and the spoken one-minute script
 - src/kaaran/whatsapp.py: WhatsApp bot, Cloud API client, webhook signature + de-duplication
 - src/kaaran/api: FastAPI app (web demo, drill-down, PDF, webhook, simulator) and static pages

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import threading
 import time
+import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -20,7 +21,7 @@ from .brief.pdf import html_to_pdf
 from .brief.render import fill
 from .ingest import IngestResult, ingest
 from .llm import intent
-from .block.answers import is_greeting
+from .block.answers import detect_lang, is_greeting, metrics_asked, superlative
 from .llm.client import setting
 from .synth.generate import generate
 from .trust import TrustResult, run_trust
@@ -61,6 +62,8 @@ CLARIFY = {
                         "The taluka in your question is not clear. Please name one taluka:"),
     "missing_place": ("कोणत्या तालुक्याबद्दल विचारत आहात? कृपया तालुक्याचे नाव लिहा:",
                       "Which taluka are you asking about? Please name one of these talukas:"),
+    "unknown_kendra": ("हे केंद्र सापडले नाही. कृपया केंद्राचे नाव तपासा, किंवा तालुका सांगा. तालुके:",
+                       "I could not find that kendra. Please check the kendra name, or name the block. Blocks:"),
     "unsupported_subject": ("सध्याच्या डेटामध्ये फक्त गणिताचे निकाल आहेत. कृपया गणिताबद्दल विचारा. तालुके:",
                             "The data only has maths results. Please ask about maths. Talukas:"),
 }
@@ -101,6 +104,7 @@ class Answer:
     summary: dict = field(default_factory=dict)  # lang -> {title, banner, items[], notes[]} (ok only)
     html: dict[str, str] = field(default_factory=dict)  # lang -> interactive brief fragment (ok only)
     info: dict = field(default_factory=dict)
+    answer_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -218,6 +222,8 @@ class Service:
             raise ValueError(f"unknown default dataset {self.default!r}")
         self.workspaces = {k: _workspace_for(spec, root) for k, spec in self.datasets.items()}
         self._voice = voice  # SarvamClient; created lazily from settings when None
+        self._answers: dict[str, Answer] = {}
+        self._answers_lock = threading.Lock()
 
     # ---------- voice (Sarvam AI) ----------
 
@@ -235,12 +241,35 @@ class Service:
         names = [str(n) for col in ("taluka_mr", "taluka") if col in t for n in t[col] if isinstance(n, str) and n]
         return list(dict.fromkeys(names))[:50]
 
-    def ask_voice(self, audio: bytes, mime: str, dataset: str | None = None, lang: str = "mr", on_progress=None) -> Answer:
-        """Speech -> text (Sarvam) -> the normal question flow. Raises VoiceUnavailable when speech cannot be used."""
-        tr = self.voice.stt(audio, mime, self.keyterms(dataset), language="mr" if lang == "mr" else None)
-        answer = self.ask(tr.text, dataset, on_progress=on_progress)
+    def ask_voice(self, audio: bytes, mime: str, dataset: str | None = None, lang: str = "mr", on_progress=None,
+                  context: str | None = None) -> Answer:
+        """Speech -> text (Sarvam, spoken language detected) -> the normal question flow. The reply language follows the
+        language spoken. Raises VoiceUnavailable when speech cannot be used."""
+        tr = self.voice.stt(audio, mime, self.keyterms(dataset), language=None)
+        spoken = "en" if str(tr.language_code).startswith("en") else "mr" if str(tr.language_code).startswith("mr") else lang
+        answer = self.ask(tr.text, dataset, on_progress=on_progress, context=context, default_lang=spoken)
         answer.info |= {"transcript": tr.text, "stt_language": tr.language_code, "stt_seconds": tr.seconds, "input": "voice"}
         return answer
+
+    def remember(self, answer: Answer) -> Answer:
+        """Keep recent answers (by id) so their spoken version can be fetched (web Listen button)."""
+        with self._answers_lock:
+            self._answers[answer.answer_id] = answer
+            while len(self._answers) > 200:
+                self._answers.pop(next(iter(self._answers)))
+        return answer
+
+    def recall(self, answer_id: str) -> Answer:
+        with self._answers_lock:
+            return self._answers[answer_id]
+
+    def voice_answer(self, answer: Answer, lang: str = "mr") -> Path:
+        """Spoken version (MP3, cached) of an answer: the direct answer, or the kendra cards, built by code."""
+        from .voice.script import spoken_summary
+
+        if answer.status != "ok":
+            return self.voice.tts(answer.reply[lang], lang)
+        return self.voice.tts(spoken_summary(answer.summary[lang], lang), lang)
 
     def voice_summary(self, brief_id: str, lang: str = "mr") -> Path:
         """One-minute spoken summary (MP3, cached) of a brief, built by code from the verified summary."""
@@ -273,8 +302,37 @@ class Service:
 
     # ---------- the question flow ----------
 
-    def ask(self, question: str, dataset: str | None = None, on_progress=None) -> Answer:
-        """Intent -> (clarify | refuse | brief). `on_progress()` is called before a brief that is not cached yet."""
+    def ask(self, question: str, dataset: str | None = None, on_progress=None, context: str | None = None,
+            default_lang: str = "mr") -> Answer:
+        """Intent -> (clarify | refuse | answer). `context` is the officer's previous question when Kaaran asked a
+        clarifying question ("which taluka?"): the reply ("Solapur district", "पंढरपूर") completes it.
+        `on_progress()` is called before a brief that is not cached yet."""
+        lang = detect_lang(question, default_lang)
+        ctx = (context or "").strip()
+        # a reply that only fills the missing slot ("Pandharpur", "In the Solapur district") completes the earlier
+        # question; a new complete question is answered on its own (and gets the earlier one only if it fails)
+        fills = bool(ctx) and len(question.split()) <= 5 and not metrics_asked(question) and not superlative(question)
+        if fills:
+            combined = self._followup(ctx, question, dataset, on_progress, lang)
+            if combined is not None:
+                return self.remember(combined)
+        answer = self._ask(question, dataset, on_progress)
+        answer.info["reply_lang"] = lang
+        if ctx and not fills and answer.status != "ok":
+            combined = self._followup(ctx, question, dataset, on_progress, lang)
+            if combined is not None:
+                return self.remember(combined)
+        return self.remember(answer)
+
+    def _followup(self, ctx: str, question: str, dataset, on_progress, lang: str) -> Answer | None:
+        combined = self._ask(f"{ctx} {question}", dataset, on_progress)
+        if combined.status != "ok":
+            return None
+        combined.question = question
+        combined.info |= {"followup_of": ctx, "reply_lang": detect_lang(ctx + " " + question, lang)}
+        return combined
+
+    def _ask(self, question: str, dataset: str | None = None, on_progress=None) -> Answer:
         t0 = time.monotonic()
         key = dataset or self.default
         ws = self.workspace(key)
@@ -309,7 +367,7 @@ class Service:
         if focus not in ws.prepare().analyses:
             raise KeyError(f"unknown block {focus!r}")
         plan = {"status": "ok", "taluka_id": focus, "question_type": "other", "metric": "score", "source": "alert"}
-        return self._answer(key, ws, "", plan, {"intent_source": "alert", "intent_cost_usd": 0.0}, t0, on_progress)
+        return self.remember(self._answer(key, ws, "", plan, {"intent_source": "alert", "intent_cost_usd": 0.0}, t0, on_progress))
 
     def alerts(self, dataset: str | None = None) -> list[dict]:
         ws = self.workspace(dataset)
@@ -324,7 +382,7 @@ class Service:
             plan = plan | {"answer": ws.direct_answer(focus, question, plan)}
         summary = {lang: ws.summarize(pack, b, plan, lang) for lang in LANGS}
         wording = sorted(set(b.sources.values()))
-        info |= {"brief_cost_usd": round(b.info.get("cost_usd", 0.0), 4), "wording": wording,
+        info |= {"district": bool(plan.get("district")), "brief_cost_usd": round(b.info.get("cost_usd", 0.0), 4), "wording": wording,
                  "llm_available": b.info.get("llm_available"), "verified": b.info.get("verification", {}).get("passed"),
                  "seconds": round(time.monotonic() - t0, 2)}
         ent = pack["entities"][focus]
@@ -333,7 +391,7 @@ class Service:
             reply={lang: as_text(summary[lang]) for lang in LANGS},
             focus=focus, focus_name={lang: taluka_name(ent, lang) for lang in LANGS},
             brief_id=self.brief_id(key, focus), summary=summary,
-            html={lang: (ws.answer_html(focus, plan, lang) if hasattr(ws, "answer_html") else "") + ws.fragment(focus, lang)
+            html={lang: ws.answer_html(focus, plan, lang) if hasattr(ws, "answer_html") else ws.fragment(focus, lang)
                   for lang in LANGS}, info=info,
         )
 

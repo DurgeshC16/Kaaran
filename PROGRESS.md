@@ -35,6 +35,42 @@ Phase 2 stages:
 
 Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; first needed in Phase 3.
 
+## Phase 8 result (2026-10-29): final build from user testing round 2 (answers that fit the question, UI, deploy, docs)
+- **Round 2 (2026-10-29):** the product owner tested 12 questions, voice and WhatsApp. The log is in docs/USER_TESTING.md and the regressions in tests/test_officer_questions.py.
+- **Answer modes** (`block/workspace.py _direct_answer`, `block/view.py`):
+
+  | Mode | When | Answer |
+  |---|---|---|
+  | fact | a figure | 1–2 lines plus the source files |
+  | rank | best/worst/highest/lowest | top 3 blocks |
+  | cards | needs attention, why it fell, a block overview | kendra cards: what / why with its label / what to do with owner |
+  | cluster | a kendra | its status plus its card |
+  | dq | which records are unreliable | the kendras named, why they are excluded, what to check |
+  | why_up | why it improved | the rise, the kendras that rose most, the inputs that moved, "associated with" wording |
+  | twin | similar block did better | the learn-from card |
+
+  In every mode the full A/B/C brief sits behind a "📄 Show the full evidence brief" button.
+- **New scopes and inputs:**
+  - **District scope:** "how many schools in Solapur", and a figure asked with no place, get district totals. "Why …" with no place still asks which taluka.
+  - **Multi-part questions:** "X shala kiti, Y PTR kiti, Z shikshak kiti kami" is answered part by part, misspellings included.
+  - **New metrics:** kendra count, single-teacher schools, vacancies, pupils.
+- **Conversation and language:**
+  - **Follow-ups:** after "which taluka?", the next reply completes the earlier question. This works on web (`context`), voice and WhatsApp (per sender).
+  - **Reply language** follows the question (Devanagari → mr; Marathi typed in Latin letters → mr; English → en). STT detects the spoken language automatically.
+- **WhatsApp:**
+  - Short answers come as text + voice note + a "reply 'report'" hint.
+  - Card answers come as text + PDF + voice.
+  - 'report' after a short answer opens the full brief.
+- **Web:**
+  - A per-answer voice reply (`/api/answers/{id}/voice`).
+  - Role home pages `/api/home` (DEO: district tiles, blocks needing attention, all blocks; BEO: block tiles, kendra cards, all kendras).
+  - UI redesigned in government-portal style.
+- **Deploy:**
+  - Dockerfile is ready for Hugging Face Spaces: uid 1000; the synthetic data is generated at build time; healthcheck. The local build and smoke test pass, including the Chromium PDF.
+  - `scripts/deploy_hf.py` creates the Space, sets secrets and variables, and pushes committed app files only. No force push, no new dependencies.
+- **Dependency:** python-pptx 1.0.2 was added as dev-only (approved) for `scripts/make_deck.py`. It pulls in lxml, so `kaaran/__init__.py` pins openpyxl's pure-Python writer (`OPENPYXL_LXML=False`) to keep generated Excel files byte-identical.
+- **Docs:** README (submission rules), docs/USER_TESTING.md, docs/DEPLOY.md, docs/13_FINAL_GUIDE.md (everything built, video test cases, market, data and generalisation answers), docs/12 video script, docs/Kaaran_Build_Deck.pptx.
+
 ## Phase 6.5 result (2026-10-28): direct answers (fix for "dummy answers" from user testing)
 - Root causes:
   - The demo runs in replay mode, so any question not already recorded falls back to the rule matcher. The matcher refused valid questions (PTR, "how many schools", "what should I do").
@@ -232,12 +268,14 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 
 ## Next task
 - 7.2 Real school frame in the demo: synth3 `--frame` using the real Solapur UDISE+ schools (pseudocodes, enrolment, teachers) with synthetic outcomes; clusters approximated by village panchayat; SYNTHETIC-marked outputs kept in data/real/.
-- Re-test Parts C/D/E6b with the user's own questions (ask for the exact wording of any that still look like dummy answers).
-- Demo in live intent mode (`KAARAN_LLM_MODE=live`, spend cap) for unseen wordings; record new intents for the deck questions.
+- Deploy to HF Spaces once HF_TOKEN/HF_USER are in .env (`scripts/deploy_hf.py`); connect Meta WhatsApp webhook (docs/DEPLOY.md); tag `build-submission`.
+- Record the video (docs/12) and polish the deck; submit before 2026-11-01 (hours early).
 - 6.4 upload (raw-body, no new dependency), optional.
 - Deploy; user testing (even 2-3 sessions; the user may skip it); video and deck.
 
 ## Decisions
+- 2026-10-29 Hosting: Hugging Face Spaces (Docker). WhatsApp: Meta Cloud API with the owner's phone, and evaluators use the web simulator (a Meta test number only reaches registered phones). Live Claude on the host with a spend cap. Deck generated with python-pptx (dev-only).
+- 2026-10-29 Answer shape: the short answer first, kendra cards only for attention/why questions, the full brief always one click away; reply language = question language.
 - 2026-10-28 Direct answers: facts are computed by code and phrased by fixed templates (no LLM). They are kept outside the evidence pack so recorded brief prompts stay valid. A data question naming a place is never refused.
 - 2026-10-28 Voice provider: Sarvam AI (saaras:v4 STT, bulbul:v4-flash TTS); key in .env only. Voice is optional: without a key, the mic and Listen buttons are hidden and WhatsApp asks the officer to type.
 - 2026-10-28 Voice reply format: MP3 audio message (no ffmpeg dependency); spoken script built by code from the summary (no LLM, no new numbers).

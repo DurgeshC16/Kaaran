@@ -59,7 +59,7 @@ def test_factual_question_gets_a_direct_answer_with_sources(block_service):
     assert a.status == "ok" and a.focus == "BPandharpur"
     assert answer_lines(a)[0].startswith(f"Pandharpur has {n} schools")
     assert a.summary["en"]["items"][0]["section"] == "answer"  # the answer comes before the brief
-    assert 'data-n="n.fact.BPandharpur.schools"' in a.html["en"] and "direct-answer" in a.html["en"]
+    assert 'data-n="n.fact.BPandharpur.schools"' in a.html["en"] and "answer-card" in a.html["en"]
     mr = block_service.ask("पंढरपूर मध्ये किती शाळा आहेत?")
     assert answer_lines(mr, "mr")[0].startswith("पंढरपूरमध्ये") and str(n) not in answer_lines(mr, "mr")[0]  # Devanagari digits
     client = TestClient(create_app(block_service))
@@ -69,7 +69,7 @@ def test_factual_question_gets_a_direct_answer_with_sources(block_service):
 
 def test_ptr_attendance_teachers_and_rule_fallback(block_service):
     for q, words in (("What is PTR in Karmala?", "pupil-teacher ratio"), ("What is the attendance in Sangola?", "average attendance"),
-                     ("How many teacher posts are vacant in Mohol?", "sanctioned posts"),
+                     ("How many teacher posts are vacant in Mohol?", "Vacant teacher posts in Mohol"),
                      ("Kendra Pramukh visits in Pandharpur", "Kendra Pramukh visits per school")):
         a = block_service.ask(q)
         assert a.status == "ok" and any(words in t for t in answer_lines(a)), q
@@ -81,7 +81,8 @@ def test_cluster_question_opens_its_block(block_service):
     a = block_service.ask("What about Bhalwad Khurd kendra?")
     assert a.status == "ok" and a.focus == "BPandharpur" and a.plan["cluster"] == "08K03"
     lines = answer_lines(a)
-    assert lines[0] == "Bhalwad Khurd Kendra needs attention now; the reasons and actions are in the brief below."
+    assert lines[0] == "Bhalwad Khurd Kendra needs attention now; the reasons and actions are below."
+    assert a.summary["en"]["mode"] == "cluster" and 'kcard' in a.html["en"]  # that kendra's card follows
     assert any("schools" in t for t in lines) and any("maths" in t for t in lines)
     assert "Kendra Kendra" not in " ".join(lines)
     client = TestClient(create_app(block_service))
@@ -95,7 +96,7 @@ def test_which_block_needs_attention_and_comparisons(block_service):
     c = block_service.ask("Compare Pandharpur and Sangola maths results")
     lines = answer_lines(c)
     assert c.focus == "BPandharpur" and lines[0].startswith("Pandharpur: maths") and lines[1].startswith("Sangola: maths")
-    assert any("Sangola" in n for n in c.summary["en"]["notes"])
+    assert c.summary["en"]["mode"] == "fact" and "kcard" not in c.html["en"]  # figures only, the brief behind a button
     client = TestClient(create_app(block_service))  # the compared block's figure is clickable too
     assert client.get(f"/api/briefs/{c.brief_id}/number", params={"id": "n.fact.BSangola.maths_pct"}).status_code == 200
 
@@ -112,7 +113,7 @@ def test_whatsapp_reply_starts_with_the_answer(block_service):
 
     a = block_service.ask("What is PTR in Karmala?")
     text = as_text(a.summary["en"])
-    assert text.index("Direct answer") < text.index("pupil-teacher ratio") < text.index("What needs attention")
+    assert text.index("Direct answer") < text.index("pupil-teacher ratio") and "What needs attention" not in text
 
 
 # ---------- regressions from the adversarial review ----------

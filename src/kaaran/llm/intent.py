@@ -148,6 +148,16 @@ def _name_patterns(name: str) -> list[re.Pattern]:
     return [re.compile(r"(?<![\wऀ-ॿ])" + p) for p in pats]
 
 
+def _aliases(g: dict) -> list[str]:
+    """Gazetteer names plus reversed direction forms: "North Solapur" = "Solapur North", "उत्तर सोलापूर" = "सोलापूर उत्तर"."""
+    names = [n for n in (g["en"], g["mr"]) if n]
+    for n in list(names):
+        parts = n.split()
+        if len(parts) == 2 and parts[0].lower() in ("north", "south", "east", "west", "उत्तर", "दक्षिण", "पूर्व", "पश्चिम"):
+            names.append(f"{parts[1]} {parts[0]}")
+    return names
+
+
 def places_in(question: str, gaz: list[dict]) -> list[str]:
     """Gazetteer ids named in the question (exact or close spelling), in the order they are said, no duplicates."""
     q = _norm(question)
@@ -159,7 +169,7 @@ def places_in(question: str, gaz: list[dict]) -> list[str]:
         pos += len(t)
     found: dict[str, int] = {}
     for g in gaz:
-        for n in (g["en"], g["mr"]):
+        for n in _aliases(g):
             if not n:
                 continue
             at = min((m.start() for p in _name_patterns(n) for m in [p.search(q)] if m), default=-1)
@@ -189,8 +199,11 @@ def rule_plan(question: str, gaz: list[dict], years: list[str]) -> dict:
             "metric": "attendance" if any(w in q for w in ("attendance", "hajeri", "हजेरी", "उपस्थिती")) else "score",
             "year_from": None, "year_to": None, "reason": None}
     people = any(w in q for w in REFUSE_PEOPLE + ["student", "विद्यार्थी"])
+    toks = set(q.split())
     if any(w in q for w in REFUSE_DATA) or any(w in q for w in PEOPLE_PATTERNS) or (
-            people and any(w in q for w in RANKING + LIST_WORDS + ["name", "नाव"])):
+            people and (any(w in toks for w in LIST_WORDS) or any(w in q for w in ["name", "नाव", "यादी", "list of"])
+                        or any(w in q for w in RANKING) and any(w in q for w in ["teacher", "शिक्षक", "student", "विद्यार्थ्य"])
+                        and not any(w in q for w in ["block", "taluka", "तालुक", "kendra", "केंद्र", "district", "जिल्ह"]))):
         return plan | {"status": "refuse", "reason": "personal_data" if any(w in q for w in REFUSE_DATA) else "individual_people"}
     hits = places_in(question, gaz)
     if any(w in q for w in OFF_TOPIC) or not (any(w in q for w in TOPIC_WORDS) or is_bare_place(question, gaz)):

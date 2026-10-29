@@ -119,8 +119,8 @@ def test_bot_clarify_refuse_and_pdf_failure(demo_service, monkeypatch):
         raise PdfUnavailable("no browser")
 
     monkeypatch.setattr(Workspace, "pdf", no_pdf)
-    replies = run(bot, "Why did maths fall in Pandharpur?")
-    assert replies[-1].kind == "text" and replies[-1].text == PDF_MISSING[0]
+    replies = run(bot, "Why did maths fall in Pandharpur?")  # asked in English: the reply is in English
+    assert replies[-1].kind == "text" and replies[-1].text == PDF_MISSING[1]
 
 
 def test_simulate_uses_the_same_bot(demo_service, fake_pdf):

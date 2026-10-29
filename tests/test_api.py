@@ -110,7 +110,7 @@ def test_simulator(client, monkeypatch, tmp_path):
     stub.write_bytes(b"%PDF-1.4 stub")
     monkeypatch.setattr(Workspace, "pdf", lambda self, focus, lang: stub)
     hi = client.post("/api/whatsapp/simulate", json={"sender": "t", "text": "hi"}).json()["replies"]
-    assert len(hi) == 1 and "कारण" in hi[0]["text"]
+    assert len(hi) == 1 and "Kaaran" in hi[0]["text"]  # an English greeting gets the English help
     r = client.post("/api/whatsapp/simulate", json={"sender": "t", "text": "पंढरपूरचा गणिताचा निकाल का घसरला?"}).json()["replies"]
     assert r[-1]["kind"] == "document" and r[-1]["url"] == "/api/briefs/demo.T08/pdf?lang=mr"
     assert client.fake_api.sent == []  # the simulator never calls the Cloud API

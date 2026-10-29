@@ -24,6 +24,7 @@ import httpx
 
 from .brief.pdf import PdfUnavailable
 from .llm.client import setting
+from .block.answers import detect_lang
 from .service import LANGS, Service, as_text
 
 GRAPH = "https://graph.facebook.com"
@@ -60,6 +61,10 @@ HELP = (
 HELP_WORDS = {"", "hi", "hello", "help", "start", "menu", "नमस्कार", "नमस्ते", "मदत", "हाय"}
 LANG_WORDS = {"en": {"english", "en", "इंग्रजी", "इंग्लिश"}, "mr": {"marathi", "mr", "मराठी"}}
 REPORT_WORDS = {"अहवाल", "report", "हो", "होय", "yes", "ho", "ahwal", "ahaval"}
+REPORT_HINT = ("📄 पूर्ण पुरावा अहवाल (PDF, प्रत्येक आकड्याचा स्रोत) हवा असल्यास 'अहवाल' लिहा.",
+               "📄 For the full evidence brief (PDF, source of every figure), reply 'report'.")
+BRIEF_MODES = {"cards", "cluster", "dq", "twin"}  # answers that come with the one-page PDF
+FOLLOWUP_REASONS = {"missing_place", "ambiguous_place", "unknown_place", "unknown_kendra"}
 NO_ALERT = ("सध्या कोणत्याही तालुक्यात तातडीचा इशारा नाही.", "No block needs urgent attention right now.")
 
 
@@ -71,6 +76,7 @@ class Reply:
     filename: str = ""
     brief_id: str = ""
     lang: str = "mr"
+    answer_id: str = ""  # the answer this reply belongs to (voice notes: its spoken version)
 
 
 def split_text(text: str, limit: int = TEXT_LIMIT) -> list[str]:
@@ -102,8 +108,13 @@ class Bot:
     def __init__(self, service: Service, dataset: str | None = None):
         self.service = service
         self.dataset = dataset
-        self.lang: dict[str, str] = {}
-        self.pending: dict[str, str] = {}  # sender -> block of the last alert (reply 'report' opens it)
+        self.lang: dict[str, str] = {}  # sender -> language chosen with 'english' / 'marathi' (default for unclear messages)
+        self.offer: dict[str, str] = {}  # sender -> block whose full brief 'report' opens (last alert or last short answer)
+        self.followup: dict[str, str] = {}  # sender -> question that got "which taluka?" (the next reply completes it)
+
+    @property
+    def pending(self) -> dict[str, str]:  # older name, kept for callers
+        return self.offer
 
     def help_text(self, lang: str) -> str:
         i = LANGS.index(lang)
@@ -124,12 +135,14 @@ class Bot:
             if audio is None:  # the gateway could not download it
                 send(Reply("text", VOICE_FAILED[i].format(why=VOICE_REASON["download"][i]), lang=lang))
                 return
-            try:  # speech -> text, then exactly the same path as a typed message
-                tr = self.service.voice.stt(audio[0], audio[1], self.service.keyterms(self.dataset),
-                                            language="mr" if lang == "mr" else None)
+            try:  # speech -> text (spoken language detected), then exactly the same path as a typed message
+                tr = self.service.voice.stt(audio[0], audio[1], self.service.keyterms(self.dataset), language=None)
             except VoiceUnavailable as e:  # fixed bilingual reason; the raw API message is never shown
                 send(Reply("text", VOICE_FAILED[i].format(why=VOICE_REASON.get(e.reason, VOICE_REASON["service"])[i]), lang=lang))
                 return
+            code = str(tr.language_code or "")
+            lang = "en" if code.startswith("en") else "mr" if code.startswith("mr") else detect_lang(tr.text, lang)
+            i = LANGS.index(lang)
             send(Reply("text", HEARD[i].format(text=tr.text), lang=lang))
             kind, text = "text", tr.text
         if kind != "text":
@@ -142,17 +155,29 @@ class Bot:
                 send(Reply("text", LANG_SET[LANGS.index(code)], lang=code))
                 return
         if cmd in HELP_WORDS:
-            send(Reply("text", self.help_text(lang), lang=lang))
+            send(Reply("text", self.help_text(detect_lang(text, lang)), lang=detect_lang(text, lang)))
             return
+        ctx = self.followup.pop(sender, None)
+        if kind == "text" and audio is None:
+            lang = detect_lang((ctx + " " + text) if ctx else text, lang)  # reply in the language the officer wrote in
+        i = LANGS.index(lang)
         ack = lambda: send(Reply("text", ACK[i], lang=lang))  # noqa: E731
-        if cmd in REPORT_WORDS and sender in self.pending:
-            answer = self.service.open_block(self.dataset, self.pending.pop(sender), on_progress=ack)
+        if cmd in REPORT_WORDS and sender in self.offer:
+            answer = self.service.open_block(self.dataset, self.offer.pop(sender), on_progress=ack)
         else:
-            answer = self.service.ask(text, self.dataset, on_progress=ack)
+            self.offer.pop(sender, None)  # a new question replaces any older 'report' offer
+            answer = self.service.ask(text, self.dataset, on_progress=ack, context=ctx, default_lang=lang)
+            if audio is None:
+                lang = answer.info.get("reply_lang", lang)
+                i = LANGS.index(lang)
         if answer.status != "ok":
+            if answer.status == "clarify" and answer.plan.get("reason") in FOLLOWUP_REASONS:
+                self.followup[sender] = answer.question  # the next reply ("Solapur district") completes this question
+            elif ctx and len(text.split()) <= 3:
+                self.followup[sender] = ctx  # one unrecognised reply ("Pune") keeps the earlier question open
             send(Reply("text", answer.reply[lang], lang=lang))
             return
-        self._deliver(answer, lang, send)
+        self._deliver(answer, lang, send, sender)
 
     def alert(self, sender: str, send: Callable[[Reply], None]) -> None:
         """Proactive message when new data arrives: the most urgent block (the officer replies 'report' to open it)."""
@@ -165,10 +190,19 @@ class Bot:
         self.pending[sender] = top["block"]
         send(Reply("text", top["text"][lang], lang=lang))
 
-    def _deliver(self, answer, lang: str, send: Callable[[Reply], None]) -> None:
+    def _deliver(self, answer, lang: str, send: Callable[[Reply], None], sender: str = "") -> None:
+        """Short answers (a figure, a ranking, data checks, why it improved): text + voice note, and 'report' gives the
+        full brief. Kendra-card answers ("what needs attention", "why did it fall", an alert): text + PDF + voice note."""
         i = LANGS.index(lang)
         for part in split_text(as_text(answer.summary[lang], bold="*")):
             send(Reply("text", part, lang=lang))
+        mode = answer.summary[lang].get("mode", "cards")
+        if mode not in BRIEF_MODES:
+            if sender and not answer.info.get("district"):
+                self.offer[sender] = answer.focus
+                send(Reply("text", REPORT_HINT[i], lang=lang))
+            self._voice_note(answer, lang, send)
+            return
         ws, focus = self.service.resolve_brief(answer.brief_id)
         try:
             path = ws.pdf(focus, lang)
@@ -182,19 +216,19 @@ class Bot:
         self._voice_note(answer, lang, send)
 
     def _voice_note(self, answer, lang: str, send: Callable[[Reply], None]) -> None:
-        """One-minute spoken summary after the PDF (skipped quietly when voice is off or fails)."""
+        """Spoken version of this answer (skipped quietly when voice is off or fails)."""
         from .voice.sarvam import VoiceUnavailable
 
         if not self.service.voice.configured or setting("KAARAN_VOICE_REPLY", "on") == "off":
             return
         try:
-            path = self.service.voice_summary(answer.brief_id, lang)
+            path = self.service.voice_answer(answer, lang)
         except (VoiceUnavailable, OSError):  # the text and PDF already went out; the voice note is a bonus
             return
         i = LANGS.index(lang)
         caption = VOICE_CAPTION[i].format(title=answer.summary[lang]["title"])
         filename = f"Kaaran_{answer.focus_name['en'].replace(' ', '_')}_{lang}.mp3"
-        send(Reply("audio", caption, path, filename, answer.brief_id, lang))
+        send(Reply("audio", caption, path, filename, answer.brief_id, lang, answer.answer_id))
 
 
 # ---------- Cloud API ----------

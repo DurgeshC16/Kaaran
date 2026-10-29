@@ -53,6 +53,8 @@ def spoken_summary(summary: dict, lang: str) -> str:
     i = 0 if lang == "mr" else 1
     title = summary.get("title", "")
     intro = INTRO[i].format(title=title) if summary.get("banner") else title + "."
+    if any(it["section"] == "answer" or it["section"].startswith("card:") for it in summary.get("items", [])):
+        return _answer_script(summary, lang, intro)
     by_section: dict[str, list] = {}
     for it in summary.get("items", []):
         by_section.setdefault(it["section"], []).append(it)
@@ -74,3 +76,36 @@ def spoken_summary(summary: dict, lang: str) -> str:
         if len(text) <= MAX_CHARS[lang]:
             return text
     return text  # one line per part (plus warnings and actions) is the floor
+
+
+TODO_WORD = ("काय करावे", "What to do")
+OUTRO_ANSWER = ("पूर्ण पुरावा अहवाल आणि प्रत्येक आकड्याचा स्रोत उपलब्ध आहे.", "The full evidence brief, with the source of every figure, is available.")
+
+
+def _answer_script(summary: dict, lang: str, intro: str) -> str:
+    """Block lens v2 summaries: the direct answer, then one short spoken card per kendra (what, why, what to do)."""
+    i = 0 if lang == "mr" else 1
+    answer = [_line(it, lang) for it in summary["items"] if it["section"] == "answer"]
+    cards: dict[str, list] = {}
+    for it in summary["items"]:
+        if it["section"].startswith("card:"):
+            cards.setdefault(it["section"], []).append(it)
+
+    def card(items: list[dict]) -> str:
+        what = next((it for it in items if it["type"] in ("RISK", "DATA")), None)
+        why = (next((it for it in items if it["type"] == "TWIN"), None) if summary.get("mode") == "twin" else None) or next(
+            (it for it in items if it["type"] == "CAUSE" and it.get("label") != "RULED_OUT"), None) or next(
+            (it for it in items if it["type"] in ("TWIN", "CAUSE")), None)
+        todo = next((it for it in items if it["type"] == "ACTION"), None)
+        parts = [items[0]["heading"] + "."]
+        parts += [_line(x, lang) for x in (what, why) if x]
+        if todo:
+            parts.append(f"{TODO_WORD[i]}: {speakable(todo['text'], lang).rstrip('.')}, {speakable(todo['owner'], lang).rstrip('.')}.")
+        return " ".join(parts)
+
+    spoken = [card(v) for v in cards.values()]
+    for n in range(len(spoken), 0, -1):  # as many cards as fit in about a minute (at least one)
+        text = " ".join([intro] + answer + spoken[:n] + [OUTRO_ANSWER[i]])
+        if len(text) <= MAX_CHARS[lang] or n == 1:
+            return text
+    return " ".join([intro] + answer + [OUTRO_ANSWER[i]])

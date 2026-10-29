@@ -24,7 +24,16 @@ PTR_NORM = 30.0
 METRIC_WORDS = {
     "schools": ["how many schools", "number of schools", "school count", "total schools", "schools in", "किती शाळा",
                 "शाळांची संख्या", "शाळा किती", "एकूण शाळा", "kiti shala", "shala kiti", "shalanchi sankhya"],
-    "teachers": ["teacher", "शिक्षक", "shikshak", "staff", "vacanc", "रिक्त", "vacant", "sanctioned", "posts", "मंजूर", "पदे"],
+    "clusters": ["how many clusters", "how many kendra", "number of clusters", "number of kendra", "किती केंद्र", "केंद्रे किती",
+                 "केंद्र किती", "kiti kendra", "kendra kiti", "kendre kiti"],
+    "single_teacher": ["single teacher", "single-teacher", "one teacher school", "one-teacher", "एकशिक्षकी", "एक शिक्षकी",
+                       "एक शिक्षक", "ek shikshaki", "ek shikshak", "ekshikshaki"],
+    "vacancies": ["vacan", "रिक्त", "shortage", "short of teacher", "कमी शिक्षक", "शिक्षक कमी", "शिक्षक किती कमी", "shikshak kami",
+                  "shikshak kiti kami", "kami shikshak", "sanctioned", "मंजूर"],
+    "pupils": ["how many students", "how many pupils", "number of students", "number of pupils", "enrolment", "enrollment",
+               "किती विद्यार्थी", "विद्यार्थी किती", "विद्यार्थी संख्या", "पटसंख्या", "kiti vidyarthi", "vidyarthi kiti", "pat sankhya",
+               "students", "pupils", "विद्यार्थी"],
+    "teachers": ["teacher", "शिक्षक", "shikshak", "staff", "posts", "पदे"],
     "ptr": ["ptr", "pupil teacher", "pupil-teacher", "student teacher ratio", "विद्यार्थी शिक्षक", "विद्यार्थी-शिक्षक"],
     "attendance": ["attendance", "हजेरी", "उपस्थिती", "hajeri", "absent", "गैरहजर"],
     "learning": ["result", "score", "learning", "निकाल", "गुण", "maths", "math", "गणित", "ganit", "language", "भाषा", "reading",
@@ -33,8 +42,10 @@ METRIC_WORDS = {
     "data_quality": ["data", "आकडेवारी", "reliable", "विश्वास", "record", "नोंद", "fake", "बनावट"],
     "actions": ["what should i do", "what to do", "काय करावे", "काय करू", "action", "कृती", "kay karave", "next step"],
     # only real "where should I look first" words; "which block has the best X" is a ranking by X (see superlative())
-    "attention_rank": ["most attention", "need attention", "needs attention", "attention first", "worst block", "worst taluka",
-                       "सर्वात जास्त लक्ष", "जास्त लक्ष", "लक्ष द्यावे", "लक्ष देण्याची", "मागे आहे", "mage aahe", "sarvat jast laksh"],
+    "attention_rank": ["most attention", "need attention", "needs attention", "need more attention", "needs more attention",
+                       "more attention", "attention first", "worst block", "worst taluka", "जास्त लक्ष देण्याची",
+                       "सर्वात जास्त लक्ष", "जास्त लक्ष", "लक्ष द्यावे", "लक्ष देण्याची", "मागे आहे", "mage aahe", "mage ahe", "sarvat jast laksh",
+                       "मागे पडला", "mage padla", "behind", "lagging"],
 }
 SCHOOL_WORDS = ("school", "शाळा", "shala")
 COUNT_WORDS = ("how many", "kiti", "किती", "number", "total", "sankhya", "संख्या", "count", "एकूण")
@@ -51,7 +62,14 @@ def normalise(text: str) -> str:
 def metrics_asked(question: str) -> list[str]:
     q = normalise(question).replace("गुणवत्ता", "quality")  # "गुण" (marks) must not fire on "गुणवत्ता" (quality)
     found = [m for m, words in METRIC_WORDS.items() if any(w in q for w in words)]
-    if "schools" not in found and any(w in q for w in SCHOOL_WORDS) and any(w in q for w in COUNT_WORDS):
+    if "single_teacher" in found and "schools" in found and not any(w in q for w in ("how many schools are", "शाळा आहेत")):
+        found.remove("schools")  # "how many single-teacher schools" asks for one figure
+    if ("single_teacher" in found or "vacancies" in found or "ptr" in found) and "teachers" in found:
+        found.remove("teachers")  # the specific figure, not the whole staffing line ("pupil teacher ratio" is PTR)
+    if "ptr" in found and "pupils" in found:
+        found.remove("pupils")  # "विद्यार्थी-शिक्षक प्रमाण" is the ratio, not a pupil count
+    if not ({"schools", "clusters", "single_teacher", "pupils"} & set(found)) and any(w in q for w in SCHOOL_WORDS) \
+            and any(w in q for w in COUNT_WORDS):
         found.insert(0, "schools")  # "pandharpur madhil shala kiti aahet"
     return found
 
@@ -101,13 +119,14 @@ def find_cluster(question: str, clusters: pd.DataFrame, block: str | None = None
         suffix = words[-1].lower() if len(words) > 1 and words[-1].lower() in SUFFIX_STARTS else None
         stem = _simple(" ".join(words[:-1])) if suffix else full
         use_stem = suffix is not None and not (said - {suffix})
-        score = 0.0
+        score = -0.1 if said and suffix not in said else 0.0  # "Longaon Khurd" must not pick plain "Longaon"
         for i in range(len(tokens)):
             chunk = "".join(tokens[i:i + len(words)])
+            penalty = 0.1 if said and suffix not in said else 0.0
             if chunk:
-                score = max(score, difflib.SequenceMatcher(None, full, chunk).ratio())
+                score = max(score, difflib.SequenceMatcher(None, full, chunk).ratio() - penalty)
             if use_stem and tokens[i]:
-                score = max(score, difflib.SequenceMatcher(None, stem, tokens[i]).ratio() - 0.02)
+                score = max(score, difflib.SequenceMatcher(None, stem, tokens[i]).ratio() - 0.05)  # exact full names win
         best_by[r.cluster_id] = score
     ranked = sorted(best_by.items(), key=lambda kv: -kv[1])
     if not ranked or ranked[0][1] < CLUSTER_MATCH:
@@ -168,6 +187,9 @@ def compute_facts(tables: dict, trust: BlockTrust, scope_codes: set, scope: dict
         vac = (pm["sanctioned"] - pm["working"]).clip(lower=0)
         out["vacant_posts"] = (int(vac.sum()), "count", 0, q("posts", where_m, pm))
         out["schools_with_vacancy"] = (int((vac > 0).sum()), "count", 0, q("posts", where_m | {"vacant_over": 0}, pm[vac > 0]))
+        sur = (pm["working"] - pm["sanctioned"]).clip(lower=0)
+        out["surplus_teachers"] = (int(sur.sum()), "count", 0, q("posts", where_m | {"surplus_over": 0}, pm[sur > 0]))
+        out["schools_with_surplus"] = (int((sur > 0).sum()), "count", 0, q("posts", where_m | {"surplus_over": 0}, pm[sur > 0]))
         one = pm[pm["working"] == 1]
         out["single_teacher_schools"] = (len(one), "count", 0, q("posts", where_m | {"working": 1}, one))
     y = tables["udise_year"]
@@ -179,6 +201,7 @@ def compute_facts(tables: dict, trust: BlockTrust, scope_codes: set, scope: dict
     if len(wk) and en.notna().any():
         zero = (wk == 0) & (en > 0)
         out["zero_teacher_schools"] = (int(zero.sum()), "count", 0, q("posts", where_m | {"working": 0}, pm[pm["udise_code"].isin(wk.index[zero])]))
+        out["pupils"] = (int(yc["enrol_total"].fillna(0).sum()), "count", 0, q("udise_year", where_y, yc))
         if wk.sum() > 0:
             out["ptr"] = (float(en.sum()) / float(wk.sum()), "index", 1, q("udise_year", where_y, yc) + q("posts", where_m, pm))
             over = ((en / wk.where(wk > 0)) > PTR_NORM) | zero  # a school with pupils and no teacher is over any norm
@@ -195,6 +218,11 @@ def compute_facts(tables: dict, trust: BlockTrust, scope_codes: set, scope: dict
         low = vals.groupby(a3["udise_code"]).mean()
         out["schools_low_attendance"] = (int((low < ATT_LOW).sum()), "count", 0, q("attendance", where_a | {"below": ATT_LOW}, a3))
         out["_att_period"] = (last3[0], last3[-1])
+        prev3 = [f"{int(m[:4]) - 1}{m[4:]}" for m in last3]  # the same months one year earlier
+        p3 = att[att["month"].isin(prev3) & att["attendance_pct"].notna()]
+        if len(p3):
+            out["attendance_prev_pct"] = (float(p3["attendance_pct"].astype(float).mean()), "pct", 1,
+                                          q("attendance", scope | {"months": prev3, "trusted_only": True}, p3))
     a = tables["assessment"]
     a = a[a["udise_code"].isin(scope_codes - trust.insufficient) & a["round"].isin(w["rounds"]) & a["pct"].notna()]
     for subj, prefix in (("maths", "M"), ("language", "L")):
@@ -216,6 +244,15 @@ def compute_facts(tables: dict, trust: BlockTrust, scope_codes: set, scope: dict
     if len(sc):
         out["kp_visits_per_school_month"] = (len(kp_cur) / (len(sc) * months_cur), "index", 1,
                                              q("visits", scope | {"visitor_role": "Kendra Pramukh", "academic_year": w["current"]}, kp_cur))
+        p0, p1 = f"{w['previous'][:4]}-06", f"{w['current'][:4]}-06"
+        kp_prev = kp[(kp["date"].astype(str).str[:7] >= p0) & (kp["date"].astype(str).str[:7] < p1)]
+        months_prev = tables["attendance"].loc[tables["attendance"]["academic_year"] == w["previous"], "month"].nunique() or 10
+        out["kp_visits_prev"] = (len(kp_prev) / (len(sc) * months_prev), "index", 1,
+                                 q("visits", scope | {"visitor_role": "Kendra Pramukh", "academic_year": w["previous"]}, kp_prev))
+        prev_month = f"{int(last_month[:4]) - 1}{last_month[4:]}"
+        pp = posts[(posts["month"] == prev_month) & posts["udise_code"].isin(scope_codes) & posts["working"].notna()]
+        if len(pp):
+            out["working_prev"] = (int(pp["working"].sum()), "count", 0, q("posts", scope | {"month": prev_month}, pp))
     out["ptr_norm"] = (PTR_NORM, "count", 0, [{"kind": "constant", "rule_id": "RTE", "name": "RTE primary pupil-teacher norm"}])
     out["att_low"] = (ATT_LOW, "pct", 0, [{"kind": "constant", "rule_id": "RISK-ATTENDANCE", "name": "ATT_LOW"}])
     fl = trust.school_flags
@@ -257,6 +294,18 @@ def register_facts(pack: dict, facts: dict, prefix: str) -> dict:
 ANSWER_TEMPLATES = {
     "schools": ("{{e:P}} मध्ये {{n:schools}} शाळा आहेत ({{n:clusters}} केंद्रे).",
                 "{{e:P}} has {{n:schools}} schools in {{n:clusters}} clusters."),
+    "clusters": ("{{e:P}} मध्ये {{n:clusters}} केंद्रे आहेत ({{n:schools}} शाळा).",
+                 "{{e:P}} has {{n:clusters}} clusters (kendras) with {{n:schools}} schools."),
+    "single_teacher": ("{{e:P}} मधील एकशिक्षकी शाळा: एकूण {{n:schools}} पैकी {{n:single_teacher_schools}}.",
+                       "Single-teacher schools in {{e:P}}: {{n:single_teacher_schools}} of {{n:schools}}."),
+    "vacancies": ("{{e:P}} मधील रिक्त शिक्षक पदे: {{n:vacant_posts}} (शाळा: {{n:schools_with_vacancy}}); मंजूर {{n:sanctioned_posts}}, "
+                  "कार्यरत {{n:working_teachers}}.",
+                  "Vacant teacher posts in {{e:P}}: {{n:vacant_posts}} (schools affected: {{n:schools_with_vacancy}}); "
+                  "{{n:working_teachers}} working against {{n:sanctioned_posts}} sanctioned."),
+    "pupils": ("{{e:P}} मध्ये {{n:pupils}} विद्यार्थी आहेत (इयत्ता १ ते ८, {{n:schools}} शाळा).",
+               "{{e:P}} has {{n:pupils}} pupils in classes 1 to 8 across {{n:schools}} schools."),
+    "schools_district": ("{{e:P}} मध्ये {{n:schools}} शाळा आहेत: {{n:blocks}} तालुके, {{n:clusters}} केंद्रे.",
+                         "{{e:P}} has {{n:schools}} schools in {{n:blocks}} blocks and {{n:clusters}} clusters."),
     "schools_cluster": ("{{e:P}} केंद्रात {{n:schools}} शाळा आहेत.", "{{e:P}} has {{n:schools}} schools."),
     "teachers": ("{{e:P}} मध्ये {{n:working_teachers}} शिक्षक कार्यरत आहेत; मंजूर पदे {{n:sanctioned_posts}}, रिक्त पदे {{n:vacant_posts}} "
                  "({{n:schools_with_vacancy}} शाळांमध्ये). एकच शिक्षक असलेल्या शाळा: {{n:single_teacher_schools}}.",
@@ -278,18 +327,20 @@ ANSWER_TEMPLATES = {
                       "{{e:P}}: maths {{n:maths_pct}} on average, about the same as last year; language {{n:language_pct}}."),
     "visits": ("{{e:P}} मध्ये या वर्षी केंद्रप्रमुखांच्या भेटी दर शाळेला दरमहा {{n:kp_visits_per_school_month}} आहेत.",
                "{{e:P}}: {{n:kp_visits_per_school_month}} Kendra Pramukh visits per school per month this year."),
-    "data_quality": ("{{e:P}} मध्ये {{n:flagged_schools}} शाळांच्या हजेरीच्या नोंदी संशयास्पद आहेत आणि {{n:insufficient_schools}} शाळांची माहिती अपूर्ण आहे.",
-                     "{{e:P}}: attendance records of {{n:flagged_schools}} schools look unreliable and data is incomplete for "
-                     "{{n:insufficient_schools}} schools."),
+    "data_quality": ("{{e:P}}: संशयास्पद हजेरी नोंदी असलेल्या शाळा {{n:flagged_schools}}; अपूर्ण माहिती असलेल्या शाळा {{n:insufficient_schools}}.",
+                     "{{e:P}}: schools with unreliable attendance records: {{n:flagged_schools}}; schools with incomplete data: "
+                     "{{n:insufficient_schools}}."),
 }
 # appended (before the final full stop) only when the condition holds
+SURPLUS_NOTE = (" मंजुरीपेक्षा जास्त शिक्षक: {{n:surplus_teachers}} ({{n:schools_with_surplus}} शाळा) - पुनर्नियुक्तीची संधी.",
+                " Teachers above sanction: {{n:surplus_teachers}} (in {{n:schools_with_surplus}} schools) - a redeployment option.")
 ZERO_TEACHER_NOTE = (" शिक्षक नसलेल्या शाळा: {{n:zero_teacher_schools}}.", " Schools with no teacher: {{n:zero_teacher_schools}}.")
 COVERAGE_NOTE = (" ({{n:schools}} पैकी {{n:schools_learning}} शाळांच्या पूर्ण नोंदी)", " (complete records: {{n:schools_learning}} of {{n:schools}} schools)")
 ANSWER_HEADING = ("थेट उत्तर", "Direct answer")
-RANK_LINE = ("सर्वात जास्त लक्ष देण्याची गरज: {items}. पहिल्या तालुक्याचा अहवाल खाली आहे.",
-             "Most attention needed: {items}. The first block's brief is below.")
+RANK_LINE = ("सर्वात जास्त लक्ष देण्याची गरज: {items}. पहिल्या तालुक्यातील केंद्रे खाली आहेत.",
+             "Most attention needed: {items}. The first block's clusters are below.")
 RANK_ITEM = (("{name} ({n} केंद्र)", "{name} ({n} केंद्रे)"), ("{name} ({n} cluster)", "{name} ({n} clusters)"))
-RANK_BY_LINE = ("{label}: {items}. पहिल्या तालुक्याचा अहवाल खाली आहे.", "{label}: {items}. The first block's brief is below.")
+RANK_BY_LINE = ("{label}: {items}.", "{label}: {items}.")
 
 
 def answer_lines(metrics: list[str], fact_ids: dict, scope_entity: str, is_cluster: bool, facts: dict,
@@ -301,6 +352,8 @@ def answer_lines(metrics: list[str], fact_ids: dict, scope_entity: str, is_clust
         key = m
         if m == "schools" and is_cluster:
             key = "schools_cluster"
+        elif m == "schools" and "blocks" in fact_ids:
+            key = "schools_district"
         if m == "learning":
             change = value("maths_change")
             if change is None:
@@ -311,6 +364,8 @@ def answer_lines(metrics: list[str], fact_ids: dict, scope_entity: str, is_clust
         mr, en = ANSWER_TEMPLATES[key]
         if key == "teachers" and (value("zero_teacher_schools") or 0) > 0:
             mr, en = mr + ZERO_TEACHER_NOTE[0], en + ZERO_TEACHER_NOTE[1]
+        if key in ("teachers", "vacancies") and (value("surplus_teachers") or 0) > 0:
+            mr, en = mr + SURPLUS_NOTE[0], en + SURPLUS_NOTE[1]
         if key.startswith("learning") and value("schools_learning") is not None and value("schools_learning") < (value("schools") or 0):
             mr, en = mr[:-1] + COVERAGE_NOTE[0] + ".", en[:-1] + COVERAGE_NOTE[1] + "."  # INSUFFICIENT schools left out: say so
         needed = set(re.findall(r"\{\{n:([a-z_0-9]+)\}\}", mr + en))
@@ -322,16 +377,20 @@ def answer_lines(metrics: list[str], fact_ids: dict, scope_entity: str, is_clust
             en = en.replace("{{p:" + name + "}}", "{{p:" + period_ids[name] + "}}")
         sub = lambda t: re.sub(r"\{\{n:([a-z_0-9]+)\}\}", lambda x: "{{n:" + fact_ids[x.group(1)] + "}}", t)  # noqa: E731
         if is_cluster:  # "<village> मध्ये" reads badly for a kendra: "<village> केंद्रात"
-            mr = mr.replace("{{e:P}} मध्ये", "{{e:P}} केंद्रात")
+            mr = mr.replace("{{e:P}} मध्ये", "{{e:P}} केंद्रात").replace("{{e:P}} मधील", "{{e:P}} केंद्रातील")
+        elif "blocks" in fact_ids:  # the district: "सोलापूर जिल्ह्यात"
+            mr = mr.replace("{{e:P}} मध्ये", "{{e:P}} जिल्ह्यात").replace("{{e:P}} मधील", "{{e:P}} जिल्ह्यातील").replace("{{e:P}}:", "{{e:P}} जिल्हा:")
         lines.append({"metric": m, "mr": sub(mr).replace("{{e:P}}", "{{e:" + scope_entity + "}}"),
-                      "en": sub(en).replace("{{e:P}}", "{{e:" + scope_entity + "}}")})
+                      "en": sub(en).replace("{{e:P}}", "{{e:" + scope_entity + "}}"),
+                      "facts": [fact_ids[n] for n in sorted(needed)]})
     return lines
 
 
 # ---------- ranking blocks by an asked figure ("which block has the lowest PTR?") ----------
 
 # metric -> (fact, +1 if higher is better, -1 if lower is better, 0 if neither)
-RANK_FACT = {"learning": ("maths_pct", 1), "attendance": ("attendance_pct", 1), "visits": ("kp_visits_per_school_month", 1),
+RANK_FACT = {"single_teacher": ("single_teacher_schools", -1), "vacancies": ("vacant_posts", -1), "pupils": ("pupils", 0),
+             "clusters": ("clusters", 0), "learning": ("maths_pct", 1), "attendance": ("attendance_pct", 1), "visits": ("kp_visits_per_school_month", 1),
              "ptr": ("ptr", -1), "teachers": ("vacant_posts", -1), "schools": ("schools", 0), "data_quality": ("flagged_schools", -1)}
 RANK_LABEL = {
     "maths_pct": (("गणिताचा सर्वाधिक सरासरी निकाल", "Highest maths results"), ("गणिताचा सर्वात कमी सरासरी निकाल", "Lowest maths results")),
@@ -341,6 +400,10 @@ RANK_LABEL = {
     "ptr": (("सर्वाधिक विद्यार्थी-शिक्षक प्रमाण", "Highest pupil-teacher ratio"), ("सर्वात कमी विद्यार्थी-शिक्षक प्रमाण", "Lowest pupil-teacher ratio")),
     "vacant_posts": (("सर्वाधिक रिक्त पदे", "Most vacant posts"), ("सर्वात कमी रिक्त पदे", "Fewest vacant posts")),
     "schools": (("सर्वाधिक शाळा", "Most schools"), ("सर्वात कमी शाळा", "Fewest schools")),
+    "single_teacher_schools": (("सर्वाधिक एकशिक्षकी शाळा", "Most single-teacher schools"), ("सर्वात कमी एकशिक्षकी शाळा", "Fewest single-teacher schools")),
+    "pupils": (("सर्वाधिक विद्यार्थी", "Most pupils"), ("सर्वात कमी विद्यार्थी", "Fewest pupils")),
+    "working_teachers": (("सर्वाधिक कार्यरत शिक्षक", "Most working teachers"), ("सर्वात कमी कार्यरत शिक्षक", "Fewest working teachers")),
+    "clusters": (("सर्वाधिक केंद्रे", "Most clusters"), ("सर्वात कमी केंद्रे", "Fewest clusters")),
     "flagged_schools": (("संशयास्पद हजेरी नोंदी असलेल्या सर्वाधिक शाळा", "Most schools with unreliable attendance records"),
                         ("संशयास्पद हजेरी नोंदी असलेल्या सर्वात कमी शाळा", "Fewest schools with unreliable attendance records")),
 }
@@ -361,6 +424,8 @@ def superlative(question: str) -> str | None:
 
 def rank_order(metric: str, sup: str) -> tuple[str, str] | None:
     """(fact, 'desc' | 'asc') for a metric and a superlative, or None when the ranking would be meaningless."""
+    if metric == "teachers" and sup in ("high", "low"):  # "most / fewest teachers" = working teachers, never vacancies
+        return "working_teachers", "desc" if sup == "high" else "asc"
     if metric not in RANK_FACT:
         return None
     fact, better = RANK_FACT[metric]
@@ -372,12 +437,17 @@ def rank_order(metric: str, sup: str) -> tuple[str, str] | None:
     return fact, "desc" if up else "asc"
 
 
-def rank_line(fact: str, order: str, ranked: list[tuple[str, str]]) -> dict:
-    """One line ranking the top blocks by a fact; ranked = [(block entity id, number id), ...] (placeholders only)."""
+TIED = (" (इतर काहींचाही हाच आकडा आहे)", " (some others have the same figure)")
+
+
+def rank_line(fact: str, order: str, ranked: list[tuple[str, str]], tied: bool = False) -> dict:
+    """One line ranking the top blocks (or kendras) by a fact; ranked = [(entity id, number id), ...] (placeholders only)."""
     label = RANK_LABEL[fact][0 if order == "desc" else 1]
     items = ", ".join("{{e:" + b + "}} {{n:" + nid + "}}" for b, nid in ranked)
-    return {"metric": "rank_by", "mr": RANK_BY_LINE[0].format(label=label[0], items=items),
-            "en": RANK_BY_LINE[1].format(label=label[1], items=items)}
+    mr, en = RANK_BY_LINE[0].format(label=label[0], items=items), RANK_BY_LINE[1].format(label=label[1], items=items)
+    if tied:
+        mr, en = mr[:-1] + TIED[0] + ".", en[:-1] + TIED[1] + "."
+    return {"metric": "rank_by", "mr": mr, "en": en, "facts": [nid for _b, nid in ranked]}
 
 
 # ---------- greeting / help ----------
@@ -397,17 +467,20 @@ def is_greeting(question: str) -> bool:
 
 def asks_why(question: str) -> bool:
     q = normalise(question)
-    return any(w in q for w in WHY_WORDS)
+    tokens = q.split()
+    # "का" / "ka" before a verb asks why ("निकाल का घसरला", "changla ka aala"); at the end it is a yes/no particle
+    return any(w in q for w in WHY_WORDS) or any(t in ("का", "ka") and i < len(tokens) - 1 for i, t in enumerate(tokens))
 
 
 # ---------- the block's facts bundle (kept outside the evidence pack, so recorded brief prompts stay unchanged) ----------
 
+DQ_WORDS = ("reliable", "unreliable", "विश्वास", "fake", "बनावट", "संशय", "suspicious", "trust", "vishwas", "khari", "खरी")
 CLUSTER_WORDS = ("kendra", "केंद्र", "cluster", "kendr")
 CLUSTER_STATUS = {
-    "AT_RISK": ("{{e:P}} केंद्राकडे तातडीने लक्ष देण्याची गरज आहे; कारणे आणि कृती खालील अहवालात आहेत.",
-                "{{e:P}} needs attention now; the reasons and actions are in the brief below."),
-    "AT_RISK_UNEXPLAINED": ("{{e:P}} केंद्राकडे तातडीने लक्ष देण्याची गरज आहे; घसरणीचे स्पष्ट कारण सापडले नाही. काय तपासले आणि कृती खालील अहवालात आहेत.",
-                            "{{e:P}} needs attention now; no clear cause was found. What was checked and the actions are in the brief below."),
+    "AT_RISK": ("{{e:P}} केंद्राकडे तातडीने लक्ष देण्याची गरज आहे; कारणे आणि कृती खाली दिली आहेत.",
+                "{{e:P}} needs attention now; the reasons and actions are below."),
+    "AT_RISK_UNEXPLAINED": ("{{e:P}} केंद्राकडे तातडीने लक्ष देण्याची गरज आहे; घसरणीचे स्पष्ट कारण सापडले नाही. काय तपासले आणि कृती खाली दिली आहेत.",
+                            "{{e:P}} needs attention now; no clear cause was found. What was checked and the actions are below."),
     "DATA": ("{{e:P}} केंद्रातील हजेरीच्या नोंदी विश्वासार्ह दिसत नाहीत; आधी त्या तपासाव्यात.",
              "Attendance records in {{e:P}} look unreliable; check them first."),
     "INSUFFICIENT": ("{{e:P}} केंद्राची माहिती अपूर्ण आहे, त्यामुळे अजून निष्कर्ष काढता येत नाही.",
@@ -459,7 +532,7 @@ def cluster_named(question: str, clusters: pd.DataFrame, block: str | None, bloc
 
 
 def direct_answer(question: str, bundle: dict, pack: dict, cluster_id: str | None = None,
-                  metrics: list[str] | None = None) -> dict:
+                  metrics: list[str] | None = None, keep_status: bool = False) -> dict:
     """{scope, cluster, metrics, lines[]}: the asked figures for the block (or the named cluster), as placeholder text."""
     metrics = metrics_asked(question) if metrics is None else metrics
     focus = pack["scope"]["focus"]
@@ -472,8 +545,169 @@ def direct_answer(question: str, bundle: dict, pack: dict, cluster_id: str | Non
         if status == "AT_RISK" and "D8" in summary.get("checks", {}):  # D8 = no tested cause held
             status = "AT_RISK_UNEXPLAINED"
         mr, en = CLUSTER_STATUS.get(status, CLUSTER_STATUS["OK"])
+        if asked and not keep_status:  # a figure was asked: the status in one clause (no kendra card follows)
+            mr, en = mr.split(";")[0].rstrip(".") + ".", en.split(";")[0].rstrip(".") + "."
         lines.append({"metric": "status", "mr": mr.replace("{{e:P}}", "{{e:" + eid + "}}"), "en": en.replace("{{e:P}}", "{{e:" + eid + "}}")})
         if not asked:  # overview; an incomplete kendra gets no learning figures (it "cannot be judged yet")
             asked = [m for m in CLUSTER_OVERVIEW if not (status == "INSUFFICIENT" and m == "learning")]
     lines += answer_lines(asked, bundle["ids"][eid], eid, eid != focus, bundle["facts"][eid], bundle["period_ids"].get(eid))
     return {"scope": eid, "cluster": cluster_id if eid != focus else None, "metrics": metrics, "lines": lines}
+
+
+# ---------- "why did it improve?" (rule-based, associated-with wording only) ----------
+
+IMPROVE_WORDS = ["improve", "improved", "rose", "rise", "increase", "better", "went up", "go up", "gone up", "goes up", "चांगला", "चांगले", "चांगली", "changla",
+                 "changle", "सुधार", "sudhar", "वाढ", "vadh", "प्रगती", "pragati", "उंचाव"]
+DECLINE_WORDS = ["fall", "fell", "drop", "decline", "down", "घसर", "ghasar", "कमी झा", "kami zal", "worse", "खाल"]
+WHY_UP = {
+    "headline": ("{{e:P}} मध्ये गणिताचा निकाल या वर्षी {{n:maths_change}} गुणांनी वाढून {{n:maths_pct}} झाला.",
+                 "{{e:P}}: maths rose {{n:maths_change}} points this year, to {{n:maths_pct}}."),
+    "top": ("सर्वात जास्त वाढ: {items}.", "Largest rises: {items}."),
+    "kp": ("याच काळात केंद्रप्रमुखांच्या भेटी दर शाळेला दरमहा {{n:kp_visits_prev}} वरून {{n:kp_visits_per_school_month}} झाल्या.",
+           "Over the same period Kendra Pramukh visits went from {{n:kp_visits_prev}} to {{n:kp_visits_per_school_month}} per school per month."),
+    "att": ("हजेरी {{n:attendance_prev_pct}} वरून {{n:attendance_pct}} झाली (विश्वासार्ह नोंदी).",
+            "Attendance went from {{n:attendance_prev_pct}} to {{n:attendance_pct}} (trusted records)."),
+    "staff": ("कार्यरत शिक्षक {{n:working_prev}} वरून {{n:working_teachers}} झाले.",
+              "Working teachers went from {{n:working_prev}} to {{n:working_teachers}}."),
+    "assoc": ("हे बदल वाढीशी संबंधित दिसतात; यांमुळेच वाढ झाली असे हा डेटा सिद्ध करत नाही.",
+              "These changes are associated with the rise; the data does not prove they caused it."),
+    "none": ("शिक्षक संख्या, हजेरी आणि केंद्रप्रमुखांच्या भेटी जवळपास तशाच राहिल्या, त्यामुळे डेटा वाढीचे स्पष्ट कारण दाखवत नाही. "
+             "सर्वात जास्त वाढलेल्या केंद्रांमध्ये काय वेगळे केले ते प्रत्यक्ष विचारून घ्यावे.",
+             "Teacher numbers, attendance and Kendra Pramukh visits stayed about the same, so the data shows no clear reason. "
+             "Ask the clusters that rose most what they did differently."),
+    "none_fell": ("वरील बदल वाढीचे कारण दाखवत नाहीत; डेटामध्ये निकालासोबत वाढलेला घटक नाही. सर्वात जास्त वाढलेल्या केंद्रांमध्ये काय वेगळे केले ते प्रत्यक्ष विचारून घ्यावे.",
+                  "These changes do not explain the rise: no input in the data rose with the results. Ask the clusters that rose most what they did differently."),
+    "not_up": ("{{e:P}} मध्ये गणिताचा निकाल या वर्षी वाढलेला नाही.", "{{e:P}}: maths did not rise this year."),
+}
+KP_MOVE, ATT_MOVE, STAFF_MOVE = 0.2, 1.0, 0.02  # smallest changes worth mentioning (visits/school/month; points; share)
+
+
+TWIN_WORDS = ["similar", "twin", "than", "सारख", "समान", "जुळा", "पेक्षा", "sarkha", "sarakha", "peksha"]
+
+
+def asks_twin(question: str) -> bool:
+    """"Which similar block did better than X?" / "X सारखा कोणता तालुका" (the learn-from comparison, not why X improved)."""
+    q = normalise(question)
+    return any(w in q for w in TWIN_WORDS)
+
+
+def asks_improvement(question: str) -> bool:
+    q = normalise(question)
+    return any(w in q for w in IMPROVE_WORDS) and not any(w in q for w in DECLINE_WORDS) and not asks_twin(question)
+
+
+def improvement_lines(bundle: dict, focus: str) -> list[dict]:
+    """Why a block's results rose: the rise, the kendras that rose most, and the inputs that moved with it."""
+    f, ids = bundle["facts"][focus], bundle["ids"][focus]
+    val = lambda name: f[name][0] if name in ids else None  # noqa: E731
+
+    def line(key: str, extra: dict | None = None, facts: list[str] | None = None) -> dict:
+        mr, en = WHY_UP[key]
+        sub_ = lambda t: re.sub(r"\{\{n:([a-z_0-9]+)\}\}", lambda x: "{{n:" + ids[x.group(1)] + "}}", t).replace("{{e:P}}", "{{e:" + focus + "}}")  # noqa: E731
+        mr, en = sub_(mr), sub_(en)
+        if extra:
+            mr, en = mr.format(**{k: v[0] for k, v in extra.items()}), en.format(**{k: v[1] for k, v in extra.items()})
+        return {"metric": "why_up", "mr": mr, "en": en, "facts": facts or [ids[n] for n in re.findall(r"\{\{n:([a-z_0-9]+)\}\}", WHY_UP[key][1]) if n in ids]}
+
+    change = val("maths_change")
+    if change is None:
+        return []
+    if round(change, 1) <= 0:  # say so, with the actual figure
+        return [line("not_up")] + answer_lines(["learning"], ids, focus, False, f)
+    out = [line("headline")]
+    rises = sorted(((bundle["facts"][c]["maths_change"][0], c) for c in bundle["ids"] if c != focus and c.startswith("C")
+                    and "maths_change" in bundle["ids"][c]), reverse=True)
+    top = [(v, c) for v, c in rises if round(v, 1) > 0][:2]
+    if top:
+        items = ", ".join("{{e:" + c + "}} (+{{n:" + bundle["ids"][c]["maths_change"] + "}})" for _v, c in top)
+        out.append(line("top", {"items": (items, items)}, [bundle["ids"][c]["maths_change"] for _v, c in top]))
+    rose, fell = [], []
+    for key, prev, cur, step, rel in (("kp", "kp_visits_prev", "kp_visits_per_school_month", KP_MOVE, False),
+                                       ("att", "attendance_prev_pct", "attendance_pct", ATT_MOVE, False),
+                                       ("staff", "working_prev", "working_teachers", STAFF_MOVE, True)):
+        if val(prev) is None or val(cur) is None:
+            continue
+        d = (val(cur) - val(prev)) / val(prev) if rel and val(prev) else val(cur) - val(prev)
+        if d >= step:
+            rose.append(line(key))
+        elif d <= -step:
+            fell.append(line(key))
+    if rose:
+        out += rose + fell + [line("assoc")]
+    elif fell:
+        out += fell + [line("none_fell")]
+    else:
+        out.append(line("none"))
+    return out
+
+
+# ---------- district scope ----------
+
+DISTRICT_WORDS = ["district", "जिल्हा", "जिल्ह्यात", "जिल्ह्याचा", "जिल्ह्यातील", "jilha", "jilhyat", "zilla", "zila", "whole"]
+
+
+def district_named(question: str, district_names: list[str]) -> bool:
+    q = normalise(question)
+    return any(w in q for w in DISTRICT_WORDS) or any(re.search(r"(?<![\wऀ-ॿ])" + re.escape(normalise(n)), q)
+                                                      for n in district_names if n)
+
+
+def build_district(tables: dict, trust: BlockTrust, packs: dict, entity: dict) -> dict:
+    """District-wide facts (all blocks), as a bundle like build_facts (entity id = entity['id'])."""
+    any_pack = next(iter(packs.values()))
+    file_id = {s["file"]: s["id"] for s in any_pack["sources"]}
+    files = view_files(tables)
+    eid = entity["id"]
+    codes = set(tables["schools"]["udise_code"])
+    facts = compute_facts(tables, trust, codes, {"district": entity["name_en"]}, file_id, files)
+    facts["blocks"] = (tables["schools"]["block"].nunique(), "count", 0, _q("schools", {"distinct": "block"}, tables["schools"], file_id))
+    out = {"numbers": {}, "periods": {}, "entities": {eid: {k: v for k, v in entity.items() if k != "id"}}, "ids": {}, "facts": {},
+           "period_ids": {}}
+    ids = register_facts(out, facts, eid)
+    for nid in ids.values():
+        out["numbers"][nid]["entity"] = eid
+    out["ids"][eid], out["facts"][eid] = ids, facts
+    if "_att_period" in facts:
+        pid = f"p.fact.{eid}.att"
+        out["periods"][pid] = {"kind": "month_range", "from": facts["_att_period"][0], "to": facts["_att_period"][1]}
+        out["period_ids"][eid] = {"att": pid}
+    return out
+
+
+# ---------- several questions in one message ----------
+
+SPLIT = re.compile(r"[,;?।\n]+|\s+(?:and|आणि|ani|also|तसेच)\s+")
+
+
+def segments(question: str) -> list[str]:
+    """Parts of a message that each look like their own question ("X madhe shala kiti, Y PTR kiti")."""
+    parts = [p.strip() for p in SPLIT.split(question) if p and p.strip()]
+    return parts if len(parts) > 1 else [question]
+
+
+# ---------- reply language ----------
+
+MR_LATIN = {"kiti", "ahe", "aahe", "ahet", "aahet", "madhe", "madhye", "madhil", "cha", "chi", "che", "kay", "ka", "la", "shala",
+            "shikshak", "nikal", "hajeri", "kontya", "konta", "konti", "mage", "kasa", "kase", "kashi", "zala", "zali", "aala",
+            "changla", "kami", "jast", "talukyat", "talukyatil", "sanga", "vishwasarha", "aakdevari", "ghasarla", "karave"}
+EN_WORDS = {"what", "how", "which", "why", "is", "are", "the", "in", "of", "many", "does", "do", "did", "has", "have", "show",
+            "tell", "me", "about", "need", "needs", "most", "best", "lowest", "highest", "give", "list", "should", "i", "there",
+            "attendance", "schools", "school", "teachers", "teacher", "results", "result", "maths", "vacant", "posts", "students",
+            "report", "data", "reliable", "visits", "compare", "district", "block", "cluster", "ratio", "improve", "fall",
+            "hello", "hi", "hey", "help", "thanks", "thank", "you", "please"}
+
+
+def detect_lang(text: str, default: str = "mr") -> str:
+    """Language of an officer's message: Devanagari -> mr; Marathi typed in Latin letters -> mr; English -> en."""
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return default
+    if sum(1 for c in letters if "\u0900" <= c <= "\u097f") / len(letters) > 0.3:
+        return "mr"
+    tokens = set(normalise(text).split())
+    mr, en = len(tokens & MR_LATIN), len(tokens & EN_WORDS)
+    if mr > en:
+        return "mr"
+    if en:
+        return "en"
+    return default

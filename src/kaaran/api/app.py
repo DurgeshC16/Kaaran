@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from ..brief.pdf import PdfUnavailable, find_browser
 from ..llm.client import get_client
+from ..voice.sarvam import VoiceUnavailable
 from ..service import LANGS, MAX_QUESTION_CHARS, Service, get_service, number_detail, set_detail
 from ..whatsapp import Bot, Gateway, simulate, simulate_alert, simulate_voice, valid_signature, verify_challenge
 from starlette.concurrency import run_in_threadpool
@@ -28,6 +29,7 @@ STATIC = Path(__file__).resolve().parent / "static"
 class AskIn(BaseModel):
     question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS * 2)
     dataset: str | None = None
+    context: str | None = Field(None, max_length=MAX_QUESTION_CHARS * 2)  # the question Kaaran asked to clarify
 
 
 class OpenIn(BaseModel):
@@ -61,7 +63,11 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
         if warm:  # ingest + trust + packs in the background (default dataset first); questions are then fast
             def prepare_all():
                 for key in [svc.default] + [k for k in svc.datasets if k != svc.default]:
-                    svc.workspace(key).prepare()
+                    ws = svc.workspace(key).prepare()
+                    if key == svc.default and hasattr(ws, "district"):  # direct-answer facts for rankings / district questions
+                        ws.district()
+                        for b in ws.packs:
+                            ws.facts(b)
 
             threading.Thread(target=prepare_all, daemon=True).start()
         yield
@@ -124,7 +130,35 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
     def ask(body: AskIn):
         if body.dataset is not None and body.dataset not in svc.datasets:
             raise HTTPException(404, f"unknown dataset {body.dataset!r}")
-        return svc.ask(body.question, body.dataset).to_dict()
+        return svc.ask(body.question, body.dataset, context=body.context).to_dict()
+
+    @app.get("/api/home")
+    def home(role: str = Query("deo", pattern="^(deo|beo)$"), dataset: str | None = None, block: str | None = None):
+        """Role home page: DEO = district picture (tiles, blocks needing attention, all blocks); BEO = one block's kendras."""
+        ws = svc.workspace(dataset or None) if (dataset or None) in (None, *svc.datasets) else None
+        if ws is None:
+            raise HTTPException(404, f"unknown dataset {dataset!r}")
+        if not hasattr(ws, "home_html"):
+            raise HTTPException(404, "role home pages need a cluster-lens (block) dataset")
+        out = {}
+        for lang in LANGS:
+            html_, brief_id = ws.home_html(role, lang, block)
+            out[lang] = html_
+        return {"role": role, "brief_id": brief_id, "block": brief_id.partition(".")[2], "html": out,
+                "blocks": [{"id": b, "name_en": n[0], "name_mr": n[1]} for b, n in ws._names().items()]}
+
+    @app.get("/api/answers/{answer_id}/voice")
+    def answer_voice(answer_id: str, lang: str = "mr"):
+        """Spoken version (MP3) of a recent answer: the direct answer or the kendra cards (Sarvam TTS, cached)."""
+        try:
+            answer = svc.recall(answer_id)
+        except KeyError as e:
+            raise HTTPException(404, "answer expired; ask again") from e
+        try:
+            path = svc.voice_answer(answer, _lang(lang))
+        except VoiceUnavailable as e:
+            raise HTTPException(503, f"voice unavailable: {e.reason}") from e
+        return FileResponse(path, media_type="audio/mpeg", filename=f"Kaaran_answer_{lang}.mp3")
 
     @app.get("/api/datasets/{dataset}/alerts")
     def alerts(dataset: str):
@@ -175,16 +209,15 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
         return svc.voice.status()
 
     @app.post("/api/voice/ask")
-    async def voice_ask(request: Request, dataset: str | None = None, lang: str = "mr"):
+    async def voice_ask(request: Request, dataset: str | None = None, lang: str = "mr",
+                        context: str | None = Query(None, max_length=MAX_QUESTION_CHARS * 2)):
         """A spoken question (raw audio body) -> transcript -> the normal answer (with info.transcript)."""
-        from ..voice.sarvam import VoiceUnavailable
-
         dataset = dataset or None
         if dataset is not None and dataset not in svc.datasets:
             raise HTTPException(404, f"unknown dataset {dataset!r}")
         audio, mime = await _audio_body(request)
         try:
-            answer = await run_in_threadpool(svc.ask_voice, audio, mime, dataset, _lang(lang))
+            answer = await run_in_threadpool(svc.ask_voice, audio, mime, dataset, _lang(lang), None, context or None)
         except VoiceUnavailable as e:
             raise HTTPException(503, f"voice unavailable: {e}") from e
         return answer.to_dict()
@@ -226,18 +259,25 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
             raise HTTPException(404, str(e)) from e
 
     @app.get("/api/briefs/{brief_id}/evidence")
-    def brief_evidence(brief_id: str):
+    def brief_evidence(brief_id: str, answer_id: str | None = Query(None, max_length=40)):
         ws, focus = _brief(brief_id)
         name = ws.pack(focus)["entities"][focus]["name_en"].replace(" ", "_")
-        pack = ws.answer_pack(focus) if hasattr(ws, "answer_pack") else ws.pack(focus)  # incl. direct-answer figures
+        extra = []
+        if answer_id and hasattr(ws, "fact_block"):  # include the other blocks whose figures this answer showed
+            try:
+                ans = (svc.recall(answer_id).plan.get("answer") or {})
+                extra = [b for b in dict.fromkeys(ans.get("extra", [])) if b in ws.packs]
+            except KeyError:
+                extra = []
+        pack = ws.answer_pack(focus, extra) if hasattr(ws, "answer_pack") else ws.pack(focus)  # incl. direct-answer figures
         return JSONResponse(pack, headers={"Content-Disposition": f'attachment; filename="evidence_{name}.json"'})
 
     @app.get("/api/briefs/{brief_id}/number")
     def brief_number(brief_id: str, id: str = Query(min_length=1, max_length=200)):
         ws, focus = _brief(brief_id)
-        pack = ws.pack(focus)
+        pack = ws.answer_pack(focus) if hasattr(ws, "answer_pack") else ws.pack(focus)
         if id not in pack["numbers"] and hasattr(ws, "fact_block") and ws.fact_block(id):
-            pack = ws.answer_pack(focus, [ws.fact_block(id)])  # a direct-answer fact (this or a compared block)
+            pack = ws.answer_pack(focus, [ws.fact_block(id)])  # a direct-answer fact (this, a compared block, the district)
         if id not in pack["numbers"]:
             raise HTTPException(404, f"unknown number {id!r}")
         return number_detail(pack, id)
@@ -297,7 +337,8 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
         if r.kind == "document":
             item |= {"filename": r.filename, "url": f"/api/briefs/{r.brief_id}/pdf?lang={r.lang}"}
         if r.kind == "audio":
-            item |= {"filename": r.filename, "url": f"/api/briefs/{r.brief_id}/voice?lang={r.lang}"}
+            url = f"/api/answers/{r.answer_id}/voice?lang={r.lang}" if r.answer_id else f"/api/briefs/{r.brief_id}/voice?lang={r.lang}"
+            item |= {"filename": r.filename, "url": url}
         return item
 
     @app.post("/api/whatsapp/simulate_voice")
