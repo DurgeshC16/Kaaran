@@ -102,7 +102,7 @@ def push(repo: str, user: str, token: str) -> None:
         for child in space.iterdir():
             if child.name not in (".git", ".gitattributes"):
                 shutil.rmtree(child) if child.is_dir() else child.unlink()
-        data = subprocess.run(["git", "archive", "--format=tar", "HEAD", "--", *SHIP], cwd=ROOT, capture_output=True, check=True).stdout
+        data = subprocess.run(["git", "-c", "core.autocrlf=false", "archive", "--format=tar", "HEAD", "--", *SHIP], cwd=ROOT, capture_output=True, check=True).stdout
         with tarfile.open(fileobj=io.BytesIO(data)) as tar:
             tar.extractall(space, filter="data")
         for bad in (".env", "data", "docs"):
