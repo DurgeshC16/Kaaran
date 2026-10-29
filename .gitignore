@@ -34,3 +34,6 @@ data/uploads/
 
 # voice usage log (local)
 data/voice_usage.jsonl
+
+# aggregate files for the hosted demo only (scripts/deploy_hf.py copies them into the Space)
+published/*.json

@@ -71,23 +71,28 @@ def ensure_space(c: httpx.Client, user: str) -> str:
 
 
 def set_secrets(c: httpx.Client, repo: str, env: dict[str, str]) -> None:
+    example = dict(l.split("=", 1) for l in (ROOT / ".env.example").read_text(encoding="utf-8").splitlines()
+                   if "=" in l and not l.startswith("#"))
     for k in SECRETS:
-        if env.get(k):
+        if env.get(k, "").lower().startswith(("your", "<", "xxx")):
+            print(f"secret {k}: still a placeholder in .env (skipped)")
+        elif env.get(k):
             r = c.post(f"/api/spaces/{repo}/secrets", json={"key": k, "value": env[k]})
             print(f"secret {k}: {'set' if r.status_code < 300 else f'HTTP {r.status_code}'}")
         else:
             print(f"secret {k}: not in .env (skipped)")
     for k, v in VARIABLES.items():
-        v = v if v is not None else env.get(k)
+        v = v if v is not None else (env.get(k) or example.get(k, "").strip() or None)  # model ids must match llm_cache
         if v:
             r = c.post(f"/api/spaces/{repo}/variables", json={"key": k, "value": v})
             print(f"variable {k}={v}: {'set' if r.status_code < 300 else f'HTTP {r.status_code}'}")
 
 
-SHIP = ["src", "llm_cache", "pyproject.toml", "README.md", "Dockerfile", ".env.example", ".dockerignore"]  # what the Space needs
+SHIP = ["src", "llm_cache", "pyproject.toml", "README.md", "Dockerfile", ".env.example", ".dockerignore", "published"]  # what the Space needs
+REAL_SNAPSHOT = ROOT / "data" / "real" / "reports" / "real_snapshot.json"  # aggregates only (owner approved publishing it)
 
 
-def push(repo: str, user: str, token: str) -> None:
+def push(repo: str, user: str, token: str, publish_real: bool = True) -> None:
     """Clone the Space repo, replace its files with the committed app files, commit and push (no force-push)."""
     if subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, capture_output=True, text=True).stdout.strip():
         print("note: uncommitted changes are NOT deployed (only committed files from HEAD)")
@@ -108,6 +113,10 @@ def push(repo: str, user: str, token: str) -> None:
         for bad in (".env", "data", "docs"):
             if (space / bad).exists():
                 sys.exit(f"refusing to deploy: {bad} is in the archive")
+        if publish_real and REAL_SNAPSHOT.exists():  # aggregate-only real-data page (/real); never committed to GitHub
+            (space / "published").mkdir(exist_ok=True)
+            shutil.copy(REAL_SNAPSHOT, space / "published" / "real_snapshot.json")
+            print("published the aggregate real-data snapshot for /real")
         readme = space / "README.md"
         readme.write_text(FRONT_MATTER + readme.read_text(encoding="utf-8"), encoding="utf-8")
         run = lambda *a: subprocess.run(["git", *a], cwd=space, check=True, capture_output=True, text=True)  # noqa: E731
@@ -129,19 +138,23 @@ def push(repo: str, user: str, token: str) -> None:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--secrets-only", action="store_true")
+    p.add_argument("--no-real", action="store_true", help="do not publish the aggregate real-data snapshot")
     args = p.parse_args(argv)
     env = load_env()
-    token, user = env.get("HF_TOKEN"), env.get("HF_USER")
-    if not token or not user:
-        sys.exit("HF_TOKEN and HF_USER must be set in .env (docs/DEPLOY.md)")
+    token = env.get("HF_TOKEN")
+    if not token:
+        sys.exit("HF_TOKEN must be set in .env (docs/DEPLOY.md)")
     with hub(token) as c:
         who = c.get("/api/whoami-v2")
         if who.status_code != 200:
             sys.exit(f"HF token rejected: HTTP {who.status_code}")
+        user = who.json()["name"]  # the account username (HF_USER may hold the display name)
+        if env.get("HF_USER") and env["HF_USER"] != user:
+            print(f"note: HF_USER in .env is {env['HF_USER']!r}; using the account username {user!r}")
         repo = ensure_space(c, user)
         set_secrets(c, repo, env)
     if not args.secrets_only:
-        push(repo, user, token)
+        push(repo, user, token, publish_real=not args.no_real)
     return 0
 
 

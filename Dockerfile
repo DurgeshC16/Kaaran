@@ -16,6 +16,7 @@ COPY --chown=user pyproject.toml README.md ./
 COPY --chown=user src ./src
 COPY --chown=user llm_cache ./llm_cache
 COPY --chown=user .env.example ./.env.example
+COPY --chown=user published ./published
 RUN pip install --no-cache-dir -e . && chown -R user /app
 USER user
 ENV HOME=/home/user \

@@ -91,6 +91,8 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
         from ..service import ROOT
 
         path = ROOT / "data" / "real" / "reports" / "real_snapshot.json"
+        if not path.exists():  # hosted demo: the aggregate copy placed by scripts/deploy_hf.py (never in git)
+            path = ROOT / "published" / "real_snapshot.json"
         if not path.exists():
             raise HTTPException(404, "no real-data snapshot here; run python -m kaaran.real (docs/10_TESTING_GUIDE.md)")
         return JSONResponse(json.loads(path.read_text(encoding="utf-8")))
