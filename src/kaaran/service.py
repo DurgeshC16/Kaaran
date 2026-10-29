@@ -214,6 +214,9 @@ class Workspace:
 class Service:
     def __init__(self, datasets: dict[str, DatasetSpec] | None = None, root: Path = ROOT, default: str | None = None,
                  voice=None):
+        if datasets is None and setting("KAARAN_DATASETS"):  # e.g. "blocks" on a small host (each dataset holds ~100 MB)
+            keep = [k.strip() for k in setting("KAARAN_DATASETS").split(",") if k.strip() in DATASETS]
+            datasets = {k: DATASETS[k] for k in keep} or None
         self.datasets = datasets or DATASETS
         if default is None:  # KAARAN_DEMO_DATASET names a dataset of the built-in registry
             default = (setting("KAARAN_DEMO_DATASET") if datasets is None else None) or next(iter(self.datasets))
