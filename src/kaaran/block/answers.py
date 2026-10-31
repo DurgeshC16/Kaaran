@@ -47,8 +47,8 @@ METRIC_WORDS = {
                        "सर्वात जास्त लक्ष", "जास्त लक्ष", "लक्ष द्यावे", "लक्ष देण्याची", "मागे आहे", "mage aahe", "mage ahe", "sarvat jast laksh",
                        "मागे पडला", "mage padla", "behind", "lagging"],
 }
-SCHOOL_WORDS = ("school", "शाळा", "shala")
-COUNT_WORDS = ("how many", "kiti", "किती", "number", "total", "sankhya", "संख्या", "count", "एकूण")
+SCHOOL_WORDS = ("school", "शाळा", "shala", "shaala", "shaal")
+COUNT_WORDS = ("how many", "kiti", "kti", "किती", "number", "total", "sankhya", "संख्या", "count", "एकूण")
 SUFFIX_STARTS = {"budruk": "budr", "khurd": "khur"}  # village suffixes (बुद्रुक / खुर्द romanise to budruk / khurd)
 CLUSTER_MATCH = 0.88  # minimum similarity for a kendra name
 CLUSTER_MARGIN = 0.03  # a runner-up this close means the question is ambiguous
@@ -411,7 +411,7 @@ RANK_LABEL = {
 SUPERLATIVE = {
     "high": ["highest", "most ", "maximum", "top ", "सर्वाधिक", "सर्वात जास्त", "sarvat jast", "jast"],
     "low": ["lowest", "least", "minimum", "fewest", "सर्वात कमी", "sarvat kami"],
-    "good": ["best", "better", "doing well", "चांगला", "चांगली", "चांगले", "चांगल्या", "changla", "changli", "उत्तम"],
+    "good": ["best", "better", "doing well", "चांगला", "चांगली", "चांगले", "चांगल्या", "changla", "changli", "changle", "उत्तम"],
     "bad": ["worst", "poorest", "weakest", "वाईट", "खराब", "kharab", "vait"],
 }
 
@@ -711,4 +711,74 @@ def detect_lang(text: str, default: str = "mr") -> str:
         return "mr"
     if en:
         return "en"
+    if len(tokens) >= 3 and not mr:  # a Latin-script sentence with no Marathi words is English
+        return "en"
     return default
+
+
+# ---------- safety and scope guards (checked by code before any analysis or AI call) ----------
+
+WELLBEING_WORDS = ["kill myself", "killing myself", "suicide", "end my life", "want to die", "self harm", "self-harm",
+                   "no reason to live", "आत्महत्या", "जगायचं नाही", "जगायचे नाही", "मरायचं आहे", "मरायचे आहे", "jagaycha nahi",
+                   "jagayche nahi", "atmahatya", "marayche aahe"]
+ABUSE_WORDS = ["stupid", "idiot", "useless bot", "nonsense", "shut up", "fuck", "bastard", "मूर्ख", "नालायक", "गाढव",
+               "बावळट", "murkh", "nalayak", "gadhav", "bavlat"]
+GROUP_WORDS = ["caste", "religion", "dalit", "maratha", "muslim", "hindu", "christian", "buddhist", "brahmin",
+               "धर्म", "दलित", "मराठा", "मुस्लिम", "मुसलमान", "हिंदू", "ख्रिश्चन", "बौद्ध", "ब्राह्मण", "dharma"]
+GROUP_TOKENS = {"sc", "st", "obc", "nt", "vjnt", "jain", "jaat", "जात", "जाती", "जातीनुसार", "जातीचे", "जातीच्या"}  # whole words
+# ("जात" alone is a caste; inside "जाते" / "जातात" it is an everyday verb)
+# other districts and big cities of Maharashtra: the demo data covers one district only
+OTHER_PLACES = ["pune", "mumbai", "nagpur", "kolhapur", "nashik", "satara", "sangli", "aurangabad", "chhatrapati sambhajinagar",
+                "thane", "latur", "osmanabad", "dharashiv", "ahmednagar", "ahilyanagar", "beed", "jalgaon", "nanded", "amravati",
+                "akola", "ratnagiri", "sindhudurg", "raigad", "palghar", "dhule", "nandurbar", "parbhani", "hingoli", "jalna",
+                "buldhana", "washim", "yavatmal", "wardha", "chandrapur", "gadchiroli", "gondia", "bhandara", "delhi", "bangalore",
+                "पुणे", "मुंबई", "नागपूर", "कोल्हापूर", "नाशिक", "सातारा", "सांगली", "औरंगाबाद", "ठाणे", "लातूर", "उस्मानाबाद",
+                "अहमदनगर", "बीड", "जळगाव", "नांदेड", "अमरावती", "अकोला", "रत्नागिरी"]
+GENERIC_BEFORE_KENDRA = {"which", "the", "this", "that", "all", "each", "every", "my", "our", "any", "a", "of", "in", "konte",
+                         "kontya", "konta", "कोणत्या", "कोणते", "कोणता", "सर्व", "प्रत्येक", "या", "त्या", "माझ्या", "best", "worst",
+                         "lowest", "highest", "need", "needs", "sarvat", "सर्वात", "किती", "kiti", "kti", "how", "many", "एकूण",
+                         "total", "number", "no", "मधील", "madhil", "madhe", "मध्ये", "आणि", "and", "ani", "chya", "च्या", "ki"}
+
+
+def guard(question: str) -> str | None:
+    """wellbeing | abuse | sensitive_group | None: questions answered by a fixed reply, before any analysis."""
+    q = normalise(question)
+    if any(w in q for w in WELLBEING_WORDS):
+        return "wellbeing"
+    if any(w in q for w in GROUP_WORDS) or set(q.split()) & GROUP_TOKENS:
+        return "sensitive_group"
+    if any(w in q for w in ABUSE_WORDS):
+        return "abuse"
+    return None
+
+
+def other_place(question: str) -> str | None:
+    """A place outside this district named in the question ("schools in Pune")."""
+    q = normalise(question)
+    for p in OTHER_PLACES:
+        if re.search(r"(?<![\wऀ-ॿ])" + re.escape(p), q):
+            return p
+    return None
+
+
+def named_kendra_word(question: str, known: list[str]) -> str | None:
+    """The word right before "kendra/केंद्र/cluster" when it looks like a kendra name ("Zzyzx kendra"), else None."""
+    tokens = normalise(question).split()
+    known_s = {_simple(k) for k in known if k}
+    for i, t in enumerate(tokens):
+        if i and any(t.startswith(w) for w in ("kendra", "केंद्र", "cluster")):
+            prev = tokens[i - 1]
+            if prev not in GENERIC_BEFORE_KENDRA and _simple(prev) not in known_s and not prev.isdigit():
+                return prev
+    return None
+
+
+YEAR_NOTE = ("माहिती {first} ते {last} या वर्षांची आहे; वरील आकडे सर्वात अलीकडच्या वर्षाचे आहेत. कारण भविष्याचा अंदाज देत नाही.",
+             "The data covers {first} to {last}; the figures above are for the latest year. Kaaran does not forecast.")
+
+
+def years_outside(question: str, first: str, last: str) -> bool:
+    """A year named in the question outside the data's academic years (e.g. 2015, 2030)."""
+    lo, hi = int(first[:4]), int(last[:4]) + 1
+    years = [int(y) for y in re.findall(r"(?<!\d)(19\d{2}|20\d{2})(?!\d)", question)]
+    return any(y < lo or y > hi for y in years)

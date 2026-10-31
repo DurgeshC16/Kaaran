@@ -27,7 +27,7 @@ STATIC = Path(__file__).resolve().parent / "static"
 
 
 class AskIn(BaseModel):
-    question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS * 2)
+    question: str = Field(min_length=1, max_length=MAX_QUESTION_CHARS * 10)  # longer text is shortened, not refused
     dataset: str | None = None
     context: str | None = Field(None, max_length=MAX_QUESTION_CHARS * 2)  # the question Kaaran asked to clarify
 
@@ -45,6 +45,9 @@ class ActionIn(BaseModel):
 class SimIn(BaseModel):
     sender: str = Field(default="demo-officer", min_length=1, max_length=40)
     text: str = Field(default="", max_length=MAX_QUESTION_CHARS * 2)
+
+
+REAL_SECRET_FILE = Path("/etc/secrets/real_snapshot.json")  # Render mounts Secret Files here
 
 
 def _lang(lang: str) -> str:
@@ -87,16 +90,31 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
 
     @app.get("/api/real/snapshot")
     def real_snapshot():
-        """Aggregate-only snapshot of REAL public data, if built on this machine (data/real/ is never committed)."""
+        """Aggregate-only snapshot of REAL public data (data/real/ is never committed). Looked up in order:
+        KAARAN_REAL_SNAPSHOT, the local report, published/ (Hugging Face deploy), /etc/secrets/ (Render Secret File).
+        A missing, unreadable or malformed file gives 404 with a reason, never a server error."""
+        from ..llm.client import setting
         from ..service import ROOT
 
-        path = ROOT / "data" / "real" / "reports" / "real_snapshot.json"
-        for alt in (ROOT / "published" / "real_snapshot.json", Path("/etc/secrets/real_snapshot.json")):
-            if not path.exists():  # hosted demo: aggregate copy (HF: placed by deploy_hf.py; Render: a Secret File)
-                path = alt
-        if not path.exists():
-            raise HTTPException(404, "no real-data snapshot here; run python -m kaaran.real (docs/10_TESTING_GUIDE.md)")
-        return JSONResponse(json.loads(path.read_text(encoding="utf-8")))
+        candidates = [Path(setting("KAARAN_REAL_SNAPSHOT"))] if setting("KAARAN_REAL_SNAPSHOT") else []
+        candidates += [ROOT / "data" / "real" / "reports" / "real_snapshot.json", ROOT / "published" / "real_snapshot.json",
+                       REAL_SECRET_FILE]
+        problems = []
+        for path in candidates:
+            if not path.is_file():
+                continue
+            try:
+                data = json.loads(path.read_text(encoding="utf-8-sig"))  # utf-8-sig: a pasted file may carry a BOM
+            except (OSError, ValueError) as e:
+                problems.append(f"{path.name}: unreadable ({type(e).__name__})")
+                continue
+            if not (isinstance(data, dict) and data.get("kind") == "REAL_PUBLIC_DATA" and isinstance(data.get("blocks"), list)
+                    and isinstance(data.get("totals"), dict)):
+                problems.append(f"{path.name}: not a Kaaran real-data snapshot")
+                continue
+            return JSONResponse(data)
+        raise HTTPException(404, "no real-data snapshot here" + (f" ({'; '.join(problems)})" if problems else
+                                                                   "; run python -m kaaran.real (docs/10_TESTING_GUIDE.md)"))
 
     @app.get("/whatsapp", response_class=HTMLResponse, include_in_schema=False)
     def whatsapp_page():
@@ -143,6 +161,8 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
             raise HTTPException(404, f"unknown dataset {dataset!r}")
         if not hasattr(ws, "home_html"):
             raise HTTPException(404, "role home pages need a cluster-lens (block) dataset")
+        if role == "beo" and block and block not in ws.prepare().packs:
+            raise HTTPException(404, f"unknown block {block!r}")
         out = {}
         for lang in LANGS:
             html_, brief_id = ws.home_html(role, lang, block)

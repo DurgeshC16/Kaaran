@@ -70,6 +70,7 @@ HOME = {
     "my_kendras": ("लक्ष देण्याची गरज असलेली केंद्रे", "Kendras that need attention"),
     "all_kendras": ("सर्व केंद्रे", "All kendras"), "kendra": ("केंद्र", "Kendra"), "state": ("स्थिती", "Status"),
     "alert": ("{block}: {n} केंद्रांना तातडीने लक्ष हवे", "{block}: {n} kendras need attention now"),
+    "alert_one": ("{block}: {n} केंद्राला तातडीने लक्ष हवे", "{block}: {n} kendra needs attention now"),
     "alert_data": ("; {n} केंद्रातील नोंदी तपासा", "; check records in {n}"),
     "results": ("निकाल", "results"),
     "status": {"AT_RISK": ("तातडीने लक्ष", "Needs attention"), "DATA": ("नोंदी तपासा", "Check records"),
@@ -295,6 +296,10 @@ class BlockWorkspace:
         names = self._names()
         all_names = [n for ns in names.values() for n in ns]
         clusters = self.ingest.tables["clusters"]
+        if not places and AN.other_place(question):  # "schools in Pune": never answer with this district's figures
+            return plan | {"status": "clarify", "reason": "other_district", "taluka_id": None}
+        kendra_names = [str(n).replace(" Kendra", "") for n in clusters["cluster_name"]] + all_names
+        unknown_kendra = AN.named_kendra_word(question, [w for n in kendra_names for w in n.split()])
         segs = self._segments(question, gaz)
         if segs:
             first = next((b for sg in segs for b in sg["blocks"]), None) or next(
@@ -319,6 +324,8 @@ class BlockWorkspace:
                     return plan
                 plan = plan | {"status": "ok", "taluka_id": places[0], "reason": None, "question_type": "other"}
             cid = AN.cluster_named(question, clusters, names[plan["taluka_id"]][0], all_names)
+            if cid is None and unknown_kendra and AN.cluster_named(question, clusters, None, all_names) is None:
+                return plan | {"status": "clarify", "reason": "unknown_kendra", "taluka_id": None}  # "Zzyzx kendra in X"
             moved = None
             if cid is None:  # a kendra of another block named together with this block: open the kendra's block
                 other = AN.cluster_named(question, clusters, None, all_names)
@@ -344,7 +351,8 @@ class BlockWorkspace:
         de = self.district_entity()
         district = AN.district_named(question, [de["name_en"].replace(" district", ""), de["name_mr"]])
         # a figure asked without a place: district figures; "why" without a place still asks which taluka (never a guess)
-        if (district or (data_metrics and not AN.asks_why(question))) and (plan["status"] != "ok" or district) and self.alerts:
+        if (district or (data_metrics and not AN.asks_why(question))) and (plan["status"] != "ok" or district) and self.alerts \
+                and plan.get("reason") != "unknown_place":  # a place was named but is not in this district: ask
             return plan | {"status": "ok", "taluka_id": self.alerts[0]["block"], "reason": None, "question_type": "other",
                            "district": True}
         if plan["status"] == "refuse" and data_metrics:
@@ -498,6 +506,8 @@ class BlockWorkspace:
         ans["also_named"] = others
         ans["why"] = why
         ans["moved_from"] = plan.get("cluster_moved_from")
+        years = sorted(self.ingest.tables["assessment"]["academic_year"].dropna().unique())
+        ans["year_note"] = [years[0], years[-1]] if years and AN.years_outside(question, years[0], years[-1]) else None
         return ans
 
     def _dq_lines(self, focus: str) -> list[dict]:
@@ -549,6 +559,11 @@ class BlockWorkspace:
             cl = self.facts(focus)["entities"].get(f"C{ans['cluster']}", {})
             cname = (cl.get("name_mr") or cl.get("name_en", "")) if lang == "mr" else cl.get("name_en", "")
             notes.append(MOVED[i].format(c=cname, b=self._block_label(focus, lang)))
+        if ans.get("year_note"):
+            first, last = ans["year_note"]
+            digits = str.maketrans("0123456789", "०१२३४५६७८९") if lang == "mr" else None
+            notes.append(AN.YEAR_NOTE[i].format(first=first.translate(digits) if digits else first,
+                                                last=last.translate(digits) if digits else last))
         for other in ans.get("also_named", []):
             if other in self.packs and other not in ans.get("extra", []):
                 notes.append(ALSO_NAMED[i].format(a=self._block_label(focus, lang), b=self._block_label(other, lang)))
@@ -682,7 +697,7 @@ class BlockWorkspace:
             parts.append(f'<section class="home-alerts"><h3>{esc(HOME["need_attention"][i])} '
                          f'<span class="home-period">({esc(HOME["results"][i])} {esc(period)})</span></h3>')
             for a in self.alerts:
-                web = HOME["alert"][i].format(block=self._block_label(a["block"], lang), n=_num(a["at_risk"], lang)) + (
+                web = HOME["alert" if a["at_risk"] != 1 else "alert_one"][i].format(block=self._block_label(a["block"], lang), n=_num(a["at_risk"], lang)) + (
                     HOME["alert_data"][i].format(n=_num(a["data"], lang)) if a["data"] else "")
                 parts.append(f'<article class="acard" data-block="{esc(a["block"])}"><div class="acard-text">{esc(web)}</div>'
                              f'<button class="btn open-block" type="button" data-block="{esc(a["block"])}">{esc(HOME["open"][i])}</button></article>')

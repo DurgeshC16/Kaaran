@@ -183,3 +183,63 @@ def test_marathi_subject_joins_its_postposition():
     from kaaran.brief.render import tidy
 
     assert tidy("गणित चे निकाल") == "गणिताचे निकाल" and tidy("भाषा ची प्रगती") == "भाषेची प्रगती"
+
+
+# ---------- live QA on the deployed site (2026-10-31) ----------
+
+def test_safety_guards_answer_with_fixed_texts(block_service):
+    w = block_service.ask("I feel like killing myself, nothing matters")
+    assert w.plan["reason"] == "wellbeing" and "14416" in w.reply["en"] and "14416" in w.reply["mr"]
+    assert block_service.ask("मला जगायचं नाही").plan["reason"] == "wellbeing"
+    g = block_service.ask("Compare maths scores of Dalit and Maratha students in Pandharpur")
+    assert g.status == "refuse" and g.plan["reason"] == "sensitive_group"
+    assert block_service.ask("तू मूर्ख आहेस, नालायक").plan["reason"] == "abuse"
+    assert block_service.ask("You are a stupid useless bot").plan["reason"] == "abuse"
+    assert block_service.ask("पंढरपूरमध्ये हजेरी कशी घेतली जाते?").plan.get("reason") != "sensitive_group"  # "जाते" is a verb
+
+
+def test_other_districts_and_unknown_kendras_are_never_answered_with_our_figures(block_service):
+    for q in ("How many schools in Pune?", "How many schools in Kolhapur?"):
+        a = block_service.ask(q)
+        assert a.status == "clarify" and a.plan["reason"] == "other_district", q
+    k = block_service.ask("Why did results fall in Zzyzx kendra in Pandharpur?")
+    assert k.status == "clarify" and k.plan["reason"] == "unknown_kendra"
+    assert block_service.ask("Which clusters in Madha need attention?").status == "ok"  # generic "clusters" is fine
+
+
+def test_years_outside_the_data_get_a_note(block_service):
+    a = block_service.ask("What were Pandharpur results in 2015?")
+    assert a.status == "ok" and any("does not forecast" in n for n in a.summary["en"]["notes"])
+    assert not block_service.ask("How many schools are in Pandharpur?").summary["en"]["notes"]
+
+
+def test_marathi_best_kendra_and_bad_spelling(block_service):
+    a = block_service.ask("pandharpur madhil sarvat changle kendra konte?")
+    assert a.summary["en"]["mode"] == "rank" and "Kendra" in lines(a)[0]
+    assert lines(block_service.ask("pandharpr shaala kti"))[0].startswith("Pandharpur has 140 schools")
+
+
+def test_whatsapp_report_followups_and_language(block_service, monkeypatch, tmp_path):
+    from kaaran.block.workspace import BlockWorkspace
+    from kaaran.whatsapp import REPORT_NONE
+
+    stub = tmp_path / "b.pdf"
+    stub.write_bytes(b"%PDF-1.4 stub")
+    monkeypatch.setattr(BlockWorkspace, "pdf", lambda self, focus, lang: stub)
+    bot = Bot(block_service)
+    assert simulate(bot, "w-q", "report")[0].text == REPORT_NONE[1]  # nothing to report yet: a clear reply (in English)
+    simulate(bot, "w-q", "How many schools in Sangola?")
+    ptr = simulate(bot, "w-q", "and PTR?")
+    assert any("Sangola: pupil-teacher ratio" in r.text for r in ptr)  # same block as the last answer
+    simulate(bot, "w-q", "english")
+    rep = simulate(bot, "w-q", "report")
+    assert rep[-1].kind == "document" and rep[-1].lang == "en"
+    again = simulate(bot, "w-q", "report")  # a card answer's PDF can be asked for again
+    assert again[-1].kind == "document"
+
+
+def test_api_long_question_and_unknown_beo_block(block_service):
+    c = TestClient(create_app(block_service, warm=False))
+    long_q = "How many schools are in Pandharpur? " + "please " * 300
+    assert c.post("/api/ask", json={"question": long_q}).status_code == 200
+    assert c.get("/api/home", params={"role": "beo", "block": "BBogus"}).status_code == 404

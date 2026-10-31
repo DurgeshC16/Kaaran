@@ -51,8 +51,9 @@ def main(base: str) -> int:
         tok = e.get("WHATSAPP_TOKEN", "")
         dbg = c.get("https://graph.facebook.com/v26.0/debug_token", params={"input_token": tok, "access_token": tok}).json().get("data", {})
         exp = dbg.get("expires_at") or 0
-        results.append(("WhatsApp token in .env is valid" + (" (never expires)" if dbg.get("is_valid") and not exp else
-                        " (temporary: expires within days)" if dbg.get("is_valid") else ""), bool(dbg.get("is_valid"))))
+        import datetime
+        until = datetime.datetime.fromtimestamp(exp).strftime("%Y-%m-%d") if exp else "never"
+        results.append((f"WhatsApp token in .env is valid (expires: {until})", bool(dbg.get("is_valid"))))
         pn = c.get(f"https://graph.facebook.com/v26.0/{e.get('WHATSAPP_PHONE_NUMBER_ID', '')}",
                    params={"access_token": tok, "fields": "verified_name"})
         results.append(("phone number id belongs to this token", pn.status_code == 200))

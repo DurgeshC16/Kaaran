@@ -83,3 +83,29 @@ def test_rationalisation_rte_rule(tmp_path):
     data = json.loads(j.read_text(encoding="utf-8"))["rationalisation"]
     assert data["totals"]["posts_needed"] == 5 and {b["block"] for b in data["blocks"]} == {"ALPHA", "BETA"}
     assert "Teacher rationalisation potential" in m.read_text(encoding="utf-8")
+
+
+def test_snapshot_endpoint_reads_the_render_secret_file_and_survives_bad_files(tmp_path, monkeypatch):
+    """Render mounts Secret Files at /etc/secrets/; a missing or malformed file must give 404, never a 500."""
+    from fastapi.testclient import TestClient
+
+    import kaaran.api.app as appmod
+    from kaaran.api import create_app
+    from kaaran.service import DatasetSpec, Service
+
+    monkeypatch.setattr("kaaran.service.ROOT", tmp_path)  # no local data/real report in this test
+    secret = tmp_path / "etc_secrets" / "real_snapshot.json"
+    monkeypatch.setattr(appmod, "REAL_SECRET_FILE", secret)
+    client = TestClient(create_app(Service({"d": DatasetSpec("d", 42, "solapur", str(tmp_path / "x"), "d", "d")}, default="d"), warm=False))
+    assert client.get("/api/real/snapshot").status_code == 404  # missing
+    secret.parent.mkdir()
+    secret.write_text("{not json", encoding="utf-8")
+    r = client.get("/api/real/snapshot")
+    assert r.status_code == 404 and "unreadable" in r.json()["detail"]  # malformed: a reason, not a server error
+    secret.write_text(json.dumps({"kind": "SOMETHING_ELSE"}), encoding="utf-8")
+    assert "not a Kaaran real-data snapshot" in client.get("/api/real/snapshot").json()["detail"]
+    snap = snapshot(load_microdata(write_fake(tmp_path / "u")))
+    j, _m = write_report(snap, tmp_path / "out")
+    secret.write_bytes(b"\xef\xbb\xbf" + j.read_bytes())  # pasted into the Render dashboard with a BOM
+    ok = client.get("/api/real/snapshot").json()
+    assert ok["kind"] == "REAL_PUBLIC_DATA" and ok["totals"]["schools"] == 4 and "101" not in json.dumps(ok["blocks"])

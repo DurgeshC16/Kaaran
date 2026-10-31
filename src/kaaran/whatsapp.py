@@ -66,6 +66,8 @@ REPORT_HINT = ("📄 पूर्ण पुरावा अहवाल (PDF, �
                "📄 For the full evidence brief (PDF, source of every figure), reply 'report'.")
 BRIEF_MODES = {"cards", "cluster", "dq", "twin"}  # answers that come with the one-page PDF
 FOLLOWUP_REASONS = {"missing_place", "ambiguous_place", "unknown_place", "unknown_kendra"}
+REPORT_NONE = ("आधी तालुका किंवा केंद्राबद्दल प्रश्न विचारा; त्या उत्तराचा पूर्ण अहवाल 'अहवाल' लिहिल्यावर येईल.",
+               "Ask about a block or kendra first; reply 'report' after that answer for its full brief.")
 NO_ALERT = ("सध्या कोणत्याही तालुक्यात तातडीचा इशारा नाही.", "No block needs urgent attention right now.")
 
 
@@ -114,6 +116,7 @@ class Bot:
         self.followup: dict[str, str] = {}  # sender -> question that got "which taluka?" (the next reply completes it)
         self.offer_lang: dict[str, str] = {}  # sender -> language the 'report' offer was made in
         self.last_lang: dict[str, str] = {}  # sender -> language of the last reply (default for unclear messages)
+        self.last_block: dict[str, str] = {}  # sender -> block of the last answer ("and PTR?" asks about the same block)
 
     @property
     def pending(self) -> dict[str, str]:  # older name, kept for callers
@@ -155,6 +158,8 @@ class Bot:
         for code, words in LANG_WORDS.items():
             if cmd in words:
                 self.lang[sender] = self.last_lang[sender] = code
+                if sender in self.offer_lang:
+                    self.offer_lang[sender] = code  # an explicit choice also applies to the pending 'report' 
                 send(Reply("text", LANG_SET[LANGS.index(code)], lang=code))
                 return
         if cmd in HELP_WORDS:
@@ -165,6 +170,9 @@ class Bot:
             lang = detect_lang((ctx + " " + text) if ctx else text, lang)  # reply in the language the officer wrote in
         i = LANGS.index(lang)
         ack = lambda: send(Reply("text", ACK[i], lang=lang))  # noqa: E731
+        if cmd in REPORT_WORDS and sender not in self.offer and not ctx:
+            send(Reply("text", REPORT_NONE[i], lang=lang))
+            return
         if cmd in REPORT_WORDS and sender in self.offer:
             lang = self.offer_lang.pop(sender, lang)  # the full brief comes in the language of the answer it follows
             i = LANGS.index(lang)
@@ -172,7 +180,8 @@ class Bot:
         else:
             self.offer.pop(sender, None)  # a new question replaces any older 'report' offer
             self.offer_lang.pop(sender, None)
-            answer = self.service.ask(text, self.dataset, on_progress=ack, context=ctx, default_lang=lang)
+            answer = self.service.ask(self._same_block(sender, text) if not ctx else text, self.dataset, on_progress=ack,
+                                      context=ctx, default_lang=lang)
             if audio is None:
                 lang = answer.info.get("reply_lang", lang)
                 i = LANGS.index(lang)
@@ -185,7 +194,26 @@ class Bot:
             send(Reply("text", answer.reply[lang], lang=lang))
             return
         self.last_lang[sender] = lang
+        if answer.focus and not answer.info.get("district"):
+            self.last_block[sender] = answer.focus
         self._deliver(answer, lang, send, sender)
+
+    def _same_block(self, sender: str, text: str) -> str:
+        """A short follow-up that asks for a figure but names no place ("and PTR?", "आणि हजेरी?") is about the block of
+        the previous answer."""
+        from .block import answers as AN
+        from .llm import intent
+
+        block = self.last_block.get(sender)
+        if not block or len(text.split()) > 5:
+            return text
+        ws = self.service.workspace(self.dataset)
+        if not hasattr(ws, "packs") or block not in ws.packs:
+            return text
+        asked = [m for m in AN.metrics_asked(text) if m not in ("actions", "attention_rank", "data_quality")]
+        if not asked or intent.places_in(text, intent.gazetteer(ws.talukas)) or AN.district_named(text, []):
+            return text
+        return f"{ws.packs[block]['entities'][block]['name_en']} {text}"
 
     def alert(self, sender: str, send: Callable[[Reply], None]) -> None:
         """Proactive message when new data arrives: the most urgent block (the officer replies 'report' to open it)."""
@@ -223,6 +251,9 @@ class Bot:
         title = answer.summary[lang]["title"]
         if title.startswith(ANSWER_HEADING[i]):  # the PDF is the brief, not the short answer ("Direct answer: X")
             title = f"{BLOCK_TITLE[i]}: {answer.focus_name[lang]}"
+        if sender:  # 'report' later re-sends this brief
+            self.offer[sender] = answer.focus
+            self.offer_lang[sender] = lang
         caption = PDF_CAPTION[i].format(title=title)[:CAPTION_LIMIT]
         filename = f"Kaaran_{answer.focus_name['en'].replace(' ', '_')}_{lang}.pdf"
         send(Reply("document", caption, path, filename, answer.brief_id, lang))

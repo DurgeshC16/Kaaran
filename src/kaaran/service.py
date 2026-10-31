@@ -21,7 +21,7 @@ from .brief.pdf import html_to_pdf
 from .brief.render import fill
 from .ingest import IngestResult, ingest
 from .llm import intent
-from .block.answers import detect_lang, is_greeting, metrics_asked, superlative
+from .block.answers import detect_lang, guard, is_greeting, metrics_asked, superlative
 from .llm.client import setting
 from .synth.generate import generate
 from .trust import TrustResult, run_trust
@@ -62,6 +62,8 @@ CLARIFY = {
                         "The taluka in your question is not clear. Please name one taluka:"),
     "missing_place": ("कोणत्या तालुक्याबद्दल विचारत आहात? कृपया तालुक्याचे नाव लिहा:",
                       "Which taluka are you asking about? Please name one of these talukas:"),
+    "other_district": ("या डेमोमध्ये फक्त एका जिल्ह्याचा (सोलापूर) डेटा आहे. कृपया यापैकी एका तालुक्याबद्दल विचारा:",
+                       "This demo holds data for one district only (Solapur). Please ask about one of these blocks:"),
     "unknown_kendra": ("हे केंद्र सापडले नाही. कृपया केंद्राचे नाव तपासा, किंवा तालुका सांगा. तालुके:",
                        "I could not find that kendra. Please check the kendra name, or name the block. Blocks:"),
     "unsupported_subject": ("सध्याच्या डेटामध्ये फक्त गणिताचे निकाल आहेत. कृपया गणिताबद्दल विचारा. तालुके:",
@@ -72,6 +74,16 @@ REFUSE = {
                           "I don't answer questions about individual teachers or students. Please ask about a taluka."),
     "personal_data": ("वैयक्तिक माहिती (नावे, फोन नंबर, ओळख क्रमांक) दिली जात नाही.",
                       "I don't share personal data (names, phone numbers, identifiers)."),
+    "wellbeing": ("तुम्हाला असे वाटत असेल तर कृपया आत्ताच कोणाशी तरी बोला. टेली-मानस (Tele-MANAS) मोफत हेल्पलाइन: 14416 "
+                  "(किंवा 1-800-891-4416), २४ तास, मराठीतही. आपत्कालीन स्थितीत 112 वर कॉल करा. मी फक्त शिक्षण डेटाबद्दल मदत करू शकतो.",
+                  "If you are feeling this way, please talk to someone now. Tele-MANAS free helpline: 14416 (or 1-800-891-4416), "
+                  "24 hours, in Marathi too. In an emergency call 112. I can only help with education data."),
+    "abuse": ("आपण आदराने बोलूया. मी तालुका व केंद्रांचे निकाल, हजेरी, शिक्षक आणि डेटाच्या गुणवत्तेबद्दल मदत करू शकतो.",
+              "Let's keep it respectful. I can help with blocks' and kendras' results, attendance, teachers and data quality."),
+    "sensitive_group": ("या डेटामध्ये जात किंवा धर्मानुसार माहिती नाही, आणि कारण विद्यार्थ्यांची जात किंवा धर्मानुसार तुलना करत नाही. "
+                        "तालुका किंवा केंद्रानुसार प्रश्न विचारा.",
+                        "This data has no caste or religion breakdown, and Kaaran does not compare pupils by caste or religion. "
+                        "Please ask by block or kendra."),
     "out_of_scope": ("हा प्रश्न या शिक्षण डेटाच्या बाहेरचा आहे. मी तालुका व केंद्रांचे निकाल, हजेरी, शिक्षक, भेटी आणि डेटाच्या गुणवत्तेबद्दल उत्तर देतो.",
                      "That is outside this education data. I answer about talukas and clusters: results, attendance, teachers, visits and data quality."),
 }
@@ -340,11 +352,17 @@ class Service:
         key = dataset or self.default
         ws = self.workspace(key)
         question = " ".join(question.split())[:MAX_QUESTION_CHARS]
+        guarded = guard(question)  # wellbeing / abuse / caste-religion: a fixed reply by code, no analysis, no AI call
+        if guarded:
+            plan = {"status": "refuse", "reason": guarded, "source": "guard"}
+            reply = {lang: REFUSE[guarded][i] for i, lang in enumerate(LANGS)}
+            return Answer("refuse", key, question, plan, reply, info={"intent_source": "guard", "intent_cost_usd": 0.0,
+                                                                        "seconds": round(time.monotonic() - t0, 2)})
         plan = intent.parse(question, ws.talukas, ws.years, tier="light", scope_note=getattr(ws, "intent_scope", ""))
         info = {"intent_source": plan.get("source"), "intent_cost_usd": plan.get("cost_usd", 0.0)}
         if getattr(ws, "kind", "taluka") == "block":  # deterministic fixes on top of the parsed plan (block/answers.py)
             plan = ws.resolve(question, plan)
-        if plan["status"] != "ok" and plan.get("reason") not in ("individual_people", "personal_data") and is_greeting(question):
+        if plan["status"] != "ok" and plan.get("reason") not in ("individual_people", "personal_data") and is_greeting(question):  # noqa: E501
             # examples in the officer's language; never the refused one, never the one without a place
             ex = [e for e in ws.examples() if "नावे" not in e["text"] and "names" not in e["text"] and len(e["text"].split()) > 3]
             lens = getattr(ws, "kind", "taluka")

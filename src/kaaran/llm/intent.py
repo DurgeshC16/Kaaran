@@ -111,7 +111,7 @@ TOPIC_WORDS = ["maths", "math", "ganit", "गणित", "result", "nikal", "न
                "data", "आकडेवारी", "decline", "fall", "drop", "improve", "taluka", "तालुका", "घसर", "ghasar", "pragati", "प्रगती",
                "election", "निवडणूक", "infrastructure", "similar", "compare", "kasa", "कसा", "कशी", "का", "why", "how",
                "केंद्र", "kendra", "cluster", "लक्ष", "attention", "mage", "मागे",
-               "school", "शाळा", "shala", "teacher", "शिक्षक", "ptr", "ratio", "प्रमाण", "vacan", "रिक्त", "visit", "भेट",
+               "school", "शाळा", "shala", "shaala", "kti", "teacher", "शिक्षक", "ptr", "ratio", "प्रमाण", "vacan", "रिक्त", "visit", "भेट",
                "किती", "kiti", "how many", "what should", "काय करा", "action", "कृती", "happen", "झाले", "status", "स्थिती",
                "report", "अहवाल", "learning", "language", "भाषा", "reading", "वाचन", "enrol", "पट",
                "aakdevari", "akdevari", "vishwas", "विश्वास", "mahiti", "माहिती", "nond", "नोंद", "reliable", "quality"]

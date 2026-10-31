@@ -25,12 +25,22 @@ HEAD = {
     "source": ("स्रोत", "Source"),
     "synthetic": ("कृत्रिम डेमो डेटा", "Synthetic demo data"),
     "click": ("निळ्या आकड्यावर क्लिक करा: फाइल, शीट व ओळी दिसतील.", "Click a blue figure to see its file, sheet and rows."),
+    "legend": ("पुराव्याचे स्तर (ठरलेल्या नियमांनुसार):", "Evidence labels (set by fixed rules):"),
 }
+# Legend of the evidence labels shown under the kendra cards: (badge class, (mr, en) name, (mr, en) meaning).
+LEGEND = (("strong", ("ठाम पुरावा", "Strong evidence"), ("सर्व नियम पूर्ण", "meets every rule")),
+          ("weak", ("कमकुवत", "Weak"), ("संबंध दिसतो, कारण सिद्ध नाही", "linked, not proven as the cause")),
+          ("ruled-out", ("संबंध आढळला नाही", "No link found"), ("तपासले, संबंध नाही", "checked, not linked")),
+          ("learn", ("यांच्याकडून शिका", "Learn from"), ("तशीच परिस्थिती, पण चांगला निकाल", "same situation, better results")),
+          ("no-data", ("पुरेसा डेटा नाही", "Not enough data"), ("अजून निर्णय देता येत नाही", "cannot be judged yet")))
 STATUS_CLASS = {("RISK", "STRONG"): "at-risk", ("RISK", "WEAK"): "watch", ("DATA", "RED_FLAG"): "red-flag",
                 ("DATA", "INSUFFICIENT"): "no-data"}
 LABEL_CLASS = {"STRONG": "strong", "WEAK": "weak", "RULED_OUT": "ruled-out", "LEARN_FROM": "learn", "INSUFFICIENT": "no-data",
                "RED_FLAG": "red-flag", "ACTION": "action"}
 FIRST_SENTENCE = re.compile(r"^(.+?[.।])(\s|$)")
+ROW_LABEL = re.compile(r"^([^<>:.;।]{2,60}):\s+(.+)$", re.S)  # "Largest rises: ..." -> a labelled row (plain-text label only)
+RANK_LINE = re.compile(r"^([^<>:]{2,90}):\s(.+?)(\s\([^<>()]*\))?\.$", re.S)  # answers.rank_line: "label: A n, B n, C n."
+RANK_ITEM = re.compile(r'\s*([^<,]+?)\s(<span class="num"[^>]*>[^<]*</span>)')
 
 
 def _badge(f: dict, i: int) -> str:
@@ -149,6 +159,43 @@ def sources_of(fact_ids: list[str], numbers: dict, files: dict[str, str]) -> lis
     return out
 
 
+def _rank_html(line: str) -> str | None:
+    """A rank line ("label: A n, B n, C n.") as a numbered list with the figure right-aligned. Same words, same figures;
+    None (keep the plain line) when the line does not have exactly that shape."""
+    m = RANK_LINE.match(line)
+    if not m:
+        return None
+    items = RANK_ITEM.findall(m.group(2))
+    if not items or ", ".join(f"{n} {v}" for n, v in items) != m.group(2):
+        return None
+    rows = "".join(f'<li><span class="rank-name">{n}</span><span class="rank-val">{v}</span></li>' for n, v in items)
+    tied = f'<p class="answer-sub">{m.group(3).strip()}</p>' if m.group(3) else ""
+    return f'<p class="answer-line answer-lead">{m.group(1)}</p><ol class="rank-list">{rows}</ol>{tied}'
+
+
+def _line_html(text: str, lead: bool) -> str:
+    """One answer line: the headline (larger), a labelled row ("label | text") when it starts with a short plain label,
+    otherwise a plain supporting line."""
+    if lead:
+        return f'<p class="answer-line answer-lead">{text}</p>'
+    m = ROW_LABEL.match(text)
+    if m:
+        return f'<p class="answer-line answer-row"><span class="row-label">{m.group(1)}</span><span class="row-text">{m.group(2)}</span></p>'
+    return f'<p class="answer-line">{text}</p>'
+
+
+def _legend_html(cards_html: list[str], i: int) -> str:
+    """Legend of the evidence labels that appear in the cards (none when the cards carry no labelled 'why' lines)."""
+    joined = "".join(cards_html)
+    used = [x for x in LEGEND if f'class="badge b-{x[0]}"' in joined]
+    if not used:
+        return ""
+    esc = html.escape
+    items = "".join(f'<span class="legend-item"><span class="badge b-{c}">{esc(name[i])}</span> {esc(gloss[i])}</span>'
+                    for c, name, gloss in used)
+    return f'<p class="conf-legend"><span class="legend-title">{esc(HEAD["legend"][i])}</span>{items}</p>'
+
+
 def answer_html(mode: str, lines_html: list[str], notes: list[str], source_files: list[str], cards_html: list[str],
                 brief_html: str, lang: str, synthetic: bool, evidence_label: str | None = None) -> str:
     """The whole answer: answer card, kendra cards, and the full brief folded behind one button."""
@@ -159,13 +206,21 @@ def answer_html(mode: str, lines_html: list[str], notes: list[str], source_files
         parts.append('<section class="answer-card">')
         tag = f'<span class="tag-synthetic">{esc(HEAD["synthetic"][i])}</span>' if synthetic else ""
         parts.append(f'<h3 class="answer-head">{esc(HEAD["answer"][i])}{tag}</h3>')
-        parts += [f'<p class="answer-line">{t}</p>' for t in lines_html]
+        rank = _rank_html(lines_html[0]) if mode == "rank" and len(lines_html) == 1 else None
+        if rank:
+            parts.append(rank)
+        else:
+            lead = mode != "fact" or len(lines_html) == 1  # parallel facts (multi-part questions) get equal rows
+            parts += [_line_html(t, lead and k == 0) for k, t in enumerate(lines_html)]
         parts += [f'<p class="answer-note">👉 {esc(n)}</p>' for n in notes]
         if source_files:
-            parts.append(f'<p class="answer-source">{esc(HEAD["source"][i])}: {esc(", ".join(source_files))} · {esc(HEAD["click"][i])}</p>')
+            chips = " ".join(f'<span class="src-file">{esc(f)}</span>' for f in source_files)
+            parts.append(f'<p class="answer-source"><span class="src-label">{esc(HEAD["source"][i])}:</span> {chips} '
+                         f'<span class="src-hint">{esc(HEAD["click"][i])}</span></p>')
         parts.append("</section>")
     if cards_html:
-        parts.append(f'<section class="kendra-cards"><h3 class="cards-head">{esc(HEAD["cards"][i])}</h3>{"".join(cards_html)}</section>')
+        parts.append(f'<section class="kendra-cards"><h3 class="cards-head">{esc(HEAD["cards"][i])}</h3>'
+                     f'{_legend_html(cards_html, i)}{"".join(cards_html)}</section>')
     parts.append(f'<details class="full-evidence"><summary>{esc(evidence_label or HEAD["evidence"][i])}</summary>{brief_html}</details>')
     parts.append("</div>")
     return "".join(parts)
