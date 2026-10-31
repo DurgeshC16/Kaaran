@@ -303,7 +303,7 @@ class BlockWorkspace:
         segs = self._segments(question, gaz)
         if segs:
             first = next((b for sg in segs for b in sg["blocks"]), None) or next(
-                (sg["ranked"][0][0] for sg in segs if sg.get("ranked")), None)
+                (sg["ranked"][0][2] for sg in segs if sg.get("ranked")), None)
             if first:
                 return plan | {"status": "ok", "taluka_id": first, "reason": None, "question_type": "other", "segments": segs,
                                "cluster": None}
@@ -372,15 +372,20 @@ class BlockWorkspace:
             asked = AN.metrics_asked(p)
             metrics = [m for m in asked if m in DATA_METRICS]
             dq = "data_quality" in asked and (not metrics or any(w in AN.normalise(p) for w in AN.DQ_WORDS))
-            if not metrics and not dq and places and last_metrics:
-                metrics = last_metrics  # "Pandharpur madhe shala kiti, Sangola madhe?"
             sup = AN.superlative(p)
+            if not metrics and not dq and places and last_metrics and not sup:
+                metrics = last_metrics  # "Pandharpur madhe shala kiti, Sangola madhe?"
+            kendra_q = any(w in AN.normalise(p) for w in AN.CLUSTER_WORDS)
+            rank_metrics = metrics or (["learning"] if sup in ("good", "bad") else [])  # "which kendra is worst": results
             ranked = None
-            if sup and metrics and not places:
-                order = AN.rank_order(metrics[0], sup)
-                if order:
-                    items, tied = self._rank_blocks(*order)
+            if sup and rank_metrics and (kendra_q or not places):
+                order = AN.rank_order(rank_metrics[0], sup)
+                if order and kendra_q:  # "wich kendra is wrost in pandharpur": that block's kendras
+                    items, tied = self._rank_clusters(*order, block=places[0] if places else None)
                     ranked = {"fact": order[0], "order": order[1], "items": items, "tied": tied}
+                elif order:
+                    items, tied = self._rank_blocks(*order)
+                    ranked = {"fact": order[0], "order": order[1], "items": [[b, n, b] for b, n in items], "tied": tied}
             blocks = places or ([last] if last else [])
             if ranked or ((metrics or dq) and blocks):
                 out.append({"blocks": [] if ranked else blocks, "metrics": metrics, "dq": dq, "text": p,
@@ -397,7 +402,8 @@ class BlockWorkspace:
             if fact in f["ids"][b]:
                 rows.append((f["facts"][b][fact][0], self.packs[b]["entities"][b]["name_en"], b, f["ids"][b][fact]))
         rows.sort(key=lambda r: ((-r[0] if order == "desc" else r[0]), r[1]))
-        tied = len(rows) > top and round(rows[top][0], 1) == round(rows[top - 1][0], 1)
+        shown = [round(r[0], 1) for r in rows[:top + 1]]
+        tied = len(set(shown)) < len(shown)  # equal figures among the shown ones or with the next one
         return [(b, nid) for _v, _n, b, nid in rows[:top]], tied
 
     def _rank_clusters(self, fact: str, order: str, block: str | None = None, top: int = 3) -> tuple[list[list[str]], bool]:
@@ -409,7 +415,8 @@ class BlockWorkspace:
                 if eid.startswith("C") and fact in ids:
                     rows.append((f["facts"][eid][fact][0], f["entities"][eid]["name_en"], eid, ids[fact], b))
         rows.sort(key=lambda r: ((-r[0] if order == "desc" else r[0]), r[1]))
-        tied = len(rows) > top and round(rows[top][0], 1) == round(rows[top - 1][0], 1)
+        shown = [round(r[0], 1) for r in rows[:top + 1]]
+        tied = len(set(shown)) < len(shown)
         return [[eid, nid, b] for _v, _n, eid, nid, b in rows[:top]], tied
 
     def direct_answer(self, focus: str, question: str, plan: dict) -> dict:
@@ -436,8 +443,8 @@ class BlockWorkspace:
             for seg in plan["segments"]:
                 if seg.get("rank"):
                     r = seg["rank"]
-                    ans["lines"].append(AN.rank_line(r["fact"], r["order"], [tuple(x) for x in r["items"]], r.get("tied", False)))
-                    ans["extra"] += [b for b, _n in r["items"] if b != focus]
+                    ans["lines"].append(AN.rank_line(r["fact"], r["order"], [(e, n) for e, n, _b in r["items"]], r.get("tied", False)))
+                    ans["extra"] += [b for _e, _n, b in r["items"] if b != focus]
                 for b in seg["blocks"]:
                     if seg["metrics"]:
                         ans["lines"] += AN.direct_answer(seg["text"], self.facts(b), self.pack(b), None, seg["metrics"])["lines"]

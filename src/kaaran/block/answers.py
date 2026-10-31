@@ -39,7 +39,8 @@ METRIC_WORDS = {
     "learning": ["result", "score", "learning", "निकाल", "गुण", "maths", "math", "गणित", "ganit", "language", "भाषा", "reading",
                  "वाचन", "nikal"],
     "visits": ["visit", "भेट", "kendra pramukh", "केंद्रप्रमुख", "crc", "mentor"],
-    "data_quality": ["data", "आकडेवारी", "reliable", "विश्वास", "record", "नोंद", "fake", "बनावट"],
+    "data_quality": ["data", "आकडेवारी", "reliable", "विश्वास", "record", "नोंद", "fake", "बनावट", "nond", "avishwas", "vishwas",
+                     "aakdevari", "akdevari", "khoti", "खोटी"],
     "actions": ["what should i do", "what to do", "काय करावे", "काय करू", "action", "कृती", "kay karave", "next step"],
     # only real "where should I look first" words; "which block has the best X" is a ranking by X (see superlative())
     "attention_rank": ["most attention", "need attention", "needs attention", "need more attention", "needs more attention",
@@ -47,7 +48,7 @@ METRIC_WORDS = {
                        "सर्वात जास्त लक्ष", "जास्त लक्ष", "लक्ष द्यावे", "लक्ष देण्याची", "मागे आहे", "mage aahe", "mage ahe", "sarvat jast laksh",
                        "मागे पडला", "mage padla", "behind", "lagging"],
 }
-SCHOOL_WORDS = ("school", "शाळा", "shala", "shaala", "shaal")
+SCHOOL_WORDS = ("school", "schol", "shcool", "शाळा", "shala", "shaala", "shaal")
 COUNT_WORDS = ("how many", "kiti", "kti", "किती", "number", "total", "sankhya", "संख्या", "count", "एकूण")
 SUFFIX_STARTS = {"budruk": "budr", "khurd": "khur"}  # village suffixes (बुद्रुक / खुर्द romanise to budruk / khurd)
 CLUSTER_MATCH = 0.88  # minimum similarity for a kendra name
@@ -412,7 +413,7 @@ SUPERLATIVE = {
     "high": ["highest", "most ", "maximum", "top ", "सर्वाधिक", "सर्वात जास्त", "sarvat jast", "jast"],
     "low": ["lowest", "least", "minimum", "fewest", "सर्वात कमी", "sarvat kami"],
     "good": ["best", "better", "doing well", "चांगला", "चांगली", "चांगले", "चांगल्या", "changla", "changli", "changle", "उत्तम"],
-    "bad": ["worst", "poorest", "weakest", "वाईट", "खराब", "kharab", "vait"],
+    "bad": ["worst", "wrost", "worse", "poorest", "weakest", "वाईट", "खराब", "kharab", "vait"],
 }
 
 
@@ -438,7 +439,7 @@ def rank_order(metric: str, sup: str) -> tuple[str, str] | None:
     return fact, "desc" if up else "asc"
 
 
-TIED = (" (इतर काहींचाही हाच आकडा आहे)", " (some others have the same figure)")
+TIED = (" (समान आकडे बरोबरीत आहेत)", " (equal figures are tied)")
 
 
 def rank_line(fact: str, order: str, ranked: list[tuple[str, str]], tied: bool = False) -> dict:
@@ -475,7 +476,8 @@ def asks_why(question: str) -> bool:
 
 # ---------- the block's facts bundle (kept outside the evidence pack, so recorded brief prompts stay unchanged) ----------
 
-DQ_WORDS = ("reliable", "unreliable", "विश्वास", "fake", "बनावट", "संशय", "suspicious", "trust", "vishwas", "khari", "खरी")
+DQ_WORDS = ("reliable", "unreliable", "विश्वास", "fake", "बनावट", "संशय", "suspicious", "trust", "vishwas", "avishwas", "khari",
+            "खरी", "nond", "नोंद", "khoti", "खोटी")
 CLUSTER_WORDS = ("kendra", "केंद्र", "cluster", "kendr")
 CLUSTER_STATUS = {
     "AT_RISK": ("{{e:P}} केंद्राकडे तातडीने लक्ष देण्याची गरज आहे; कारणे आणि कृती खाली दिली आहेत.",
@@ -734,7 +736,7 @@ OTHER_PLACES = ["pune", "mumbai", "nagpur", "kolhapur", "nashik", "satara", "san
                 "buldhana", "washim", "yavatmal", "wardha", "chandrapur", "gadchiroli", "gondia", "bhandara", "delhi", "bangalore",
                 "पुणे", "मुंबई", "नागपूर", "कोल्हापूर", "नाशिक", "सातारा", "सांगली", "औरंगाबाद", "ठाणे", "लातूर", "उस्मानाबाद",
                 "अहमदनगर", "बीड", "जळगाव", "नांदेड", "अमरावती", "अकोला", "रत्नागिरी"]
-GENERIC_BEFORE_KENDRA = {"which", "the", "this", "that", "all", "each", "every", "my", "our", "any", "a", "of", "in", "konte",
+GENERIC_BEFORE_KENDRA = {"which", "wich", "whch", "witch", "the", "this", "that", "all", "each", "every", "my", "our", "any", "a", "of", "in", "konte",
                          "kontya", "konta", "कोणत्या", "कोणते", "कोणता", "सर्व", "प्रत्येक", "या", "त्या", "माझ्या", "best", "worst",
                          "lowest", "highest", "need", "needs", "sarvat", "सर्वात", "किती", "kiti", "kti", "how", "many", "एकूण",
                          "total", "number", "no", "मधील", "madhil", "madhe", "मध्ये", "आणि", "and", "ani", "chya", "च्या", "ki"}

@@ -243,3 +243,12 @@ def test_api_long_question_and_unknown_beo_block(block_service):
     long_q = "How many schools are in Pandharpur? " + "please " * 300
     assert c.post("/api/ask", json={"question": long_q}).status_code == 200
     assert c.get("/api/home", params={"role": "beo", "block": "BBogus"}).status_code == 404
+
+
+def test_misspelt_multipart_with_kendra_ranking_and_marathi_latin_data_quality(block_service):
+    a = block_service.ask("how many schols in sangola and wich kendra is wrost in pandharpur?")
+    got = lines(a)
+    assert got[0].startswith("Sangola has 138 schools") and got[1].startswith("Lowest maths results: Bhalwad Khurd Kendra")
+    d = block_service.ask("madha madhil kontya nondi avishwasniya ahet?")
+    assert d.summary["en"]["mode"] == "dq" and "Kendras with suspicious records" in " ".join(lines(d))
+    assert "tied" in lines(block_service.ask("Which block has the best maths results?"))[0]  # Malshiras = Barshi

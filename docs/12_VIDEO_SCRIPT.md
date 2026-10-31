@@ -1,3 +1,5 @@
+> **Superseded:** record from [docs/14_DEMO_VIDEO_SCRIPT.md](14_DEMO_VIDEO_SCRIPT.md) (verified on the live site, 2026-10-31).
+
 # 12 · Three-minute demo video: script and shot list
 
 > Judges may stop at 3:00, so the first 3 minutes must stand alone. Total below: **3:00**.

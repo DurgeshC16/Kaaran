@@ -71,7 +71,7 @@ CLARIFY = {
 }
 REFUSE = {
     "individual_people": ("मी वैयक्तिक शिक्षक किंवा विद्यार्थ्यांबद्दल माहिती देत नाही. कृपया तालुका पातळीवरील प्रश्न विचारा.",
-                          "I don't answer questions about individual teachers or students. Please ask about a taluka."),
+                          "I don't answer questions about individual teachers or students. Please ask about a block (taluka) or kendra."),
     "personal_data": ("वैयक्तिक माहिती (नावे, फोन नंबर, ओळख क्रमांक) दिली जात नाही.",
                       "I don't share personal data (names, phone numbers, identifiers)."),
     "wellbeing": ("तुम्हाला असे वाटत असेल तर कृपया आत्ताच कोणाशी तरी बोला. टेली-मानस (Tele-MANAS) मोफत हेल्पलाइन: 14416 "
