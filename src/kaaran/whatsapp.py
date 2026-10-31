@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import hmac
 import threading
 import time
@@ -448,12 +449,15 @@ class Gateway:
         self.events: deque = deque(maxlen=50)
 
     def log(self, **event) -> None:
-        self.events.append({"at": time.strftime("%H:%M:%S"), **event})
+        entry = {"at": time.strftime("%H:%M:%S"), **event}
+        self.events.append(entry)
+        print("whatsapp:", json.dumps(entry, ensure_ascii=False), flush=True)  # host logs (Render); numbers are masked
 
     def accept(self, payload) -> list[dict]:
         new = []
         for m in incoming_messages(payload):
             if self.cfg.phone_number_id and m["phone_number_id"] and m["phone_number_id"] != self.cfg.phone_number_id:
+                self.log(dir="in", status="ignored", error="message for another phone number id (check WHATSAPP_PHONE_NUMBER_ID)")
                 continue
             if self.seen.add(m["id"]):
                 new.append(m)
