@@ -274,6 +274,7 @@ Phase 3 prerequisite: auth works (`/status` shows the API key) and model set; fi
 - Deploy; user testing (even 2-3 sessions; the user may skip it); video and deck.
 
 ## Decisions
+- 2026-10-31 Pre-deploy audit: hosting compared (Render free primary; Koyeb free with card or Northflank sandbox as backup; Cloud Run/Oracle rejected: card, background-task CPU, reclaim/capacity risk). Repo may stay private if the Tech4Dev evaluator IDs get read access. Fixed: /healthz HEAD, WhatsApp report language, repeated heading, dangling rank sentence, Marathi subject join, webhook checker validates the token.
 - 2026-10-30 Hosting: Hugging Face Docker Spaces need PRO (HTTP 402); owner chose the free route -> Render free plan (render.yaml). Image pre-builds briefs, PDFs and a prepared-state cache (kaaran.warm) and loads only the main dataset: under 512 MB / 0.1 CPU it is up in about 13 s, first answer about 16 s, then instant. Real-data aggregate goes to Render as a Secret File, never git.
 - 2026-10-29 Hosting: Hugging Face Spaces (Docker). WhatsApp: Meta Cloud API with the owner's phone, and evaluators use the web simulator (a Meta test number only reaches registered phones). Live Claude on the host with a spend cap. Deck generated with python-pptx (dev-only).
 - 2026-10-29 Answer shape: the short answer first, kendra cards only for attention/why questions, the full brief always one click away; reply language = question language.

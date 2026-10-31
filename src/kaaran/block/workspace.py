@@ -522,7 +522,7 @@ class BlockWorkspace:
             items = ", ".join(AN.RANK_ITEM[i][0 if r["at_risk"] == 1 else 1].format(name=self._block_label(r["block"], lang),
                                                                                     n=_num(r["at_risk"], lang))
                               for r in ans["rank"])
-            text = AN.RANK_LINE[i].format(items=items)
+            text = (AN.RANK_LINE if ans.get("mode") == "cards" else AN.RANK_LINE_SHORT)[i].format(items=items)
             out.append(_esc(text) if html else text)
         if ans.get("lines"):
             ap = self.answer_pack(focus, ans.get("extra", []))

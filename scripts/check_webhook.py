@@ -48,6 +48,14 @@ def main(base: str) -> int:
         results.append(("verify token loaded on the server", bool(cfg.get("verify_token"))))
         results.append(("app secret loaded on the server", bool(cfg.get("app_secret"))))
         results.append(("send settings (token + phone number id) loaded", bool(cfg.get("send"))))
+        tok = e.get("WHATSAPP_TOKEN", "")
+        dbg = c.get("https://graph.facebook.com/v26.0/debug_token", params={"input_token": tok, "access_token": tok}).json().get("data", {})
+        exp = dbg.get("expires_at") or 0
+        results.append(("WhatsApp token in .env is valid" + (" (never expires)" if dbg.get("is_valid") and not exp else
+                        " (temporary: expires within days)" if dbg.get("is_valid") else ""), bool(dbg.get("is_valid"))))
+        pn = c.get(f"https://graph.facebook.com/v26.0/{e.get('WHATSAPP_PHONE_NUMBER_ID', '')}",
+                   params={"access_token": tok, "fields": "verified_name"})
+        results.append(("phone number id belongs to this token", pn.status_code == 200))
         challenge = str(secrets.randbelow(10**9))
         ok = c.get(url, params={"hub.mode": "subscribe", "hub.verify_token": e.get("WHATSAPP_VERIFY_TOKEN", ""), "hub.challenge": challenge})
         results.append(("GET handshake echoes the challenge", ok.status_code == 200 and ok.text.strip() == challenge))

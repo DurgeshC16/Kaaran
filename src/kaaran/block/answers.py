@@ -339,6 +339,7 @@ COVERAGE_NOTE = (" ({{n:schools}} पैकी {{n:schools_learning}} शाळ�
 ANSWER_HEADING = ("थेट उत्तर", "Direct answer")
 RANK_LINE = ("सर्वात जास्त लक्ष देण्याची गरज: {items}. पहिल्या तालुक्यातील केंद्रे खाली आहेत.",
              "Most attention needed: {items}. The first block's clusters are below.")
+RANK_LINE_SHORT = ("सर्वात जास्त लक्ष देण्याची गरज: {items}.", "Most attention needed: {items}.")
 RANK_ITEM = (("{name} ({n} केंद्र)", "{name} ({n} केंद्रे)"), ("{name} ({n} cluster)", "{name} ({n} clusters)"))
 RANK_BY_LINE = ("{label}: {items}.", "{label}: {items}.")
 

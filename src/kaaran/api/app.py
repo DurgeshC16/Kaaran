@@ -102,7 +102,7 @@ def create_app(service: Service | None = None, gateway: Gateway | None = None, w
     def whatsapp_page():
         return FileResponse(STATIC / "whatsapp.html", media_type="text/html; charset=utf-8")
 
-    @app.get("/healthz")
+    @app.api_route("/healthz", methods=["GET", "HEAD"])  # HEAD: uptime monitors keep the free host awake
     def healthz():
         client = get_client()
         return {"ok": True, "llm_mode": client.mode, "pdf_browser": bool(find_browser()),

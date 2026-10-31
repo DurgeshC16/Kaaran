@@ -29,9 +29,11 @@ source file, sheet and rows. Claude reads the question and writes the Marathi; i
 | WhatsApp simulator | **https://kaaran.onrender.com/whatsapp** (TODO: confirm) |
 | Source | https://github.com/DurgeshC16/Kaaran |
 
-The free Space may sleep when idle. The synthetic data is generated when the image is built; the first request
-after a sleep restarts the container, which then prepares the analysis for every block in the background (allow
-up to a minute). After that, answers come back in seconds.
+The demo runs on Render's free plan (512 MB RAM, 0.1 CPU), which puts the service to sleep after 15 minutes
+without visits. The synthetic data, briefs, one-page PDFs and a prepared-state cache are all built into the image
+(`python -m kaaran.warm`), so a woken service is up in about 15 s and gives its first answer in about 16 s (measured
+locally with `docker run --memory=512m --cpus=0.1`); after that, answers come back in under a second. A free uptime
+monitor keeps it awake during evaluation (docs/DEPLOY.md). The host loads only the main dataset (`KAARAN_DATASETS=blocks`).
 
 ## Try it in 2 minutes
 
@@ -50,7 +52,7 @@ the answers below are the output on the demo dataset (seed 42).
 | Ask | What you should get |
 |---|---|
 | `Which block needs most attention?` | "Most attention needed: Pandharpur (3 clusters), Karmala (1 cluster), Madha (1 cluster)", then a card for each kendra in Pandharpur (what / why with label / what to do with owner). The full brief is behind a button. |
-| `Malshiras cha nikal changla ka aala?` (why did Malshiras improve?) | Reply in Marathi: maths rose 2.7 points to 65.2%, the kendras that rose most, the inputs that moved with it, and "associated with the rise; the data does not prove they caused it". |
+| `Malshiras cha nikal changla ka aala?` (why did Malshiras improve?) | Reply in Marathi: maths rose 2.7 points to 65.2%, the kendras that rose most (Longaon Khurd +5.0, Malner Budruk +4.3), and, because teachers, attendance and visits stayed about the same, "the data shows no clear reason; ask the clusters that rose most what they did differently". It never invents a cause. |
 | `पंढरपूर मध्ये किती शाळा आहेत?` | One line: "पंढरपूरमध्ये १४० शाळा आहेत (१२ केंद्रे)." Click १४० to see the source file. |
 | `pandharpoor madhe kiti shala ahet, karmala PTR kiti, mohol la shikshak kiti kami.` (misspelt, 3 questions) | Three answers, one per part: schools in Pandharpur, PTR in Karmala (26.5; 2 schools above 30), vacant posts in Mohol. |
 | `Which teacher in Pandharpur is absent most often?` | Refused: Kaaran never answers about individual teachers or students. |
@@ -215,6 +217,7 @@ Copy it to `.env` (git-ignored, never commit it). Settings resolve in this order
 | `KAARAN_ENV` | `dev` | Label only; not read by the code. |
 | `KAARAN_LLM_MODE` | `replay` | `replay` = recorded responses only (offline, free); `live` = recorded first, then the API (records new responses); `off` = no LLM, rule and template fallbacks. |
 | `KAARAN_DEMO_DATASET` | `blocks` | Dataset the web/WhatsApp demo opens with: `blocks`, `blocks_fictional` (cluster lens), `solapur`, `fictional` (older taluka lens). |
+| `KAARAN_DATASETS` | all four | Comma-separated list of datasets to load. The Render free plan uses `blocks` only (about 210 MB instead of about 630 MB). |
 | `KAARAN_BROWSER` | empty | Path to Edge/Chrome/Chromium for PDFs. Empty = auto-detect. |
 | `WHATSAPP_TOKEN` | empty | Meta Cloud API access token (system-user token for a lasting deploy). |
 | `WHATSAPP_PHONE_NUMBER_ID` | empty | Phone number id of the WhatsApp (test) number. |
@@ -272,8 +275,8 @@ Linux/macOS: use `.venv/bin/python` instead of `.venv\Scripts\python`. Tests nev
 (`KAARAN_VOICE=off`) and replay Claude from `llm_cache/`.
 
 Current numbers (from [PROGRESS.md](PROGRESS.md) and [docs/09_PROGRESS_REPORT.md](docs/09_PROGRESS_REPORT.md)):
-- 289 tests: full run on 2026-10-29 (replay mode, voice off): 286 passed, 3 skipped (the live-API tests, which
-  run only with `--live`).
+- 295 tests (252 in the fast suite): full run on 2026-10-31 (replay mode, voice off): 292 passed, 3 skipped (the
+  live-API tests, which run only with `--live`).
 - Block-lens scorecard: 19/19 on seeds 42, 7, 99, 2026, 11 and 77.
 - Taluka-lens scorecard: 8/8 planted truths on 5 seeds.
 - Invented numbers in briefs: 0.
@@ -333,8 +336,10 @@ Dockerfile         demo image (Python 3.11-slim + Chromium + Noto fonts)
 - **Real public data** (UDISE+ 2024-25 microdata for Solapur, PARAKH PRS 2024 benchmarks, AIKosh 2019-20, PAB
   2026-27) is processed locally by `python -m kaaran.real` into **aggregates only** (the `/real` page). The files
   live in `data/real/`, which is git-ignored and never committed or copied into the Docker image. Tests use fake
-  files in the real format. Because of this, `/real` shows the snapshot only on a machine where
-  `python -m kaaran.real` has been run; on the public demo it says "No real-data snapshot on this machine".
+  files in the real format. Because of this, `/real` shows the snapshot only where the aggregate file exists: on a
+  machine where `python -m kaaran.real` has been run, or on the hosted demo when the aggregate `real_snapshot.json`
+  (block totals, no school identifiers) is uploaded as a Render Secret File (docs/DEPLOY.md, step 7). Without it the
+  page says that no real-data snapshot is available.
   The figures are summarised in [docs/09_PROGRESS_REPORT.md](docs/09_PROGRESS_REPORT.md) §3.
 - Kaaran never ranks or names individual teachers or students and never claims a cause is proven. Actions are
   suggestions; the officer confirms before anything is forwarded.

@@ -19,16 +19,20 @@ prepared for this (tested locally with `docker run --memory=512m --cpus=0.1`):
 
 Steps (about 10 minutes):
 1. Sign up at https://render.com with GitHub (free, no card). When asked, allow Render's GitHub app to access the
-   `DurgeshC16/Kaaran` repository (it is private).
+   `DurgeshC16/Kaaran` repository. The submission rules ask for **read access for the Tech4Dev evaluator GitHub IDs** (shared before the deadline):
+   either add those IDs as collaborators (*Settings → Collaborators*, Read) or make the repository public after
+   checking the git history for secrets. Render works with a private repository through its GitHub app.
 2. Dashboard → **New → Blueprint** → pick `DurgeshC16/Kaaran`. Render reads `render.yaml` (web service `kaaran`,
    Docker, free plan, Singapore, health check `/healthz`, auto-deploy off so the evaluated version stays frozen).
 3. Render asks for the secret values (they are stored by Render, never in git). Copy them from your local `.env`:
    `ANTHROPIC_API_KEY`, `SARVAM_API_KEY`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`,
    `WHATSAPP_VERIFY_TOKEN`. Leave one empty if you do not have it yet (WhatsApp sending then stays off); add it later
    under the service's **Environment** tab and click **Save, rebuild and deploy**.
+   `WHATSAPP_TOKEN` must be the **permanent System User token** (section 4.4): the temporary token on the API Setup
+   page expires after about 24 hours, long before judging ends (top 10 on 2026-11-10, final on 2026-11-18).
 4. Click **Apply**. The first build takes about 10 minutes (Chromium, fonts, data, PDFs). The URL appears at the top
    of the service page.
-5. **Keep it awake (recommended):** create a free monitor at https://uptimerobot.com (HTTP, every 5 minutes) on
+5. **Keep it awake (recommended):** create a free monitor at https://uptimerobot.com (HTTP(s), every 5 minutes; `/healthz` answers GET and HEAD) on
    `https://<your-service>.onrender.com/healthz`. One always-on free service fits in Render's 750 free hours a month,
    and judges then never wait for a cold start.
 6. Run the checks: `.venv\Scripts\python scripts\check_webhook.py https://<your-service>.onrender.com` (section 4)
@@ -48,8 +52,9 @@ What the image already does (`Dockerfile`):
 - It copies `src/`, `llm_cache/` (recorded Claude responses), `pyproject.toml`, `README.md` and `.env.example`.
 - `.dockerignore` keeps `.env`, `data/` (including `data/real/`), `docs/source/`, `.git/` and `.venv/` out of the
   image.
-- The four SYNTHETIC demo datasets are generated **at build time** (deterministic, no LLM). On start, the server
-  prepares ingest, trust checks and packs in the background, default dataset first.
+- The four SYNTHETIC demo datasets are generated **at build time** (deterministic, no LLM), and
+  `python -m kaaran.warm --dataset blocks` pre-builds the main dataset's packs, briefs, PDFs and prepared-state cache.
+  On start, the server loads the datasets in `KAARAN_DATASETS` (Render: `blocks` only) in the background.
 - A `HEALTHCHECK` calls `/healthz` every 60 s.
 
 ---
@@ -220,29 +225,31 @@ Then by hand in a browser:
 
 1. When the smoke tests pass, tag the exact commit that is deployed:
    ```bash
-   git tag -a build-submission -m "Build-stage submission (deployed to https://<HF_USER>-kaaran.hf.space)"
+   git tag -a build-submission -m "Build-stage submission (deployed to https://<your-service>.onrender.com)"
    git push origin build-submission
    ```
-2. Put the GitHub URL, the Space URL and the tag or commit hash in the submission form.
-3. **Do not push to `main` on GitHub or to the Space after the deadline** (2026-11-01, 11:59 pm). Judges must see
-   the version that was submitted. Later work goes on a branch.
-4. Keep the Space running (do not pause it) and keep the secrets valid until judging ends. Rotate the keys after.
+2. Put the GitHub URL, the demo URL and the tag or commit hash in the submission form.
+3. **Do not push to `main` on GitHub after the deadline** (2026-11-01, 11:59 pm), and do not click *Manual Deploy* on
+   Render (`autoDeploy: false` in `render.yaml` keeps the deployed version frozen). Judges must see the version that
+   was submitted. Later work goes on a branch.
+4. Keep the service running (do not suspend it), keep the uptime monitor on, and keep the secrets valid until judging
+   ends (2026-11-18). Rotate the keys after.
 
 ## 7. Troubleshooting
 
 | Symptom | Cause and fix |
 |---|---|
-| The first page load takes long, or "Building / Starting" | **Cold start.** Free Spaces sleep after a period without visitors. The next visit restarts the container, which prepares ingest, trust checks and packs for every demo dataset in the background (the synthetic data itself was generated at build time). Wait, then reload. Open the Space yourself shortly before a judged demo. |
+| The first page load takes long, or "Building / Starting" | **Cold start.** Render free services sleep after 15 minutes without visitors (Hugging Face free Spaces after a longer idle period). The next visit restarts the container, which loads the prepared cache built into the image (Render: about 15 s to start, about 16 s to the first answer). Wait, then reload. Keep the uptime monitor on (Render step 5) and open the demo yourself shortly before a judged demo. |
 | Startup fails with `PermissionError` under `/app/data` | The container runs as uid 1000. The Dockerfile already creates that user and gives it `/app`; if you changed the Dockerfile, keep the `useradd -u 1000`, `chown -R user /app` and `USER user` lines. |
 | The PDF link returns 503 | No headless browser was found. The image installs Chromium at `/usr/bin/chromium` (`KAARAN_BROWSER`). Check `pdf_browser` in `/healthz`. Meanwhile `/api/briefs/<id>/print?lang=mr` gives a printable page. |
 | PDF is blank or the browser crashes | Chromium in containers needs `--no-sandbox`. Keep `KAARAN_BROWSER_NO_SANDBOX=1` (set in the image). |
 | 🎤 / 🔊 buttons are missing | `SARVAM_API_KEY` is not set, or `KAARAN_VOICE=off`. Check `/api/voice/status`. Text still works. |
 | "Question read by: rules" for new wordings | `KAARAN_LLM_MODE` is `replay`, `ANTHROPIC_API_KEY` is missing, or the spend cap was reached. The rule fallback still answers, and figures are identical in every mode. |
-| Webhook "Verify and save" fails | The Space is private or asleep, the URL is not `/whatsapp/webhook`, or `WHATSAPP_VERIFY_TOKEN` differs from what you typed in Meta (restart after changing secrets). |
+| Webhook "Verify and save" fails | The service is private, asleep or still deploying, the URL is not `/whatsapp/webhook`, or `WHATSAPP_VERIFY_TOKEN` differs from what you typed in Meta (restart after changing secrets). |
 | Messages arrive but no reply; status shows a signature error | `WHATSAPP_APP_SECRET` is missing or wrong. Every POST must carry a valid `X-Hub-Signature-256`. |
 | No webhook events at all | Check that the **messages** field is subscribed and the app is subscribed to the WhatsApp Business Account (`POST /<WABA_ID>/subscribed_apps` with the token). |
 | Error `131030` | The recipient is not on the test number's list. **The test number only reaches registered recipients** (step 4.3). |
 | Error `190` | The token has expired. Use the System User token (step 4.4). |
 | Error `131047`, or no reply after a long gap | **24-hour customer-service window.** Free-form replies are allowed only within 24 hours of the user's last message. Outside it, Meta requires an approved template message. The officer just sends a new message to reopen the window. Proactive alerts on real WhatsApp therefore need an approved template; the simulator's "🔔 Send alert" shows the flow. |
 | Voice note on real WhatsApp is not transcribed | Voice must be configured (`/api/voice/status`) and the note shorter than about 30 seconds. The bot replies with a fixed reason (never the raw API error). |
-| Actions confirmed in the baithak pack disappear | Space storage is not persistent by default. `actions.json`, caches and generated data reset on restart. This is fine for the demo. |
+| Actions confirmed in the baithak pack disappear | Render free services and Hugging Face Spaces have no persistent disk. `actions.json`, caches and usage logs reset on every restart or redeploy. This is fine for the demo. |

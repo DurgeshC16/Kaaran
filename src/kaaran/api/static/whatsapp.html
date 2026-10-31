@@ -168,7 +168,10 @@ $("ex").addEventListener("click", (e) => { const b = e.target.closest("button");
   const ds = await (await fetch("/api/datasets")).json();
   const d = ds.find(x => x.default) || ds[0];
   const ex = d.examples || await (await fetch(`/api/datasets/${encodeURIComponent(d.id)}/examples`)).json();
-  $("ex").innerHTML = ["hi"].concat(ex.map(x => x.text)).concat(["अहवाल", "english"]).map(x => `<button type="button">${esc(x)}</button>`).join("");
+  // Everyday questions from user testing round 2 (docs/USER_TESTING.md) first, on the main demo dataset only.
+  const showcase = d.id === "blocks" ? ["Which block needs most attention?", "पंढरपूर मध्ये किती शाळा आहेत?", "What is PTR in Karmala?"] : [];
+  const list = ["hi"].concat(showcase, ex.map(x => x.text).filter(x => !showcase.includes(x)), ["अहवाल", "english"]);
+  $("ex").innerHTML = list.map(x => `<button type="button">${esc(x)}</button>`).join("");
 })();
 send("नमस्कार");
 </script>

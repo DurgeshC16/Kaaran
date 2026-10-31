@@ -10,7 +10,8 @@
   header a { color:#cfe3ff; font-size:13px; }
   .real { background:#e7f3ec; border-bottom:1px solid #2e7d32; padding:6px 18px; font-weight:600; font-size:13px; }
   main { max-width:1200px; margin:0 auto; padding:16px 18px; }
-  .card { background:#fff; border:1px solid #d9dee3; border-radius:8px; padding:14px; margin-bottom:14px; }
+  .card { background:#fff; border:1px solid #d9dee3; border-radius:8px; padding:14px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  @media (max-width: 640px) { main { padding:10px 8px; } table { min-width:560px; } }
   table { border-collapse:collapse; width:100%; font-size:13px; }
   th, td { border-bottom:1px solid #eee; padding:5px 6px; text-align:right; } th:first-child, td:first-child { text-align:left; }
   th { background:#f1f4f8; }
@@ -28,9 +29,10 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&
 (async () => {
   const r = await fetch("/api/real/snapshot");
   if (!r.ok) {
-    document.getElementById("m").innerHTML = `<div class="card">No real-data snapshot on this machine. Real files are never committed.
-      Put the UDISE+ microdata in <code>data/real/udise_2425/</code> and run
-      <code>.venv\\Scripts\\python -m kaaran.real --udise data/real/udise_2425</code> (see docs/10_TESTING_GUIDE.md).</div>`;
+    document.getElementById("m").innerHTML = `<div class="card"><b>या सर्व्हरवर खऱ्या डेटाचा सारांश उपलब्ध नाही.</b><br>
+      No real-data snapshot on this server. Real files are never committed to git. The aggregate snapshot (block totals only)
+      is built locally with <code>python -m kaaran.real --udise data/real/udise_2425</code> (docs/10_TESTING_GUIDE.md) and,
+      on the hosted demo, uploaded as a secret file (docs/DEPLOY.md). The demo pages use SYNTHETIC data.</div>`;
     return;
   }
   const s = await r.json();

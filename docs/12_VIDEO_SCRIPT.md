@@ -37,7 +37,9 @@ Timing check: 12 + 18 + 28 + 12 + 12 + 20 + 20 + 15 + 10 + 18 + 15 = **180 s**.
 - no API keys, tokens or phone numbers visible (terminal, `.env`, WhatsApp header);
 - live Sarvam tested once before recording (`GET /api/voice/status` → configured).
 
-**Do not use these wordings on camera (known issues, 2026-10-29):**
-- the Marathi PTR ranking question `सर्वात जास्त विद्यार्थी-शिक्षक प्रमाण कोणत्या तालुक्यात आहे?` is refused as a question
-  about individuals (re-checked 2026-10-29); use the English `Which block has the highest PTR?` instead.
-- (Fixed and re-checked 2026-10-29: `report` after an English WhatsApp question now returns the English brief.)
+**Known issues (re-checked 2026-10-31 on the local server, replay mode):**
+- Fixed: the Marathi PTR ranking question `सर्वात जास्त विद्यार्थी-शिक्षक प्रमाण कोणत्या तालुक्यात आहे?` now gives the
+  ranking ("सर्वाधिक विद्यार्थी-शिक्षक प्रमाण: मोहोळ २६.७, माढा २६.७, करमाळा २६.५").
+- Fixed (2026-10-29): `report` after an English WhatsApp question returns the English brief.
+- Kendra names are shown in Latin letters inside Marathi answers (for example "Bhalwad Khurd केंद्र"): the synthetic
+  data has no Devanagari kendra names. Do not point at them on camera.

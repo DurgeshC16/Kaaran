@@ -151,3 +151,35 @@ def test_whatsapp_report_opens_the_latest_answer(block_service, monkeypatch, tmp
     simulate(bot, "w-r", "How many schools are in Mohol?")  # now offers Mohol
     replies = simulate(bot, "w-r", "report")
     assert replies[-1].kind == "document" and replies[-1].brief_id == "blocks.BMohol"
+
+
+# ---------- pre-deployment audit (2026-10-31) ----------
+
+def test_health_answers_head_for_uptime_monitors(block_service):
+    c = TestClient(create_app(block_service, warm=False))
+    assert c.head("/healthz").status_code == 200 and c.get("/healthz").json()["ok"]
+
+
+def test_report_keeps_the_language_of_the_answer(block_service, monkeypatch, tmp_path):
+    from kaaran.block.workspace import BlockWorkspace
+
+    stub = tmp_path / "b.pdf"
+    stub.write_bytes(b"%PDF-1.4 stub")
+    monkeypatch.setattr(BlockWorkspace, "pdf", lambda self, focus, lang: stub)
+    bot = Bot(block_service)
+    simulate(bot, "w-l", "सांगोला मध्ये किती शाळा आहेत?")
+    replies = simulate(bot, "w-l", "report")
+    assert replies[-1].kind == "document" and all(r.lang == "mr" for r in replies)
+
+
+def test_short_answer_text_has_no_repeated_heading(block_service):
+    from kaaran.service import as_text
+
+    text = as_text(block_service.ask("How many schools are in Pandharpur?").summary["en"])
+    assert text.count("Direct answer") == 1
+
+
+def test_marathi_subject_joins_its_postposition():
+    from kaaran.brief.render import tidy
+
+    assert tidy("गणित चे निकाल") == "गणिताचे निकाल" and tidy("भाषा ची प्रगती") == "भाषेची प्रगती"

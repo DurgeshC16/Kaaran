@@ -188,7 +188,7 @@ Status as of 2026-10-29. Source: PROGRESS.md, docs/09, and the commands named be
 - **Voice note in:** the bot transcribes it, replies "🎤 I heard: ...", then answers as if it were typed.
 - **Help and language:** `hi` / `मदत` gives help; `english` / `marathi` sets the reply language.
 - **Simulator** at `/whatsapp` runs the same bot locally, with a "🔔 Send alert" button and a mic.
-- **Real Meta test number: TODO** (not connected yet; needs Meta credentials and a public URL: the deployed Space, docs/DEPLOY.md §4, or a tunnel, docs/DEMO.md §3).
+- **Real Meta test number: TODO** (credentials are in the local `.env` as of 2026-10-31; the webhook is not connected yet: it needs the public Render URL, docs/DEPLOY.md §4, or a tunnel, docs/DEMO.md §3, and a permanent System User token).
 
 ### 2.12 Voice (Sarvam AI)
 - **Code:** `src/kaaran/voice/`.
@@ -229,7 +229,7 @@ Status as of 2026-10-29. Source: PROGRESS.md, docs/09, and the commands named be
 | AI column mapper, hold-out layout | 100% (rule baseline 0%) | `python -m kaaran.eval.mapping --seed 42` |
 | Prompt injection in a spreadsheet | ignored (it reaches the model as masked data) | `python -m kaaran.eval.guardrails` |
 | Real data checks | 11/11 UDISE+, 18/18 with PAB | `python -m kaaran.real ...` |
-| Automated tests | 289 collected. Full run on 2026-10-29 (replay, voice off): **286 passed, 3 skipped** (live-API tests, only with `--live`). The earlier xlsx byte-hash failure is fixed: `src/kaaran/__init__.py` pins `OPENPYXL_LXML=False`. | `python -m pytest -q` |
+| Automated tests | 295 collected (252 fast). Full run on 2026-10-31 (replay, voice off): **292 passed, 3 skipped** (live-API tests, only with `--live`). The earlier xlsx byte-hash failure is fixed: `src/kaaran/__init__.py` pins `OPENPYXL_LXML=False`. | `python -m pytest -q` |
 | Live AI spend so far | about $1.8 in total (docs/09) | `data/llm_usage.jsonl` |
 
 ---
@@ -246,9 +246,9 @@ the transcript goes down the same path as typed text.
 | 2 | Web | `कोणत्या तालुक्याकडे सर्वात जास्त लक्ष द्यावे?` / `Which block needs most attention?` | "Most attention needed: Pandharpur (3 clusters), Karmala (1 cluster), Madha (1 cluster)", then Pandharpur's kendra cards. **Verified** (both languages). | Efficacy (DEO's first question) |
 | 3 | Web | `पंढरपूर मध्ये किती शाळा आहेत?` / `How many schools are in Pandharpur?` | One line: "पंढरपूरमध्ये १४० शाळा आहेत (१२ केंद्रे)." / "Pandharpur has 140 schools in 12 clusters." Reply language follows the question. **Verified.** | User-centricity (Marathi first, short answers) |
 | 4 | Web or WhatsApp | `pandharpoor madhe kiti shala ahet, karmala PTR kiti, mohol la shikshak kiti kami.` (misspelt, transliterated, 3 questions) | Three lines: Pandharpur 140 schools / Karmala PTR 26.5, 2 schools above 30 / Mohol 2 vacant posts, 498 working of 500 sanctioned. **Verified.** | User-centricity (real typing); Technical strength |
-| 5 | Web | `गणितात सर्वात चांगला तालुका कोणता?` / `Which block has the best maths results?` | "गणिताचा सर्वाधिक सरासरी निकाल: माळशिरस ६५.२%, बार्शी ६५.२%, उत्तर सोलापूर ६३.३%." / "Highest maths results: Malshiras 65.2%, Barshi 65.2%, North Solapur 63.3%." Ranking only; the brief sits behind the button. **Verified (both).** Also `Which block has the highest PTR?` → "Mohol 26.7, Madha 26.7, Karmala 26.5" (**verified**). Do **not** use the Marathi PTR wording `सर्वात जास्त विद्यार्थी-शिक्षक प्रमाण कोणत्या तालुक्यात आहे?`: it is wrongly refused as a question about individuals (known issue, see the final report). | Efficacy |
+| 5 | Web | `गणितात सर्वात चांगला तालुका कोणता?` / `Which block has the best maths results?` | "गणिताचा सर्वाधिक सरासरी निकाल: माळशिरस ६५.२%, बार्शी ६५.२%, उत्तर सोलापूर ६३.३%." / "Highest maths results: Malshiras 65.2%, Barshi 65.2%, North Solapur 63.3%." Ranking only; the brief sits behind the button. **Verified (both).** Also `Which block has the highest PTR?` → "Mohol 26.7, Madha 26.7, Karmala 26.5" (**verified**). The Marathi PTR wording `सर्वात जास्त विद्यार्थी-शिक्षक प्रमाण कोणत्या तालुक्यात आहे?` now gives the same ranking (re-checked 2026-10-31; earlier it was wrongly refused). | Efficacy |
 | 6 | Web | `पंढरपूरचा निकाल का घसरला?` / `Why did Pandharpur fall?` | Direct line (maths 59.4%, 2.0 points lower; complete records for 136 of 140 schools), then **6 cards** (5 kendras + a whole-block card). Three clusters, three different reasons: Bhalwad Khurd (KP visits 1.3 → 0.1, subtraction weakest, **Strong evidence**), Bhalpur (seasonal migration, attendance about 14.7 points lower Nov-Mar), Takangaon (6 schools lost a teacher; 1 school improved anyway: **Learn from**). Also Dhanwade Khurd (**Red flag**: 7 schools with full attendance), Malpur Khurd (**Not enough data**), poll duty (**No link found**), and Malshiras as the twin block. Each card has an owner and timing. **Verified.** | Efficacy; Innovation (different causes → different actions); Guardrails (labels from rules) |
-| 7 | Web | `Malshiras cha nikal changla ka aala?` / `Why did Malshiras improve?` | "maths rose 2.7 points to 65.2%", the largest rises by kendra, teachers 496 → 498, and "These changes are **associated with** the rise; the data does not prove they caused it." **Verified.** | Guardrails (no causal claim) |
+| 7 | Web | `Malshiras cha nikal changla ka aala?` / `Why did Malshiras improve?` | "Malshiras: maths rose 2.7 points this year, to 65.2%. Largest rises: Longaon Khurd Kendra (+5.0), Malner Budruk Kendra (+4.3). Teacher numbers, attendance and Kendra Pramukh visits stayed about the same, so the data shows **no clear reason**. Ask the clusters that rose most what they did differently." **Verified 2026-10-31.** | Guardrails (no causal claim) |
 | 8 | Web | `Which of madha attendance records look unreliable?` | "Madha: schools with unreliable attendance records: 1 … Kendras with suspicious records: Dhokkheda Budruk Kendra (1) … not used in the analysis until checked. The Kendra Pramukh should check the registers in person." **Verified.** | Technical strength (trust before analysis) |
 | 9 | Web | `पंढरपूर तालुक्यात कोणत्या केंद्रांकडे लक्ष द्यावे?` (kendra question) | The kendra cards for Pandharpur (as in case 6). **Verified.** | Efficacy (BEO's unit is the kendra) |
 | 10 | WhatsApp simulator | `निकाल का घसरला?` then `पंढरपूर` | First: "कोणत्या तालुक्याबद्दल विचारत आहात? …" (it asks instead of guessing). Second: the Pandharpur brief + PDF; the follow-up completes the first question. **Verified.** API equivalent: `ask("In the solapur district", context="Which block has the highest PTR?")` → the PTR ranking. | User-centricity; Guardrails (clarify, don't guess) |
@@ -259,7 +259,7 @@ the transcript goes down the same path as typed text.
 | 15 | Web | Open Pandharpur → **📋 बैठक पॅक** → Confirm an action | Actions grouped by owner, for example "For the next month, visit classrooms in all 12 schools of Bhalwad Khurd Kendra every week" (Kendra Pramukh, this week, *Funded under PAB 2026-27 C476 p.57*). Status changes to confirmed. **Verified (API).** | Efficacy (sub-problem 3: accountability); Roadmap |
 | 16 | Web | **📄 full evidence** button → PDF (Marathi) | One A4 page: A / B / C, SYNTHETIC banner, Devanagari shaped correctly. The PDF browser was found (Edge). **TODO:** open and check visually before recording. | Low-cost devices (one page, WhatsApp-sized) |
 | 17 | Web 🎤 / WhatsApp voice note | Say `पंढरपूर मध्ये किती शाळा आहेत?` / `What is PTR in Karmala?` | "🎤 ऐकले: …", the one-line answer, then the 🔊 voice reply. **Verified as text only.** Live Sarvam was not run today (it costs money). Run once before recording. | Voice-first; Efficacy |
-| 18 | Web `/real` (local machine only: the public Space has no real data and shows "No real-data snapshot") | (no input) | Real UDISE+ 2024-25 Solapur snapshot: 2,900 ZP schools, PTR 20.1, 99 single-teacher schools, 789 with no CRC visit, the 2019-20 cross-check, PRS benchmarks, rationalisation 213 / 89 / 124. The report file exists in `data/real/reports/`. | Works in real scenarios |
+| 18 | Web `/real` (local machine, or the hosted demo once the aggregate snapshot is uploaded as a Render Secret File, docs/DEPLOY.md step 7; otherwise the page says no snapshot is available) | (no input) | Real UDISE+ 2024-25 Solapur snapshot: 2,900 ZP schools, PTR 20.1, 99 single-teacher schools, 789 with no CRC visit, the 2019-20 cross-check, PRS benchmarks, rationalisation 213 / 89 / 124. The report file exists in `data/real/reports/`. | Works in real scenarios |
 
 **For the video, pick:** 1 or 2, 6, 14, 16, 17, 4, 12, 18 (see docs/12_VIDEO_SCRIPT.md).
 
@@ -455,10 +455,10 @@ wording.
 
 Deadline: **1 Nov 2026, 11:59 pm** (we submit hours early). Requirements from docs/PROJECT_CONTEXT.md.
 
-| # | Deliverable | Status (2026-10-29) | Owner |
+| # | Deliverable | Status (2026-10-31) | Owner |
 |---|---|---|---|
-| 1 | Public, testable demo link (+ any software needed) | ⏳ Dockerfile ready (uid 1000, data built into the image, replay mode, Chromium + Noto fonts) and `scripts/deploy_hf.py` (docs/DEPLOY.md); **not deployed yet** | TODO (team) |
-| 2 | GitHub source code (judges check the AI usage) | ✅ github.com/DurgeshC16/Kaaran; current work is not committed yet; public/licence decision pending (open-source credit +$250) | TODO (team) |
+| 1 | Public, testable demo link (+ any software needed) | ⏳ Render free plan: `render.yaml` + Dockerfile (data, briefs, PDFs and cache built into the image; tested locally at 512 MB / 0.1 CPU), docs/DEPLOY.md. Hugging Face Docker Spaces need PRO (HTTP 402). **Not deployed yet** (2026-10-31: `kaaran.onrender.com` returns 404). | TODO (team) |
+| 2 | GitHub source code (judges check the AI usage) | ⏳ github.com/DurgeshC16/Kaaran is committed and pushed, but **private**: give the Tech4Dev evaluator GitHub IDs read access (or make it public after a history scan). No licence file yet (open-source credit +$250). | TODO (team) |
 | 3 | Public YouTube video, 3 minutes | ⏳ script ready (docs/12_VIDEO_SCRIPT.md); not recorded | TODO (team) |
 | 4 | Short PowerPoint: AI in layers, guardrails, low connectivity, user testing (1-2 slides), roadmap (1-2 slides) | ⏳ `docs/Kaaran_Build_Deck.pptx` (12 slides) generated by `scripts/make_deck.py` from docs/11_PITCH_DECK.md; review the user-testing slide against `docs/USER_TESTING.md` | TODO (team) |
 

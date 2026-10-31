@@ -24,7 +24,8 @@ import httpx
 
 from .brief.pdf import PdfUnavailable
 from .llm.client import setting
-from .block.answers import detect_lang
+from .block.answers import ANSWER_HEADING, detect_lang
+from .brief.texts_block import BLOCK_TITLE
 from .service import LANGS, Service, as_text
 
 GRAPH = "https://graph.facebook.com"
@@ -53,10 +54,10 @@ VOICE_CAPTION = ("🔊 {title}: एका मिनिटाचा आवाज-
 LANG_SET = ("ठीक आहे, आता उत्तरे मराठीत येतील.", "OK, replies will now be in English.")
 ERROR = ("माफ करा, काहीतरी चुकले. कृपया पुन्हा प्रयत्न करा.", "Sorry, something went wrong. Please try again.")
 HELP = (
-    "नमस्कार! मी *कारण* - शिक्षण डेटा विश्लेषक (डेमो: कृत्रिम डेटा).\nएका तालुक्याबद्दल प्रश्न टाइप करा, उदा.:\n{examples}\n\n"
-    "उत्तर: छोटा सारांश + एक पानी PDF अहवाल. इंग्रजीसाठी 'english' लिहा.",
-    "Hello! I am *Kaaran*, an education data analyst (demo: synthetic data).\nType a question about one taluka, e.g.:\n{examples}\n\n"
-    "You get a short summary + a one-page PDF brief. Type 'marathi' for Marathi.",
+    "नमस्कार! मी *कारण* - शिक्षण डेटा विश्लेषक (डेमो: कृत्रिम डेटा).\nतालुका किंवा केंद्राबद्दल प्रश्न टाइप करा किंवा 🎤 व्हॉइस नोट पाठवा, उदा.:\n{examples}\n\n"
+    "उत्तर: थेट उत्तर + आवाज-सारांश; 'अहवाल' लिहिल्यास एक पानी PDF. मी तुमच्याच भाषेत उत्तर देतो.",
+    "Hello! I am *Kaaran*, an education data analyst (demo: synthetic data).\nType or 🎤 speak a question about a block or cluster, e.g.:\n{examples}\n\n"
+    "You get a direct answer + a voice summary; reply 'report' for the one-page PDF. I reply in the language you use.",
 )
 HELP_WORDS = {"", "hi", "hello", "help", "start", "menu", "नमस्कार", "नमस्ते", "मदत", "हाय"}
 LANG_WORDS = {"en": {"english", "en", "इंग्रजी", "इंग्लिश"}, "mr": {"marathi", "mr", "मराठी"}}
@@ -111,6 +112,8 @@ class Bot:
         self.lang: dict[str, str] = {}  # sender -> language chosen with 'english' / 'marathi' (default for unclear messages)
         self.offer: dict[str, str] = {}  # sender -> block whose full brief 'report' opens (last alert or last short answer)
         self.followup: dict[str, str] = {}  # sender -> question that got "which taluka?" (the next reply completes it)
+        self.offer_lang: dict[str, str] = {}  # sender -> language the 'report' offer was made in
+        self.last_lang: dict[str, str] = {}  # sender -> language of the last reply (default for unclear messages)
 
     @property
     def pending(self) -> dict[str, str]:  # older name, kept for callers
@@ -124,7 +127,7 @@ class Bot:
 
     def handle(self, sender: str, kind: str, text: str, send: Callable[[Reply], None],
                audio: tuple[bytes, str] | None = None) -> None:
-        lang = self.lang.get(sender, "mr")
+        lang = self.last_lang.get(sender) or self.lang.get(sender, "mr")
         i = LANGS.index(lang)
         if kind == "audio":
             from .voice.sarvam import VoiceUnavailable
@@ -151,7 +154,7 @@ class Bot:
         cmd = _norm(text)
         for code, words in LANG_WORDS.items():
             if cmd in words:
-                self.lang[sender] = code
+                self.lang[sender] = self.last_lang[sender] = code
                 send(Reply("text", LANG_SET[LANGS.index(code)], lang=code))
                 return
         if cmd in HELP_WORDS:
@@ -163,9 +166,12 @@ class Bot:
         i = LANGS.index(lang)
         ack = lambda: send(Reply("text", ACK[i], lang=lang))  # noqa: E731
         if cmd in REPORT_WORDS and sender in self.offer:
+            lang = self.offer_lang.pop(sender, lang)  # the full brief comes in the language of the answer it follows
+            i = LANGS.index(lang)
             answer = self.service.open_block(self.dataset, self.offer.pop(sender), on_progress=ack)
         else:
             self.offer.pop(sender, None)  # a new question replaces any older 'report' offer
+            self.offer_lang.pop(sender, None)
             answer = self.service.ask(text, self.dataset, on_progress=ack, context=ctx, default_lang=lang)
             if audio is None:
                 lang = answer.info.get("reply_lang", lang)
@@ -175,8 +181,10 @@ class Bot:
                 self.followup[sender] = answer.question  # the next reply ("Solapur district") completes this question
             elif ctx and len(text.split()) <= 3:
                 self.followup[sender] = ctx  # one unrecognised reply ("Pune") keeps the earlier question open
+            self.last_lang[sender] = lang
             send(Reply("text", answer.reply[lang], lang=lang))
             return
+        self.last_lang[sender] = lang
         self._deliver(answer, lang, send, sender)
 
     def alert(self, sender: str, send: Callable[[Reply], None]) -> None:
@@ -188,6 +196,7 @@ class Bot:
             return
         top = alerts[0]
         self.pending[sender] = top["block"]
+        self.offer_lang[sender] = lang
         send(Reply("text", top["text"][lang], lang=lang))
 
     def _deliver(self, answer, lang: str, send: Callable[[Reply], None], sender: str = "") -> None:
@@ -200,6 +209,7 @@ class Bot:
         if mode not in BRIEF_MODES:
             if sender and not answer.info.get("district"):
                 self.offer[sender] = answer.focus
+                self.offer_lang[sender] = lang
                 send(Reply("text", REPORT_HINT[i], lang=lang))
             self._voice_note(answer, lang, send)
             return
@@ -210,7 +220,10 @@ class Bot:
             send(Reply("text", PDF_MISSING[i], lang=lang))
             self._voice_note(answer, lang, send)  # the voice summary does not depend on the PDF
             return
-        caption = PDF_CAPTION[i].format(title=answer.summary[lang]["title"])[:CAPTION_LIMIT]
+        title = answer.summary[lang]["title"]
+        if title.startswith(ANSWER_HEADING[i]):  # the PDF is the brief, not the short answer ("Direct answer: X")
+            title = f"{BLOCK_TITLE[i]}: {answer.focus_name[lang]}"
+        caption = PDF_CAPTION[i].format(title=title)[:CAPTION_LIMIT]
         filename = f"Kaaran_{answer.focus_name['en'].replace(' ', '_')}_{lang}.pdf"
         send(Reply("document", caption, path, filename, answer.brief_id, lang))
         self._voice_note(answer, lang, send)

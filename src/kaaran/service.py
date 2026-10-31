@@ -464,7 +464,10 @@ def as_text(summary: dict, bold: str = "") -> str:
     section = None
     for it in summary["items"]:
         if it["section"] != section:
-            lines += ["", f"{bold}{it['heading']}{bold}"]
+            if it["heading"] and not summary["title"].startswith(it["heading"]):  # no repeat of the title's heading
+                lines += ["", f"{bold}{it['heading']}{bold}"]
+            else:
+                lines.append("")
             section = it["section"]
         badge = f"[{it['badge']}] " if it.get("badge") else ""
         lines.append(("• " if it["owner"] else "") + badge + it["text"] + (f" — {it['owner']}" if it["owner"] else ""))

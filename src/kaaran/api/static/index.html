@@ -379,6 +379,7 @@ function setLang(l) { if (l !== state.lang && UI[l]) { state.lang = l; applyUI()
 
 function renderDatasets() {
   $("dataset").innerHTML = state.datasets.map(d => `<option value="${esc(d.id)}" ${d.id === state.dataset ? "selected" : ""}>${esc(d.label[state.lang])}</option>`).join("");
+  $("dataset").closest(".ds").style.display = state.datasets.length > 1 ? "" : "none";   // one dataset on the host: no picker
 }
 
 function homeKey() { return `${state.dataset}|${state.role}|${state.role === "beo" ? state.block : ""}`; }
@@ -396,7 +397,23 @@ function renderRole() {
 function renderExamples() {
   const d = current(), box = $("examples");
   if (!d || !d.examples) { box.innerHTML = `<span class="empty" style="padding:0"><span class="spinner"></span>${esc(t("loading"))}</span>`; return; }
-  box.innerHTML = d.examples.slice(0, 5).map((e, i) => `<button class="ex" data-i="${i}" type="button">${esc(e.text)}</button>`).join("");
+  state.exList = exampleList(d);
+  box.innerHTML = state.exList.map((e, i) => `<button class="ex" data-i="${i}" type="button">${esc(e.text)}</button>`).join("");
+}
+
+// Everyday questions from user testing (docs/USER_TESTING.md, round 2), shown first on the main demo dataset.
+// The block names are the real-name labels of the "blocks" dataset; other datasets keep their own examples.
+const SHOWCASE = [
+  { lang: "en", text: "Which block needs most attention?" },
+  { lang: "mr", text: "पंढरपूर मध्ये किती शाळा आहेत?" },
+  { lang: "mr-Latn", text: "Malshiras cha nikal changla ka aala?" },
+  { lang: "en", text: "Which block has the best maths results?" },
+  { lang: "en", text: "Which of madha attendance records look unreliable?" },
+];
+function exampleList(d) {
+  const own = d.examples.slice(0, d.id === "blocks" ? 2 : 5);
+  if (d.id !== "blocks") return own;
+  return SHOWCASE.concat(own.filter(e => !SHOWCASE.some(x => x.text === e.text)));
 }
 
 function renderHistory() {
@@ -646,7 +663,7 @@ $("ask-form").addEventListener("submit", (e) => { e.preventDefault(); ask($("q")
 $("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask($("q").value); } });
 $("examples").addEventListener("click", (e) => {
   const b = e.target.closest(".ex"); if (!b) return;
-  const ex = current().examples[+b.dataset.i]; $("q").value = ex.text; ask(ex.text);
+  const ex = (state.exList || current().examples)[+b.dataset.i]; $("q").value = ex.text; ask(ex.text);
 });
 $("history").addEventListener("click", (e) => {
   const li = e.target.closest("li"); if (!li) return;

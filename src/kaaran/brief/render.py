@@ -102,9 +102,17 @@ def fill(text: str, pack: dict, lang: str) -> str:
 DOUBLED_KENDRA = re.compile(r"\b(Kendra)(\s+Kendra)+\b")
 
 
+MR_SUBJECT_JOIN = {"गणित चे": "गणिताचे", "गणित ची": "गणिताची", "गणित चा": "गणिताचा", "गणित च्या": "गणिताच्या",
+                   "भाषा चे": "भाषेचे", "भाषा ची": "भाषेची", "भाषा चा": "भाषेचा", "भाषा च्या": "भाषेच्या"}
+
+
 def tidy(text: str) -> str:
-    """Rendering clean-up that never changes facts: a cluster name already ends in 'Kendra'."""
-    return DOUBLED_KENDRA.sub(r"\1", text)
+    """Rendering clean-up that never changes facts: a cluster name already ends in 'Kendra'; Marathi subject words
+    join their postposition ("गणित चे" -> "गणिताचे")."""
+    text = DOUBLED_KENDRA.sub(r"\1", text)
+    for a, b in MR_SUBJECT_JOIN.items():
+        text = text.replace(a, b)
+    return text
 
 
 def allowed_refs(finding: dict, pack: dict) -> dict[str, set]:

@@ -51,7 +51,7 @@ testing**: recorded AI answers in `llm_cache/` are replayed for free.
 | Step | Command | What "pass" looks like | Time |
 |---|---|---|---|
 | C1 Fast tests | `.venv\Scripts\python -m pytest -q -m "not slow"` | `… passed, … deselected`, **0 failed** | ~2 min |
-| C2 Full tests (before every commit) | `.venv\Scripts\python -m pytest -q` | `235 passed, 3 skipped` | ~6-7 min |
+| C2 Full tests (before every commit) | `.venv\Scripts\python -m pytest -q` | `292 passed, 3 skipped` (2026-10-31) | ~6-7 min |
 
 The 3 skipped tests call the paid AI API. They run only with `--live`.
 
