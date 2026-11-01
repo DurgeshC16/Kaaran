@@ -323,6 +323,8 @@ Dockerfile         demo image (Python 3.11-slim + Chromium + Noto fonts)
 | [08 Data download guide](docs/08_DATA_DOWNLOAD_GUIDE.md) | where to get each real dataset |
 | [09 Progress report](docs/09_PROGRESS_REPORT.md) | what is built, real-data findings, quality numbers |
 | [10 Testing guide](docs/10_TESTING_GUIDE.md) | how to run and test everything, step by step |
+| [11 Sample questions](docs/11_SAMPLE_QUESTIONS.md) | 46 officer questions (Marathi/English) with the answers Kaaran gives, incl. refusals |
+| [13 Final guide](docs/13_FINAL_GUIDE.md) | everything built, demo cases, real vs synthetic data, generalising to other states |
 | [User testing](docs/USER_TESTING.md) | test rounds, feedback, what we changed, pilot protocol |
 | [Deploy](docs/DEPLOY.md) | Render (free) / Hugging Face Spaces, Meta WhatsApp setup, webhook checker, smoke tests |
 | [Demo](docs/DEMO.md) · [Evidence schema](docs/EVIDENCE_SCHEMA.md) · [Confidence rules](docs/CONFIDENCE_RULES.md) · [Synthetic data spec](docs/SYNTHETIC_DATA_SPEC.md) | demo script and technical contracts |

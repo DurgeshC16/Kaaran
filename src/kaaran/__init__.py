@@ -2,7 +2,7 @@
 
 import os
 
-# openpyxl writes different (equally valid) XML bytes when lxml is installed (python-pptx, a dev tool, pulls it in).
+# openpyxl writes different (equally valid) XML bytes when lxml is installed (some optional tools pull it in).
 # The synthetic generator promises byte-identical files per seed, so pin openpyxl's pure-Python writer.
 os.environ.setdefault("OPENPYXL_LXML", "False")
 

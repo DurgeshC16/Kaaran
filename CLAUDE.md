@@ -38,7 +38,6 @@ The synthetic data generator (src/kaaran/synth) makes NO LLM calls and is determ
 - Demo server (web + WhatsApp webhook): `.venv\Scripts\python -m kaaran.api` (http://127.0.0.1:8000, simulator at /whatsapp; setup in docs/DEMO.md)
 - Voice (Sarvam AI, optional): set SARVAM_API_KEY in .env; check with `GET /api/voice/status`. Tests never call Sarvam (conftest sets KAARAN_VOICE=off)
 - Deploy to Hugging Face Spaces (needs HF_TOKEN, HF_USER in .env): `.venv\Scripts\python scripts\deploy_hf.py` (docs/DEPLOY.md)
-- Build the submission deck: `.venv\Scripts\python scripts\make_deck.py` (writes docs/Kaaran_Build_Deck.pptx)
 - Prompt-injection check: `.venv\Scripts\python -m kaaran.eval.guardrails`
 - Mapping eval (baseline vs LLM, both layouts): `.venv\Scripts\python -m kaaran.eval.mapping --seed 42` (`KAARAN_LLM_MODE=live` to record new responses)
 

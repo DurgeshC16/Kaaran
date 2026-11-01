@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==9.1.1", "python-pptx==1.0.2"]  # python-pptx: builds the submission deck (scripts/make_deck.py), not used by the app
+dev = ["pytest==9.1.1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
